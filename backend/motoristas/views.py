@@ -11,16 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Utilizador, Motorista
 from .services import validar_token_telegram, gerar_token_telegram
 from .validators import validar_documento, validar_imagem
-
-
-class BotAuthMixin:
-    """Verifica o X-Bot-Secret header para endpoints internos."""
-
-    def verificar_bot_secret(self, request):
-        bot_secret = request.headers.get("X-Bot-Secret")
-        if bot_secret != settings.BOT_SECRET:
-            return JsonResponse({"erro": "Não autorizado"}, status=403)
-        return None
+from motogram.mixins import BotAuthMixin
 
 
 class VerificarAssinaturaView(BotAuthMixin, View):

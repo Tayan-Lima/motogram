@@ -14,16 +14,7 @@ from django.utils.decorators import method_decorator
 from .models import Corrida
 from .services import notificar_motoristas_proximos
 from motoristas.models import Motorista
-
-
-class BotAuthMixin:
-    """Verifica o X-Bot-Secret header para endpoints internos."""
-
-    def verificar_bot_secret(self, request):
-        bot_secret = request.headers.get("X-Bot-Secret")
-        if bot_secret != settings.BOT_SECRET:
-            return JsonResponse({"erro": "Não autorizado"}, status=403)
-        return None
+from motogram.mixins import BotAuthMixin
 
 
 class CriarCorridaView(BotAuthMixin, View):

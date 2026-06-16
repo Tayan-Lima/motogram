@@ -1,5 +1,7 @@
-"""Serviços da app pagamentos — lógica de criação de Pix."""
+"""Serviços da app pagamentos — lógica de criação de Pix e webhook."""
 
+import hmac
+import hashlib
 import requests
 from django.conf import settings
 
@@ -49,3 +51,38 @@ def criar_pix_mercadopago(motorista, valor, pix_txid):
         }
     except requests.RequestException:
         return {}
+
+
+def verificar_assinatura_webhook(request):
+    secret = settings.MP_WEBHOOK_SECRET
+    if not secret:
+        return True
+
+    signature = request.headers.get("X-Signature", "")
+    x_request_id = request.headers.get("X-Request-Id", "")
+
+    expected = hmac.new(
+        secret.encode(),
+        f"{x_request_id}{request.body.decode()}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+    return hmac.compare_digest(signature, expected)
+
+
+def processar_webhook_mercadopago(data):
+    from .models import Assinatura
+    from motoristas.services import activar_motorista_apos_pagamento
+
+    payment_id = data.get("data", {}).get("id")
+    payment_type = data.get("type")
+
+    if payment_type != "payment" or not payment_id:
+        return
+
+    try:
+        assinatura = Assinatura.objects.get(pix_txid=payment_id, status="pendente")
+    except Assinatura.DoesNotExist:
+        return
+
+    activar_motorista_apos_pagamento(assinatura)
