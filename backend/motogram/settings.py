@@ -1,4 +1,5 @@
 import os
+import ctypes.util as _ctypes_util
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -31,11 +32,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 
 _USE_POSTGIS = False
 if DATABASE_URL:
-    try:
-        from django.contrib.gis.db.backends.postgis.base import DatabaseWrapper  # noqa: F401
-        _USE_POSTGIS = True
-    except Exception:
-        pass
+    _USE_POSTGIS = _ctypes_util.find_library('gdal') is not None
 
 if _USE_POSTGIS:
     INSTALLED_APPS.insert(6, 'django.contrib.gis')

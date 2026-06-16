@@ -4,7 +4,10 @@ from django.conf import settings
 from datetime import date
 
 try:
-    from django.contrib.gis.db.models import PointField
+    if getattr(settings, '_USE_POSTGIS', False):
+        from django.contrib.gis.db.models import PointField
+    else:
+        raise ImportError("PostGIS desactivado")
 except Exception:
     PointField = None
 
