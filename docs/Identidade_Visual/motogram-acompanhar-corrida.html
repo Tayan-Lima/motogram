@@ -1,0 +1,241 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Acompanhar Corrida</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --gold: #C4942A;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow-x: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; font-size: inherit; }
+
+/* Status bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; background: var(--bg); z-index: 20; }
+
+/* Map full */
+.map-full { flex: 1; background: #E5DDD2; position: relative; min-height: 380px; overflow: hidden; }
+.map-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(26,24,21,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(26,24,21,0.04) 1px, transparent 1px); background-size: 28px 28px; }
+.map-road { position: absolute; background: var(--fg); opacity: 0.08; }
+.map-road:nth-child(2) { top: 30%; left: -5%; width: 140%; height: 2px; transform: rotate(-12deg); }
+.map-road:nth-child(3) { top: 55%; left: -10%; width: 130%; height: 3px; transform: rotate(6deg); }
+
+/* Driver dot animated */
+.driver-dot { position: absolute; top: 38%; left: 30%; z-index: 3; transition: all 3s ease-in-out; }
+.driver-icon { width: 28px; height: 28px; background: var(--fg); border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.65rem; font-weight: 800; }
+.driver-eta-bubble { position: absolute; top: -32px; left: 50%; transform: translateX(-50%); background: var(--fg); color: #fff; padding: 4px 10px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+
+/* My dot */
+.my-dot { position: absolute; top: 58%; left: 55%; z-index: 2; }
+.my-icon { width: 14px; height: 14px; background: var(--accent2); border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 6px rgba(199,91,57,0.3); }
+
+/* Route line */
+.route-line { position: absolute; top: 40%; left: 32%; width: 24%; height: 2px; background: var(--accent); opacity: 0.3; transform: rotate(40deg); z-index: 1; border-radius: 1px; }
+
+/* Bottom card */
+.bottom-card { background: var(--surface); border-radius: 20px 20px 0 0; margin-top: -20px; position: relative; z-index: 10; box-shadow: 0 -4px 24px rgba(0,0,0,0.06); padding: 20px 20px 28px; }
+.card-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 16px; }
+
+/* Status bar inline */
+.ride-status { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.status-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s ease infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.8); } }
+.status-label { font-size: 0.82rem; font-weight: 700; letter-spacing: -0.01em; }
+.status-time { margin-left: auto; font-size: 0.85rem; font-weight: 750; color: var(--accent); }
+
+/* Driver info */
+.driver-row { display: flex; align-items: center; gap: 14px; padding: 16px; background: var(--bg); border-radius: 14px; margin-bottom: 16px; }
+.driver-avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), #E8906A); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 1.2rem; color: #fff; flex-shrink: 0; }
+.driver-info h4 { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+.driver-info p { font-size: 0.8rem; color: var(--muted); }
+.driver-actions { display: flex; gap: 8px; margin-left: auto; }
+.driver-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; transition: all 0.2s; cursor: pointer; font-size: 1rem; }
+.driver-btn:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.driver-btn.call { background: var(--accent); border-color: var(--accent); color: #fff; }
+.driver-btn.call:hover { background: #15632f; }
+
+/* Ride details */
+.ride-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.detail-item { background: var(--bg); border-radius: 12px; padding: 14px; text-align: center; }
+.detail-item h5 { font-size: 0.7rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.detail-item .value { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+.detail-item .sub { font-size: 0.72rem; color: var(--muted); }
+
+/* Pickup/Dest */
+.pickup-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.pickup-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pickup-dot.from { background: var(--accent); }
+.pickup-dot.to { background: var(--accent2); }
+.pickup-line { width: 2px; height: 16px; background: var(--border); margin: 0 4px 0 4px; }
+.pickup-text { font-size: 0.88rem; font-weight: 500; }
+.pickup-text small { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+
+/* Actions */
+.ride-actions { display: flex; gap: 10px; }
+.btn { flex: 1; padding: 14px; border-radius: 100px; font-weight: 650; font-size: 0.9rem; text-align: center; transition: all 0.2s; letter-spacing: -0.01em; }
+.btn-outline { border: 1.5px solid var(--border); color: var(--fg); background: var(--surface); }
+.btn-outline:hover { border-color: var(--fg); }
+.btn-solid { background: var(--fg); color: var(--bg); }
+.btn-solid:hover { background: var(--accent); color: #fff; }
+.btn-danger { background: none; color: var(--accent2); font-weight: 600; font-size: 0.82rem; }
+.btn-danger:hover { opacity: 0.8; }
+
+/* Cancel modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,24,21,0.6); z-index: 50; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; margin: 0 auto; padding: 24px 20px 36px; transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.22,0.61,0.36,1); }
+.modal-overlay.active .modal-sheet { transform: translateY(0); }
+.modal-sheet h3 { font-size: 1.2rem; font-weight: 850; letter-spacing: -0.03em; margin-bottom: 8px; }
+.modal-sheet p { font-size: 0.88rem; color: var(--muted); margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>9:41</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<!-- Map -->
+<div class="map-full">
+  <div class="map-grid"></div>
+  <div class="map-road"></div>
+  <div class="map-road"></div>
+  <div class="route-line" id="routeLine"></div>
+  <div class="driver-dot" id="driverDot">
+    <div class="driver-eta-bubble" id="etaBubble">2 min</div>
+    <div class="driver-icon">M</div>
+  </div>
+  <div class="my-dot">
+    <div class="my-icon"></div>
+  </div>
+</div>
+
+<!-- Bottom card -->
+<div class="bottom-card">
+  <div class="card-handle"></div>
+
+  <div class="ride-status">
+    <span class="status-pulse"></span>
+    <span class="status-label" id="statusLabel">Motorista a caminho</span>
+    <span class="status-time" id="etaTime">Chega em 2 min</span>
+  </div>
+
+  <div class="driver-row">
+    <div class="driver-avatar">MS</div>
+    <div class="driver-info">
+      <h4>Marcos Silva</h4>
+      <p>Honda CG 160 • Azul • Placa JQW-4E21</p>
+    </div>
+    <div class="driver-actions">
+      <button class="driver-btn call" onclick="callDriver()" aria-label="Ligar">📞</button>
+      <button class="driver-btn" onclick="openChat()" aria-label="Chat">💬</button>
+    </div>
+  </div>
+
+  <div class="ride-details">
+    <div class="detail-item">
+      <h5>Preço</h5>
+      <div class="value">R$ 8,50</div>
+    </div>
+    <div class="detail-item">
+      <h5>Distância</h5>
+      <div class="value">2,4 km</div>
+      <div class="sub">~8 min</div>
+    </div>
+  </div>
+
+  <div class="pickup-row">
+    <span class="pickup-dot from"></span>
+    <span class="pickup-text">Mercado Municipal<small>Ponto de embarque</small></span>
+  </div>
+  <div style="margin-left:4px;margin-bottom:8px;">
+    <div class="pickup-line"></div>
+  </div>
+  <div class="pickup-row" style="margin-bottom:16px;">
+    <span class="pickup-dot to"></span>
+    <span class="pickup-text">Av. Getúlio Vargas, 420<small>Destino</small></span>
+  </div>
+
+  <div class="ride-actions">
+    <button class="btn btn-outline" onclick="shareRoute()">Compartilhar rota</button>
+    <button class="btn btn-outline" onclick="openCancelModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Cancel modal -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal-sheet">
+    <h3>Cancelar corrida?</h3>
+    <p>O motorista já está a caminho. Cancelamentos frequentes podem afetar sua conta.</p>
+    <button class="btn btn-solid" style="width:100%;margin-bottom:10px;" onclick="confirmCancel()">Sim, cancelar</button>
+    <button class="btn btn-outline" style="width:100%;" onclick="closeCancelModal()">Manter corrida</button>
+  </div>
+</div>
+
+<script>
+const driverDot = document.getElementById('driverDot');
+const etaBubble = document.getElementById('etaBubble');
+const etaTime = document.getElementById('etaTime');
+const statusLabel = document.getElementById('statusLabel');
+
+// Animate driver approaching
+let eta = 2; // minutes
+const etaInterval = setInterval(() => {
+  if (eta > 0) {
+    eta--;
+    etaBubble.textContent = eta + ' min';
+    etaTime.textContent = 'Chega em ' + eta + ' min';
+    // Move driver closer
+    const progress = 1 - (eta / 2);
+    driverDot.style.top = (38 + progress * 20) + '%';
+    driverDot.style.left = (30 + progress * 22) + '%';
+  }
+  if (eta === 0 && statusLabel.textContent === 'Motorista a caminho') {
+    statusLabel.textContent = 'Motorista chegou!';
+    etaTime.textContent = 'Aguardando você';
+    etaBubble.textContent = 'Chegou';
+    etaBubble.style.background = 'var(--accent)';
+    clearInterval(etaInterval);
+  }
+}, 4000);
+
+function callDriver() {
+  alert('Ligando para Marcos Silva... 📞');
+}
+
+function openChat() {
+  alert('Abrindo chat com o motorista...');
+}
+
+function shareRoute() {
+  alert('Link da rota copiado! Compartilhe com quem você confia.');
+}
+
+function openCancelModal() {
+  document.getElementById('cancelModal').classList.add('active');
+}
+function closeCancelModal() {
+  document.getElementById('cancelModal').classList.remove('active');
+}
+function confirmCancel() {
+  document.getElementById('cancelModal').classList.remove('active');
+  alert('Corrida cancelada.');
+  setTimeout(() => window.location.href = 'solicitar-corrida.html', 500);
+}
+</script>
+</body>
+</html>

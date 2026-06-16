@@ -1,0 +1,226 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Cadastro Motorista</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow-x: hidden; }
+button, input, select { font-family: inherit; font-size: inherit; border: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; }
+.header { display: flex; align-items: center; gap: 12px; padding: 8px 16px 12px; }
+.header-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; text-decoration: none; color: var(--fg); transition: all 0.2s; }
+.header-back:hover { background: var(--fg); color: var(--bg); }
+.header-title { font-size: 1.1rem; font-weight: 750; letter-spacing: -0.02em; }
+
+.progress { display: flex; gap: 6px; padding: 0 20px 20px; }
+.progress-step { flex: 1; height: 3px; border-radius: 3px; background: var(--border); transition: background 0.3s; }
+.progress-step.done { background: var(--accent); }
+.progress-step.active { background: var(--fg); }
+
+.form-area { flex: 1; padding: 0 20px; overflow-y: auto; }
+.step { display: none; flex-direction: column; gap: 20px; }
+.step.active { display: flex; }
+.step h2 { font-size: 1.5rem; font-weight: 850; letter-spacing: -0.04em; margin-bottom: 4px; }
+.step p { font-size: 0.9rem; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-group label { font-size: 0.78rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.input-field { padding: 14px 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; font-size: 0.95rem; font-weight: 500; outline: none; transition: all 0.2s; width: 100%; color: var(--fg); }
+.input-field:focus { border-color: var(--fg); }
+.input-field::placeholder { color: #C4BFB8; }
+
+.upload-zone { background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+.upload-zone:hover { border-color: var(--accent); background: rgba(27,122,61,0.02); }
+.upload-zone.uploaded { border-color: var(--accent); border-style: solid; background: rgba(27,122,61,0.03); }
+.upload-icon { font-size: 2.5rem; margin-bottom: 8px; }
+.upload-text { font-size: 0.9rem; font-weight: 600; }
+.upload-hint { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.form-bottom { padding: 16px 20px 28px; }
+.btn { width: 100%; padding: 16px; border-radius: 100px; font-weight: 650; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; letter-spacing: -0.01em; text-align: center; }
+.btn-solid { background: var(--fg); color: var(--bg); }
+.btn-solid:hover { background: var(--accent); color: #fff; }
+.btn-ghost { background: none; color: var(--muted); margin-top: 8px; }
+.btn-ghost:hover { color: var(--fg); }
+
+.toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: var(--fg); color: #fff; padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.85rem; z-index: 60; opacity: 0; transition: all 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>9:41</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<div class="header">
+  <a href="index.html" class="header-back">←</a>
+  <div class="header-title">Cadastro Motorista</div>
+</div>
+
+<div class="progress" id="progress">
+  <div class="progress-step done"></div>
+  <div class="progress-step active" id="p2"></div>
+  <div class="progress-step" id="p3"></div>
+  <div class="progress-step" id="p4"></div>
+</div>
+
+<div class="form-area">
+  <!-- Step 1: Dados pessoais -->
+  <div class="step active" id="step1">
+    <h2>Seus dados</h2>
+    <p>Precisamos verificar sua identidade. Seus dados ficam protegidos.</p>
+    <div class="input-group">
+      <label for="fullName">Nome completo</label>
+      <input type="text" class="input-field" id="fullName" placeholder="Como está na CNH" autocomplete="name">
+    </div>
+    <div class="input-group">
+      <label for="cpf">CPF</label>
+      <input type="text" class="input-field" id="cpf" placeholder="000.000.000-00" inputmode="numeric">
+    </div>
+    <div class="input-group">
+      <label for="phoneDriver">Telefone</label>
+      <input type="tel" class="input-field" id="phoneDriver" placeholder="(92) 9 9999-8888">
+    </div>
+  </div>
+
+  <!-- Step 2: CNH -->
+  <div class="step" id="step2">
+    <h2>Sua CNH</h2>
+    <p>Carteira de habilitação com categoria A (moto).</p>
+    <div class="input-group">
+      <label for="cnhNumber">Número da CNH</label>
+      <input type="text" class="input-field" id="cnhNumber" placeholder="00000000000" inputmode="numeric">
+    </div>
+    <div class="upload-zone" id="cnhUpload" onclick="uploadDoc(this, 'cnh')">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">Foto da CNH (frente)</div>
+      <div class="upload-hint">Toque para simular upload</div>
+    </div>
+    <div class="upload-zone" id="cnhBackUpload" onclick="uploadDoc(this, 'cnhBack')">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">Foto da CNH (verso)</div>
+      <div class="upload-hint">Toque para simular upload</div>
+    </div>
+  </div>
+
+  <!-- Step 3: Veículo -->
+  <div class="step" id="step3">
+    <h2>Sua moto</h2>
+    <p>Dados do veículo que você vai usar nas corridas.</p>
+    <div class="input-group">
+      <label for="brand">Marca</label>
+      <input type="text" class="input-field" id="brand" placeholder="Ex: Honda">
+    </div>
+    <div class="input-group">
+      <label for="model">Modelo</label>
+      <input type="text" class="input-field" id="model" placeholder="Ex: CG 160">
+    </div>
+    <div class="row-2">
+      <div class="input-group">
+        <label for="year">Ano</label>
+        <input type="text" class="input-field" id="year" placeholder="2023" inputmode="numeric">
+      </div>
+      <div class="input-group">
+        <label for="color">Cor</label>
+        <input type="text" class="input-field" id="color" placeholder="Azul">
+      </div>
+    </div>
+    <div class="input-group">
+      <label for="plate">Placa</label>
+      <input type="text" class="input-field" id="plate" placeholder="JQW-4E21">
+    </div>
+  </div>
+
+  <!-- Step 4: Selfie -->
+  <div class="step" id="step4">
+    <h2>Sua foto</h2>
+    <p>Uma selfie clara do seu rosto. Isso ajuda os passageiros a te reconhecerem.</p>
+    <div class="upload-zone" id="selfieUpload" onclick="uploadDoc(this, 'selfie')">
+      <div class="upload-icon">🤳</div>
+      <div class="upload-text">Tirar selfie</div>
+      <div class="upload-hint">Toque para simular</div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--muted);">Sua foto só aparece depois que você aceitar uma corrida.</p>
+  </div>
+</div>
+
+<div class="form-bottom">
+  <button class="btn btn-solid" id="btnNext" onclick="nextStep()">Continuar</button>
+  <button class="btn btn-ghost" id="btnBack" onclick="prevStep()" style="display:none;">Voltar</button>
+</div>
+
+<div class="toast" id="toast">Cadastro enviado para análise!</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+const btnNext = document.getElementById('btnNext');
+const btnBack = document.getElementById('btnBack');
+
+function updateUI() {
+  document.querySelectorAll('.step').forEach((s, i) => {
+    s.classList.toggle('active', i + 1 === currentStep);
+  });
+  document.querySelectorAll('.progress-step').forEach((p, i) => {
+    p.classList.remove('done', 'active');
+    if (i + 1 < currentStep) p.classList.add('done');
+    if (i + 1 === currentStep) p.classList.add('active');
+  });
+  btnBack.style.display = currentStep === 1 ? 'none' : 'block';
+  btnNext.textContent = currentStep === totalSteps ? 'Enviar cadastro' : 'Continuar';
+}
+
+function nextStep() {
+  if (currentStep === totalSteps) {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+      window.location.href = 'dashboard-motorista.html';
+    }, 1800);
+    return;
+  }
+  currentStep++;
+  updateUI();
+}
+
+function prevStep() {
+  if (currentStep > 1) { currentStep--; updateUI(); }
+}
+
+function uploadDoc(el, type) {
+  el.classList.add('uploaded');
+  el.querySelector('.upload-icon').textContent = '✅';
+  el.querySelector('.upload-text').textContent = 'Enviado!';
+  el.querySelector('.upload-hint').textContent = type === 'selfie' ? 'Selfie salva' : 'Documento enviado';
+}
+
+// CPF mask
+document.getElementById('cpf').addEventListener('input', function(e) {
+  let v = e.target.value.replace(/\D/g,'').slice(0,11);
+  v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  e.target.value = v;
+});
+</script>
+</body>
+</html>

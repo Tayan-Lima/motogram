@@ -1,0 +1,244 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Cadastro Passageiro</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow-x: hidden; }
+button, input { font-family: inherit; font-size: inherit; border: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* Status bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; }
+
+/* Header */
+.header { display: flex; align-items: center; gap: 12px; padding: 8px 16px 12px; }
+.header-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; text-decoration: none; color: var(--fg); transition: all 0.2s; }
+.header-back:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.header-title { font-size: 1.1rem; font-weight: 750; letter-spacing: -0.02em; }
+
+/* Progress */
+.progress { display: flex; gap: 6px; padding: 0 20px 20px; }
+.progress-step { flex: 1; height: 3px; border-radius: 3px; background: var(--border); transition: background 0.3s; }
+.progress-step.done { background: var(--accent); }
+.progress-step.active { background: var(--fg); }
+
+/* Form area */
+.form-area { flex: 1; padding: 0 20px; overflow-y: auto; }
+.step { display: none; flex-direction: column; gap: 20px; }
+.step.active { display: flex; }
+
+.step-illustration { text-align: center; padding: 20px 0 10px; }
+.step-icon-circle { width: 80px; height: 80px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; }
+.step-icon-circle.phone { background: rgba(27,122,61,0.08); }
+.step-icon-circle.user { background: rgba(199,91,57,0.08); }
+.step-icon-circle.check { background: rgba(27,122,61,0.1); }
+
+.step h2 { font-size: 1.5rem; font-weight: 850; letter-spacing: -0.04em; margin-bottom: 4px; }
+.step p { font-size: 0.9rem; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-group label { font-size: 0.78rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.input-field { padding: 14px 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; font-size: 0.95rem; font-weight: 500; outline: none; transition: all 0.2s; width: 100%; color: var(--fg); }
+.input-field:focus { border-color: var(--fg); }
+.input-field::placeholder { color: #C4BFB8; }
+
+/* Phone input */
+.phone-wrap { display: flex; gap: 8px; }
+.phone-wrap .input-field:first-child { width: 85px; flex-shrink: 0; }
+.phone-wrap .input-field:last-child { flex: 1; }
+
+/* Bottom */
+.form-bottom { padding: 16px 20px 28px; }
+.btn { width: 100%; padding: 16px; border-radius: 100px; font-weight: 650; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; letter-spacing: -0.01em; text-align: center; }
+.btn-solid { background: var(--fg); color: var(--bg); }
+.btn-solid:hover { background: var(--accent); color: #fff; }
+.btn-ghost { background: none; color: var(--muted); margin-top: 8px; }
+.btn-ghost:hover { color: var(--fg); }
+
+/* Terms */
+.terms { display: flex; align-items: flex-start; gap: 10px; font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+.terms input { margin-top: 2px; accent-color: var(--accent); }
+.terms a { color: var(--fg); font-weight: 600; text-decoration: underline; }
+
+/* Success */
+.success-icon { font-size: 4rem; text-align: center; animation: pop 0.5s cubic-bezier(0.22,0.61,0.36,1); }
+@keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+/* Toast */
+.toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: var(--fg); color: #fff; padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.85rem; z-index: 60; opacity: 0; transition: all 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>9:41</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<div class="header">
+  <a href="splash.html" class="header-back">←</a>
+  <div class="header-title">Criar conta</div>
+</div>
+
+<div class="progress" id="progress">
+  <div class="progress-step done"></div>
+  <div class="progress-step active" id="step2Bar"></div>
+  <div class="progress-step" id="step3Bar"></div>
+</div>
+
+<div class="form-area">
+  <!-- Step 1: Phone -->
+  <div class="step active" id="step1">
+    <div class="step-illustration">
+      <div class="step-icon-circle phone">📱</div>
+    </div>
+    <h2>Seu telefone</h2>
+    <p>Vamos enviar um código de confirmação por SMS.</p>
+    <div class="phone-wrap">
+      <input type="text" class="input-field" value="+55" readonly aria-label="Código do país">
+      <input type="tel" class="input-field" id="phoneInput" placeholder="(92) 9 9999-8888" maxlength="16" inputmode="numeric">
+    </div>
+    <p style="font-size:0.75rem;color:var(--muted);">Você receberá um código de 4 dígitos.</p>
+  </div>
+
+  <!-- Step 2: Name -->
+  <div class="step" id="step2">
+    <div class="step-illustration">
+      <div class="step-icon-circle user">👤</div>
+    </div>
+    <h2>Seu nome</h2>
+    <p>Como os motoristas vão te chamar.</p>
+    <div class="input-group">
+      <label for="nameInput">Nome completo</label>
+      <input type="text" class="input-field" id="nameInput" placeholder="Seu nome" autocomplete="name">
+    </div>
+    <div class="input-group">
+      <label for="emailInput">E-mail (opcional)</label>
+      <input type="email" class="input-field" id="emailInput" placeholder="seu@email.com" autocomplete="email">
+    </div>
+  </div>
+
+  <!-- Step 3: Confirm -->
+  <div class="step" id="step3">
+    <div class="step-illustration">
+      <div class="success-icon">✓</div>
+    </div>
+    <h2>Tudo pronto!</h2>
+    <p>Confirme seus dados e aceite os termos para começar.</p>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="color:var(--muted);font-size:0.82rem;">Telefone</span>
+        <span style="font-weight:600;font-size:0.9rem;" id="confirmPhone">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--muted);font-size:0.82rem;">Nome</span>
+        <span style="font-weight:600;font-size:0.9rem;" id="confirmName">—</span>
+      </div>
+    </div>
+    <div class="terms">
+      <input type="checkbox" id="termsCheck">
+      <span>Aceito os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a> do MotoGram.</span>
+    </div>
+  </div>
+</div>
+
+<div class="form-bottom">
+  <button class="btn btn-solid" id="btnNext" onclick="nextStep()">Continuar</button>
+  <button class="btn btn-ghost" id="btnBack" onclick="prevStep()" style="display:none;">Voltar</button>
+</div>
+
+<div class="toast" id="toast">Conta criada com sucesso!</div>
+
+<script>
+let currentStep = 1;
+const phoneInput = document.getElementById('phoneInput');
+const nameInput = document.getElementById('nameInput');
+const btnNext = document.getElementById('btnNext');
+const btnBack = document.getElementById('btnBack');
+const termsCheck = document.getElementById('termsCheck');
+
+// Mask phone
+phoneInput.addEventListener('input', (e) => {
+  let val = e.target.value.replace(/\D/g, '');
+  if (val.length > 11) val = val.slice(0, 11);
+  if (val.length > 2) val = '(' + val.slice(0,2) + ') ' + val.slice(2);
+  if (val.length > 10) val = val.slice(0, 10) + '-' + val.slice(10);
+  e.target.value = val;
+});
+
+function updateUI() {
+  document.querySelectorAll('.step').forEach((s, i) => {
+    s.classList.toggle('active', i + 1 === currentStep);
+  });
+  document.querySelectorAll('.progress-step').forEach((p, i) => {
+    p.classList.remove('done', 'active');
+    if (i + 1 < currentStep) p.classList.add('done');
+    if (i + 1 === currentStep) p.classList.add('active');
+  });
+
+  btnBack.style.display = currentStep === 1 ? 'none' : 'block';
+  if (currentStep === 3) {
+    btnNext.textContent = 'Criar conta';
+    document.getElementById('confirmPhone').textContent = '+55 ' + phoneInput.value;
+    document.getElementById('confirmName').textContent = nameInput.value || '—';
+  } else {
+    btnNext.textContent = 'Continuar';
+  }
+}
+
+function nextStep() {
+  if (currentStep === 1) {
+    if (phoneInput.value.replace(/\D/g,'').length < 10) {
+      alert('Digite um telefone válido.');
+      return;
+    }
+  }
+  if (currentStep === 2) {
+    if (!nameInput.value.trim()) {
+      alert('Digite seu nome.');
+      return;
+    }
+  }
+  if (currentStep === 3) {
+    if (!termsCheck.checked) {
+      alert('Aceite os termos de uso para continuar.');
+      return;
+    }
+    // Success
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+      window.location.href = 'solicitar-corrida.html';
+    }, 1500);
+    return;
+  }
+  currentStep++;
+  updateUI();
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    updateUI();
+  }
+}
+</script>
+</body>
+</html>

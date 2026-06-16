@@ -1,0 +1,279 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Histórico</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --gold: #C4942A;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow-x: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; font-size: inherit; }
+a { text-decoration: none; color: inherit; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; }
+.header { display: flex; align-items: center; gap: 12px; padding: 8px 16px 12px; }
+.header-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; text-decoration: none; color: var(--fg); transition: all 0.2s; }
+.header-back:hover { background: var(--fg); color: var(--bg); }
+.header-title { font-size: 1.1rem; font-weight: 750; letter-spacing: -0.02em; }
+
+/* Summary cards */
+.summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+.summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.summary-card h5 { font-size: 0.7rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.summary-card .big { font-size: 1.6rem; font-weight: 850; letter-spacing: -0.03em; }
+.summary-card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+/* Filter tabs */
+.filter-tabs { display: flex; gap: 8px; padding: 0 16px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.filter-tabs::-webkit-scrollbar { display: none; }
+.filter-chip { padding: 8px 16px; border-radius: 100px; font-size: 0.8rem; font-weight: 600; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; transition: all 0.2s; cursor: pointer; }
+.filter-chip.active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* Ride list */
+.ride-list { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+.ride-group { margin-bottom: 20px; }
+.ride-group-date { font-size: 0.75rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; padding-left: 4px; }
+
+.ride-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+.ride-card:hover { border-color: var(--fg); }
+.ride-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ride-driver-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), #E8906A); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 0.9rem; color: #fff; flex-shrink: 0; }
+.ride-driver-info { flex: 1; }
+.ride-driver-info h4 { font-weight: 650; font-size: 0.92rem; }
+.ride-driver-info p { font-size: 0.75rem; color: var(--muted); }
+.ride-card-price { font-weight: 700; font-size: 0.95rem; color: var(--accent); }
+.ride-card-route { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+.ride-card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ride-card-dot.from { background: var(--accent2); }
+.ride-card-dot.to { background: var(--accent); }
+.ride-card-arrow { color: var(--border); font-size: 0.7rem; }
+.ride-card-meta { display: flex; gap: 16px; margin-top: 10px; font-size: 0.72rem; color: var(--muted); }
+
+/* Detail modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,24,21,0.6); z-index: 50; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; margin: 0 auto; padding: 24px 20px 36px; transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.22,0.61,0.36,1); }
+.modal-overlay.active .modal-sheet { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 20px; }
+.modal-sheet h3 { font-size: 1.2rem; font-weight: 850; letter-spacing: -0.03em; margin-bottom: 16px; }
+.modal-detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.modal-detail-row span:first-child { color: var(--muted); }
+.modal-detail-row span:last-child { font-weight: 600; }
+.btn-sm { width: 100%; padding: 14px; border-radius: 100px; font-weight: 650; font-size: 0.9rem; margin-top: 16px; background: var(--fg); color: var(--bg); transition: all 0.2s; }
+.btn-sm:hover { background: var(--accent); color: #fff; }
+
+/* Bottom nav */
+.bottom-nav { display: flex; align-items: center; justify-content: space-around; padding: 10px 8px 20px; background: var(--surface); border-top: 1px solid var(--border); }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.65rem; color: var(--muted); transition: color 0.2s; cursor: pointer; }
+.nav-item.active { color: var(--fg); }
+.nav-item-icon { font-size: 1.2rem; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>9:41</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<div class="header">
+  <a href="solicitar-corrida.html" class="header-back">←</a>
+  <div class="header-title">Histórico</div>
+</div>
+
+<div class="summary-row">
+  <div class="summary-card">
+    <h5>Total gasto</h5>
+    <div class="big">R$ 347,80</div>
+    <div class="sub">Últimos 30 dias</div>
+  </div>
+  <div class="summary-card">
+    <h5>Corridas</h5>
+    <div class="big">28</div>
+    <div class="sub">Média R$ 12,42</div>
+  </div>
+</div>
+
+<div class="filter-tabs" id="filterTabs">
+  <button class="filter-chip active" onclick="filterRides(this, 'todas')">Todas</button>
+  <button class="filter-chip" onclick="filterRides(this, 'concluida')">Concluídas</button>
+  <button class="filter-chip" onclick="filterRides(this, 'cancelada')">Canceladas</button>
+</div>
+
+<div class="ride-list" id="rideList">
+  <div class="ride-group" data-type="concluida">
+    <div class="ride-group-date">Hoje — 12 de Janeiro</div>
+    <div class="ride-card" onclick="openDetail('Mercado Municipal', 'Av. Getúlio Vargas, 420', 'Marcos Silva', 'R$ 8,50', '2,4 km', '8 min', '14:23')">
+      <div class="ride-card-top">
+        <div class="ride-driver-avatar">MS</div>
+        <div class="ride-driver-info">
+          <h4>Marcos Silva</h4>
+          <p>Honda CG 160 • Azul</p>
+        </div>
+        <div class="ride-card-price">R$ 8,50</div>
+      </div>
+      <div class="ride-card-route">
+        <span class="ride-card-dot from"></span> Mercado Municipal
+        <span class="ride-card-arrow">→</span>
+        <span class="ride-card-dot to"></span> Av. Getúlio Vargas
+      </div>
+      <div class="ride-card-meta">
+        <span>2,4 km</span><span>8 min</span><span>14:23</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ride-group" data-type="concluida">
+    <div class="ride-group-date">Ontem — 11 de Janeiro</div>
+    <div class="ride-card" onclick="openDetail('Terminal de Ônibus', 'Shopping Via Norte', 'Juliana Costa', 'R$ 12,00', '4,1 km', '11 min', '18:10')">
+      <div class="ride-card-top">
+        <div class="ride-driver-avatar">JC</div>
+        <div class="ride-driver-info">
+          <h4>Juliana Costa</h4>
+          <p>Yamaha Fazer 250 • Preta</p>
+        </div>
+        <div class="ride-card-price">R$ 12,00</div>
+      </div>
+      <div class="ride-card-route">
+        <span class="ride-card-dot from"></span> Terminal de Ônibus
+        <span class="ride-card-arrow">→</span>
+        <span class="ride-card-dot to"></span> Shopping Via Norte
+      </div>
+      <div class="ride-card-meta">
+        <span>4,1 km</span><span>11 min</span><span>18:10</span>
+      </div>
+    </div>
+    <div class="ride-card" onclick="openDetail('Casa', 'Aeroporto', 'Rafael Gomes', 'R$ 22,00', '8,7 km', '18 min', '09:30')">
+      <div class="ride-card-top">
+        <div class="ride-driver-avatar">RG</div>
+        <div class="ride-driver-info">
+          <h4>Rafael Gomes</h4>
+          <p>Honda Bros 160 • Vermelha</p>
+        </div>
+        <div class="ride-card-price">R$ 22,00</div>
+      </div>
+      <div class="ride-card-route">
+        <span class="ride-card-dot from"></span> Casa
+        <span class="ride-card-arrow">→</span>
+        <span class="ride-card-dot to"></span> Aeroporto
+      </div>
+      <div class="ride-card-meta">
+        <span>8,7 km</span><span>18 min</span><span>09:30</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ride-group" data-type="cancelada">
+    <div class="ride-group-date">10 de Janeiro</div>
+    <div class="ride-card" style="opacity:0.6;" onclick="openDetail('Praça da Matriz', 'Feira Municipal', '—', 'R$ 0', '—', '—', 'Cancelado')">
+      <div class="ride-card-top">
+        <div class="ride-driver-avatar" style="background:var(--border);">✕</div>
+        <div class="ride-driver-info">
+          <h4>Corrida cancelada</h4>
+          <p>Pelo passageiro</p>
+        </div>
+        <div class="ride-card-price" style="color:var(--accent2);">R$ 0</div>
+      </div>
+      <div class="ride-card-route">
+        <span class="ride-card-dot from"></span> Praça da Matriz
+        <span class="ride-card-arrow">→</span>
+        <span class="ride-card-dot to"></span> Feira Municipal
+      </div>
+    </div>
+  </div>
+
+  <div class="ride-group" data-type="concluida">
+    <div class="ride-group-date">9 de Janeiro</div>
+    <div class="ride-card" onclick="openDetail('Rodoviária', 'Rua das Flores, 88', 'Marcos Silva', 'R$ 6,00', '1,6 km', '5 min', '20:45')">
+      <div class="ride-card-top">
+        <div class="ride-driver-avatar">MS</div>
+        <div class="ride-driver-info">
+          <h4>Marcos Silva</h4>
+          <p>Honda CG 160 • Azul</p>
+        </div>
+        <div class="ride-card-price">R$ 6,00</div>
+      </div>
+      <div class="ride-card-route">
+        <span class="ride-card-dot from"></span> Rodoviária
+        <span class="ride-card-arrow">→</span>
+        <span class="ride-card-dot to"></span> Rua das Flores, 88
+      </div>
+      <div class="ride-card-meta">
+        <span>1,6 km</span><span>5 min</span><span>20:45</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3>Detalhes da corrida</h3>
+    <div class="modal-detail-row"><span>Motorista</span><span id="detailDriver">—</span></div>
+    <div class="modal-detail-row"><span>Origem</span><span id="detailFrom">—</span></div>
+    <div class="modal-detail-row"><span>Destino</span><span id="detailTo">—</span></div>
+    <div class="modal-detail-row"><span>Valor</span><span id="detailPrice">—</span></div>
+    <div class="modal-detail-row"><span>Distância</span><span id="detailDist">—</span></div>
+    <div class="modal-detail-row"><span>Duração</span><span id="detailTime">—</span></div>
+    <div class="modal-detail-row"><span>Horário</span><span id="detailHour">—</span></div>
+    <button class="btn-sm" onclick="closeDetail()">Fechar</button>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="dashboard-motorista.html" class="nav-item">
+    <span class="nav-item-icon">☰</span> Painel
+  </a>
+  <a href="historico-corridas.html" class="nav-item active">
+    <span class="nav-item-icon">⏱</span> Histórico
+  </a>
+  <a href="perfil-passageiro.html" class="nav-item">
+    <span class="nav-item-icon">👤</span> Perfil
+  </a>
+  <a href="solicitar-corrida.html" class="nav-item">
+    <span class="nav-item-icon">⚙</span> Ajustes
+  </a>
+</nav>
+
+<script>
+function filterRides(chip, type) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  document.querySelectorAll('.ride-group').forEach(g => {
+    if (type === 'todas') { g.style.display = 'block'; }
+    else { g.style.display = g.dataset.type === type ? 'block' : 'none'; }
+  });
+}
+
+function openDetail(from, to, driver, price, dist, time, hour) {
+  document.getElementById('detailFrom').textContent = from;
+  document.getElementById('detailTo').textContent = to;
+  document.getElementById('detailDriver').textContent = driver;
+  document.getElementById('detailPrice').textContent = price;
+  document.getElementById('detailDist').textContent = dist;
+  document.getElementById('detailTime').textContent = time;
+  document.getElementById('detailHour').textContent = hour;
+  document.getElementById('detailModal').classList.add('active');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('active');
+}
+</script>
+</body>
+</html>

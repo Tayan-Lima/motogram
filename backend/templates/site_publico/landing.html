@@ -1,0 +1,287 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}MotoGram — Moto Táxi na Amazônia{% endblock %}
+
+{% block content %}
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="nav">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="text-xl font-extrabold tracking-tight flex items-center gap-2">
+            <span class="w-2 h-2 rounded bg-accent"></span>
+            MotoGram
+        </a>
+        <div class="hidden sm:flex items-center gap-8">
+            <a href="#como-funciona" class="text-sm text-muted hover:text-fg transition-colors">Como funciona</a>
+            <a href="#pra-voce" class="text-sm text-muted hover:text-fg transition-colors">Pra você</a>
+            <a href="#motorista" class="text-sm text-muted hover:text-fg transition-colors">Motorista</a>
+            <a href="#app" class="text-sm text-muted hover:text-fg transition-colors">App</a>
+            {% if user.is_authenticated %}
+            <a href="/passageiro/perfil/" class="text-sm text-muted hover:text-fg transition-colors">Perfil</a>
+            <a href="/passageiro/" class="bg-fg text-bg px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-accent hover:text-white transition-all">
+                Pedir corrida
+            </a>
+            {% else %}
+            <a href="/passageiro/login/" class="text-sm text-muted hover:text-fg transition-colors">Entrar</a>
+            <a href="/passageiro/cadastro/" class="bg-fg text-bg px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-accent hover:text-white transition-all">
+                Criar conta
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="pt-32 pb-16 px-6 max-w-7xl mx-auto">
+    <div class="flex flex-col lg:flex-row gap-12 items-center">
+        <div class="max-w-xl">
+            <p class="text-xs font-bold uppercase tracking-widest text-accent mb-5">Moto táxi • Amazônia</p>
+            <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter leading-none mb-6">
+                Chegue <em class="relative not-italic">rápido<svg class="absolute -bottom-1 left-0 w-full h-3" viewBox="0 0 200 12" fill="none"><path d="M2 8 C50 2, 150 2, 198 8" stroke="#1B7A3D" stroke-width="3" stroke-linecap="round" opacity="0.3"/></svg></em>,<br>volte seguro.
+            </h1>
+            <p class="text-muted text-lg leading-relaxed mb-8 max-w-md">
+                MotoGram conecta você a mototaxistas verificados da sua região. Preço aparece antes de aceitar, rota compartilhada em tempo real — simples assim.
+            </p>
+            <div class="flex gap-3 flex-wrap">
+                <a href="/passageiro/" class="inline-flex items-center gap-2 bg-fg text-bg px-7 py-3.5 rounded-pill font-semibold text-sm hover:bg-accent hover:text-white transition-all">
+                    Pedir corrida agora
+                </a>
+                <a href="#como-funciona" class="inline-flex items-center gap-2 border-1.5 border-border px-7 py-3.5 rounded-pill font-semibold text-sm hover:border-fg transition-all">
+                    Como funciona
+                </a>
+            </div>
+        </div>
+        <div class="relative w-full max-w-sm">
+            <div class="bg-fg rounded-2xl p-6 relative overflow-hidden">
+                <div class="border border-white/15 rounded-xl p-5">
+                    <div class="h-1 bg-white/25 rounded w-2/5 mb-3"></div>
+                    <div class="h-1 bg-white/25 rounded w-3/4 mb-6"></div>
+                    <div class="bg-white/10 rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-9 h-9 rounded-full bg-accent2 flex-shrink-0"></div>
+                            <div class="flex-1">
+                                <div class="h-2 bg-white/20 rounded mb-1.5"></div>
+                                <div class="h-2 bg-white/20 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5 mt-auto">
+                            <div class="w-2 h-2 rounded-full bg-white/30"></div>
+                            <div class="w-2 h-2 rounded-full bg-white"></div>
+                            <div class="w-2 h-2 rounded-full bg-white/30"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute -top-5 -right-5 w-16 h-16 rounded-full bg-accent2 opacity-70 hidden sm:block"></div>
+            <div class="absolute -bottom-8 -left-8 w-24 h-24 rounded-full border-2 border-border hidden sm:block"></div>
+        </div>
+    </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="py-10 overflow-hidden border-y border-border">
+    <div class="flex gap-12 animate-marquee whitespace-nowrap" style="width: max-content;">
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Preço na hora</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Motoristas verificados</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Rota compartilhada</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Funciona offline</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Sem taxa surpresa</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Preço na hora</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Motoristas verificados</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Rota compartilhada</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Funciona offline</span><span class="text-sm font-semibold text-accent">&bull;</span>
+        <span class="text-sm font-semibold uppercase tracking-widest text-muted">Sem taxa surpresa</span><span class="text-sm font-semibold text-accent">&bull;</span>
+    </div>
+</div>
+
+<!-- COMO FUNCIONA -->
+<section id="como-funciona" class="py-20 px-6 max-w-7xl mx-auto">
+    <p class="text-xs font-bold uppercase tracking-widest text-accent mb-4">Como funciona</p>
+    <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tighter leading-none mb-4">Quatro toques.<br>Você chegou.</h2>
+    <p class="text-muted text-lg leading-relaxed mb-12 max-w-md">Abrir, escolher, confirmar, seguir. Sem burocracia, sem surpresa no preço.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-surface border border-border rounded-2xl p-7 relative">
+            <span class="absolute top-3 right-5 text-6xl font-extrabold text-bg" style="-webkit-text-stroke: 1.5px var(--border);">01</span>
+            <h3 class="text-base font-bold mt-10 mb-2 tracking-tight">Abra o app</h3>
+            <p class="text-sm text-muted leading-relaxed">Cadastro rápido com telefone. Nada de formulário infinito.</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-7 relative">
+            <span class="absolute top-3 right-5 text-6xl font-extrabold text-bg" style="-webkit-text-stroke: 1.5px var(--border);">02</span>
+            <h3 class="text-base font-bold mt-10 mb-2 tracking-tight">Escolha o destino</h3>
+            <p class="text-sm text-muted leading-relaxed">Digite ou marque no mapa. O valor aparece na mesma hora.</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-7 relative">
+            <span class="absolute top-3 right-5 text-6xl font-extrabold text-bg" style="-webkit-text-stroke: 1.5px var(--border);">03</span>
+            <h3 class="text-base font-bold mt-10 mb-2 tracking-tight">Confirme</h3>
+            <p class="text-sm text-muted leading-relaxed">Veja quem vai te buscar, a moto e quanto tempo vai levar.</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-7 relative">
+            <span class="absolute top-3 right-5 text-6xl font-extrabold text-bg" style="-webkit-text-stroke: 1.5px var(--border);">04</span>
+            <h3 class="text-base font-bold mt-10 mb-2 tracking-tight">Acompanhe</h3>
+            <p class="text-sm text-muted leading-relaxed">Siga o trajeto no mapa. Compartilhe sua rota com quem você confia.</p>
+        </div>
+    </div>
+</section>
+
+<!-- PRA VOCÊ, PASSAGEIRO -->
+<section id="pra-voce" class="py-20 px-6 max-w-7xl mx-auto">
+    <div class="flex flex-col lg:flex-row gap-12 items-center">
+        <div class="max-w-lg">
+            <p class="text-xs font-bold uppercase tracking-widest text-accent mb-4">Pra você, passageiro</p>
+            <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tighter leading-none mb-4">Rápido como uma moto,<br>simples como mensagem.</h2>
+            <p class="text-muted text-lg leading-relaxed mb-8">
+                Sem bandeirada, sem tarifa dinâmica escondida. Você sempre vê o preço antes de aceitar.
+            </p>
+            <div class="flex flex-col gap-0 border-t border-border">
+                <div class="flex items-center gap-4 py-5 border-b border-border hover:pl-2 transition-all cursor-pointer">
+                    <div class="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent font-bold text-lg shrink-0">$</div>
+                    <div class="flex-1"><h4 class="font-bold text-base">Preço antecipado</h4></div>
+                    <span class="text-border hover:text-fg hover:translate-x-1 transition-all">&rarr;</span>
+                </div>
+                <div class="flex items-center gap-4 py-5 border-b border-border hover:pl-2 transition-all cursor-pointer">
+                    <div class="w-10 h-10 rounded-lg bg-accent2/10 flex items-center justify-center text-accent2 font-bold text-lg shrink-0">&odot;</div>
+                    <div class="flex-1"><h4 class="font-bold text-base">Rastreio em tempo real</h4></div>
+                    <span class="text-border hover:text-fg hover:translate-x-1 transition-all">&rarr;</span>
+                </div>
+                <div class="flex items-center gap-4 py-5 hover:pl-2 transition-all cursor-pointer">
+                    <div class="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center text-gold font-bold text-lg shrink-0">&nearr;</div>
+                    <div class="flex-1"><h4 class="font-bold text-base">Compartilhar rota</h4></div>
+                    <span class="text-border hover:text-fg hover:translate-x-1 transition-all">&rarr;</span>
+                </div>
+            </div>
+        </div>
+        <div class="w-full max-w-sm">
+            <div class="aspect-square bg-surface border border-border rounded-2xl grid grid-cols-2 gap-3 p-7">
+                <div class="bg-fg rounded-lg"></div>
+                <div class="bg-bg rounded-lg border border-border"></div>
+                <div class="bg-bg rounded-lg border border-border"></div>
+                <div class="bg-accent rounded-lg"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MOTORISTA -->
+<section id="motorista" class="py-20 px-6 max-w-7xl mx-auto">
+    <div class="flex flex-col lg:flex-row gap-12 items-center">
+        <div class="max-w-lg">
+            <p class="text-xs font-bold uppercase tracking-widest text-accent mb-4">Para motoristas</p>
+            <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tighter leading-none mb-4">Ganhe mais,<br>com taxa justa.</h2>
+            <p class="text-muted text-lg leading-relaxed mb-8">
+                Assinatura mensal fixa — sem porcentagem que come seu lucro. Dashboard limpo, pagamento Pix, corridas no Telegram.
+            </p>
+            <a href="/motorista/cadastro/" class="inline-flex items-center gap-2 bg-fg text-bg px-7 py-3.5 rounded-pill font-semibold text-sm hover:bg-accent hover:text-white transition-all">
+                Cadastrar como motorista
+            </a>
+        </div>
+        <div class="w-full max-w-sm">
+            <div class="bg-surface border border-border rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xs font-bold">JS</div>
+                    <div>
+                        <p class="font-semibold text-sm">João Silva</p>
+                        <p class="text-xs text-muted">Honda CG 160 • Centro</p>
+                    </div>
+                </div>
+                <div class="bg-bg rounded-xl p-4 mb-4">
+                    <p class="text-xs text-muted uppercase tracking-wider mb-2">Ganhos hoje</p>
+                    <p class="text-2xl font-extrabold">R$ 87,50</p>
+                </div>
+                <div class="flex gap-2">
+                    <div class="flex-1 bg-bg rounded-lg p-3 text-center">
+                        <p class="text-xs text-muted">Corridas</p>
+                        <p class="font-bold">7</p>
+                    </div>
+                    <div class="flex-1 bg-bg rounded-lg p-3 text-center">
+                        <p class="text-xs text-muted">Avaliação</p>
+                        <p class="font-bold text-gold">4.8 &#9733;</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- APP MOTOTAXI -->
+<section id="app" class="py-20 px-6 max-w-7xl mx-auto">
+    <p class="text-xs font-bold uppercase tracking-widest text-accent mb-4">App MotoGram</p>
+    <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tighter leading-none mb-4">Explore as telas</h2>
+    <p class="text-muted text-lg leading-relaxed mb-12 max-w-md">Cadastre-se e peça sua primeira corrida. Sem instalar nada.</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <a href="/passageiro/cadastro/" class="bg-surface border border-border rounded-2xl p-5 text-center hover:border-fg hover:-translate-y-0.5 transition-all block">
+            <div class="text-4xl font-extrabold text-bg mb-2" style="-webkit-text-stroke: 1.5px var(--border);">01</div>
+            <h5 class="font-bold text-sm mb-0.5">Criar Conta</h5>
+            <span class="text-xs text-muted">Cadastro rápido</span>
+        </a>
+        <a href="/passageiro/" class="bg-surface border border-border rounded-2xl p-5 text-center hover:border-fg hover:-translate-y-0.5 transition-all block">
+            <div class="text-4xl font-extrabold text-bg mb-2" style="-webkit-text-stroke: 1.5px var(--border);">02</div>
+            <h5 class="font-bold text-sm mb-0.5">Pedir Corrida</h5>
+            <span class="text-xs text-muted">Mapa e destino</span>
+        </a>
+        <a href="/passageiro/perfil/" class="bg-surface border border-border rounded-2xl p-5 text-center hover:border-fg hover:-translate-y-0.5 transition-all block">
+            <div class="text-4xl font-extrabold text-bg mb-2" style="-webkit-text-stroke: 1.5px var(--border);">03</div>
+            <h5 class="font-bold text-sm mb-0.5">Meu Perfil</h5>
+            <span class="text-xs text-muted">Histórico e dados</span>
+        </a>
+        <a href="/motorista/cadastro/" class="bg-surface border border-border rounded-2xl p-5 text-center hover:border-fg hover:-translate-y-0.5 transition-all block">
+            <div class="text-4xl font-extrabold text-bg mb-2" style="-webkit-text-stroke: 1.5px var(--border);">04</div>
+            <h5 class="font-bold text-sm mb-0.5">Motorista</h5>
+            <span class="text-xs text-muted">Cadastro e dashboard</span>
+        </a>
+        <a href="/motorista/dashboard/" class="bg-surface border border-border rounded-2xl p-5 text-center hover:border-fg hover:-translate-y-0.5 transition-all block">
+            <div class="text-4xl font-extrabold text-bg mb-2" style="-webkit-text-stroke: 1.5px var(--border);">05</div>
+            <h5 class="font-bold text-sm mb-0.5">Dashboard</h5>
+            <span class="text-xs text-muted">Ganhos e estatísticas</span>
+        </a>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 px-6">
+    <div class="max-w-3xl mx-auto bg-fg rounded-3xl p-10 text-center text-bg relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full border-2 border-white/10 hidden sm:block"></div>
+        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tighter mb-4">Pronto pra acelerar?</h2>
+        <p class="text-bg/55 mb-8 max-w-md mx-auto">MotoGram é grátis para passageiros. Motoristas pagam assinatura fixa — justo, simples, sem letra miúda.</p>
+        <a href="/passageiro/" class="inline-flex items-center gap-2 bg-bg text-fg px-8 py-4 rounded-pill font-semibold hover:bg-accent hover:text-white transition-all">
+            Pedir primeira corrida
+        </a>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="py-10 px-6 border-t border-border">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-base font-extrabold tracking-tight">Moto<span class="text-accent">Gram</span></p>
+        <div class="flex gap-6">
+            <a href="#como-funciona" class="text-sm text-muted hover:text-fg transition-colors">Como funciona</a>
+            <a href="#pra-voce" class="text-sm text-muted hover:text-fg transition-colors">Passageiro</a>
+            <a href="#motorista" class="text-sm text-muted hover:text-fg transition-colors">Motorista</a>
+            <span class="text-sm text-muted/40 cursor-not-allowed">Termos</span>
+            <span class="text-sm text-muted/40 cursor-not-allowed">Privacidade</span>
+        </div>
+        <p class="text-xs text-muted">&copy; 2026 MotoGram — Feito para a Amazônia</p>
+    </div>
+</footer>
+
+<style>
+    @keyframes marquee {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    .animate-marquee { animation: marquee 25s linear infinite; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+<script>
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 40) {
+            nav.classList.add('bg-bg/90', 'backdrop-blur-lg');
+        } else {
+            nav.classList.remove('bg-bg/90', 'backdrop-blur-lg');
+        }
+    }, { passive: true });
+</script>
+{% endblock %}

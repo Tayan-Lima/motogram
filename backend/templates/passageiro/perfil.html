@@ -1,0 +1,177 @@
+{% extends "passageiro/base_passageiro.html" %}
+
+{% block title %}Meu Perfil{% endblock %}
+
+{% block passageiro_content %}
+<div class="flex-1 flex flex-col" x-data="perfil()">
+    <div class="px-5 py-8 text-center border-b border-border">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
+            {{ user.username|slice:":1"|upper }}
+        </div>
+        <h1 class="text-xl font-bold">Olá, {{ user.username }}</h1>
+        {% if user.telefone %}
+        <p class="text-sm text-muted">{{ user.telefone }}</p>
+        {% endif %}
+        {% if user.email %}
+        <p class="text-xs text-muted">{{ user.email }}</p>
+        {% endif %}
+    </div>
+
+    <div class="px-5 py-5 flex gap-3">
+        <a href="/passageiro/" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm text-center hover:bg-accent transition-all">
+            Pedir corrida
+        </a>
+        <a href="/passageiro/logout/" class="px-5 py-3.5 border border-border rounded-pill text-sm text-muted hover:border-fg transition-all">
+            Sair
+        </a>
+    </div>
+
+    <div class="px-5 pb-5">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-muted">Endereços favoritos</h2>
+            <button @click="mostrarForm = !mostrarForm" class="text-xs text-accent font-semibold hover:text-accent/80 transition-colors" x-text="mostrarForm ? 'Cancelar' : 'Adicionar'"></button>
+        </div>
+
+        <div x-show="mostrarForm" class="bg-surface border border-border rounded-2xl p-4 mb-3">
+            <input type="text" x-model="novoNome" placeholder="Nome do local (ex: Casa, Trabalho)" class="w-full mb-2 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="60">
+            <input type="text" x-model="novoEndereco" placeholder="Endereço (opcional)" class="w-full mb-3 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="200">
+            <div class="flex gap-2">
+                <input type="text" x-model="novoLat" placeholder="Latitude" class="flex-1 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" inputmode="decimal">
+                <input type="text" x-model="novoLon" placeholder="Longitude" class="flex-1 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" inputmode="decimal">
+            </div>
+            <button @click="salvarFavorito()" class="w-full mt-3 bg-fg text-bg py-2.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+                Salvar endereço
+            </button>
+        </div>
+
+        {% if favoritos %}
+        <div class="flex flex-col gap-2">
+            {% for f in favoritos %}
+            <div class="bg-surface border border-border rounded-xl p-3 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">{{ f.nome }}</p>
+                    {% if f.endereco %}
+                    <p class="text-xs text-muted truncate">{{ f.endereco }}</p>
+                    {% endif %}
+                </div>
+                <button @click="removerFavorito({{ f.id }})" class="text-muted hover:text-accent2 transition-colors shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4 bg-surface border border-border rounded-2xl" x-show="!mostrarForm">
+            <p class="text-xs text-muted">Nenhum endereço salvo.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="flex-1 px-5 pb-8">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-muted mb-4">Corridas recentes</h2>
+        {% if corridas %}
+        <div class="flex flex-col gap-3">
+            {% for corrida in corridas %}
+            <div class="bg-surface border border-border rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full
+                        {% if corrida.status == 'aguardando' %}bg-gold/10 text-gold
+                        {% elif corrida.status == 'aceite' %}bg-accent/10 text-accent
+                        {% elif corrida.status == 'concluida' %}bg-accent/10 text-accent
+                        {% elif corrida.status == 'cancelada' %}bg-accent2/10 text-accent2
+                        {% else %}bg-border/20 text-muted{% endif %}">
+                        {{ corrida.get_status_display }}
+                    </span>
+                    <span class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y H:i" }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-2.5 h-2.5 rounded-full bg-accent2 shrink-0"></span>
+                    <span class="text-muted truncate">{{ corrida.origem_lat|floatformat:4 }}, {{ corrida.origem_lon|floatformat:4 }}</span>
+                </div>
+                {% if corrida.destino_lat %}
+                <div class="flex items-center gap-2 text-sm mt-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-accent shrink-0"></span>
+                    <span class="text-muted truncate">{{ corrida.destino_lat|floatformat:4 }}, {{ corrida.destino_lon|floatformat:4 }}</span>
+                </div>
+                {% endif %}
+                {% if corrida.motorista %}
+                <div class="mt-2 pt-2 border-t border-border flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-[10px] font-bold">
+                        {{ corrida.motorista.nome_completo|slice:":1" }}
+                    </span>
+                    <span class="text-xs font-semibold">{{ corrida.motorista.nome_completo }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <div class="w-12 h-12 rounded-full bg-border/20 flex items-center justify-center mx-auto mb-3 text-muted">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <p class="text-muted text-sm">Nenhuma corrida ainda.</p>
+            <a href="/passageiro/" class="inline-block mt-3 text-accent text-sm font-semibold">Pedir primeira corrida &rarr;</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function perfil() {
+    return {
+        mostrarForm: false,
+        novoNome: '',
+        novoEndereco: '',
+        novoLat: '',
+        novoLon: '',
+
+        async salvarFavorito() {
+            if (!this.novoNome.trim() || !this.novoLat || !this.novoLon) return;
+            try {
+                const resp = await fetch('/api/passageiros/favoritos/criar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
+                    },
+                    body: JSON.stringify({
+                        nome: this.novoNome.trim(),
+                        endereco: this.novoEndereco.trim(),
+                        lat: parseFloat(this.novoLat),
+                        lon: parseFloat(this.novoLon),
+                    }),
+                });
+                if (resp.ok) {
+                    window.location.reload();
+                }
+            } catch(e) {}
+        },
+
+        async removerFavorito(id) {
+            try {
+                await fetch(`/api/passageiros/favoritos/${id}/remover/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
+                    },
+                });
+                window.location.reload();
+            } catch(e) {}
+        },
+    };
+}
+</script>
+{% endblock %}

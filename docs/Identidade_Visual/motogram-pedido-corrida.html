@@ -1,0 +1,190 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Pedido de Corrida</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --gold: #C4942A;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--fg); color: #fff; min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+button { font-family: inherit; cursor: pointer; border: none; font-size: inherit; }
+
+/* Status bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.5); }
+.status-bar svg { opacity: 0.5; }
+
+/* Pulsing background */
+.pulse-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(27,122,61,0.3) 0%, var(--fg) 70%); animation: bg-pulse 2s ease-in-out infinite; pointer-events: none; }
+@keyframes bg-pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* Content */
+.content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 28px; position: relative; z-index: 2; }
+
+/* Animated bell ring */
+.notif-icon { position: relative; width: 100px; height: 100px; margin-bottom: 32px; }
+.notif-ring { position: absolute; inset: 0; border: 3px solid var(--accent); border-radius: 50%; animation: ring-pulse 1.5s ease-out infinite; }
+.notif-ring:nth-child(2) { animation-delay: 0.5s; }
+.notif-ring:nth-child(3) { animation-delay: 1s; }
+@keyframes ring-pulse { 0% { transform: scale(0.6); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
+.notif-center { position: absolute; inset: 15px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; animation: center-bounce 0.6s ease infinite alternate; }
+@keyframes center-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
+
+/* Timer */
+.timer { font-size: 4rem; font-weight: 850; letter-spacing: -0.05em; color: var(--accent); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.timer-label { font-size: 0.82rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 28px; }
+
+/* Ride card */
+.ride-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; width: 100%; text-align: left; margin-bottom: 24px; }
+.ride-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.ride-avatar { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), #E8906A); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 1.1rem; color: #fff; flex-shrink: 0; }
+.ride-passenger h4 { font-weight: 700; font-size: 1rem; }
+.ride-passenger p { font-size: 0.78rem; color: rgba(255,255,255,0.45); }
+.ride-rating { margin-left: auto; font-weight: 700; font-size: 0.85rem; }
+.ride-rating span { color: var(--gold); }
+.ride-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 12px 0; }
+.ride-location { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; }
+.ride-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ride-dot.from { background: var(--accent2); }
+.ride-dot.to { background: var(--accent); }
+.ride-price { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
+.ride-price .amount { font-size: 1.6rem; font-weight: 850; letter-spacing: -0.03em; color: var(--accent); }
+.ride-price .distance { font-size: 0.8rem; color: rgba(255,255,255,0.45); }
+
+/* Action buttons */
+.actions { display: flex; gap: 14px; width: 100%; }
+.btn { flex: 1; padding: 16px; border-radius: 100px; font-weight: 650; font-size: 0.95rem; transition: all 0.2s; letter-spacing: -0.01em; }
+.btn-accept { background: var(--accent); color: #fff; }
+.btn-accept:hover { background: #15632f; transform: scale(1.02); }
+.btn-decline { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); }
+.btn-decline:hover { background: rgba(199,91,57,0.2); border-color: var(--accent2); color: var(--accent2); }
+
+/* Accepted state */
+.accepted-overlay { position: fixed; inset: 0; background: var(--fg); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+.accepted-overlay.show { opacity: 1; pointer-events: auto; }
+.accepted-check { font-size: 5rem; animation: pop 0.5s cubic-bezier(0.22,0.61,0.36,1); }
+@keyframes pop { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.15) rotate(5deg); } 100% { transform: scale(1) rotate(0); } }
+.accepted-text { font-size: 1.5rem; font-weight: 850; letter-spacing: -0.04em; margin-top: 16px; }
+.accepted-sub { font-size: 0.9rem; color: var(--muted); margin-top: 8px; }
+
+/* Expired state */
+.expired-text { color: var(--accent2); font-size: 1rem; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="pulse-bg"></div>
+
+<div class="status-bar">
+  <span>14:23</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<div class="content" id="mainContent">
+  <div class="notif-icon" id="notifIcon">
+    <div class="notif-ring"></div>
+    <div class="notif-ring"></div>
+    <div class="notif-ring"></div>
+    <div class="notif-center">$</div>
+  </div>
+
+  <div class="timer" id="timerDisplay">15</div>
+  <div class="timer-label">segundos para aceitar</div>
+
+  <div class="ride-card">
+    <div class="ride-row">
+      <div class="ride-avatar">AS</div>
+      <div class="ride-passenger">
+        <h4>Ana Souza</h4>
+        <p>Passageira desde 2024</p>
+      </div>
+      <div class="ride-rating"><span>★</span> 4.8</div>
+    </div>
+    <div class="ride-divider"></div>
+    <div class="ride-location">
+      <span class="ride-dot from"></span> Mercado Municipal
+    </div>
+    <div class="ride-location" style="margin-top:4px;">
+      <span class="ride-dot to"></span> Av. Getúlio Vargas, 420
+    </div>
+    <div class="ride-price">
+      <span class="amount">R$ 8,50</span>
+      <span class="distance">2,4 km • ~8 min</span>
+    </div>
+  </div>
+
+  <div class="actions" id="actionButtons">
+    <button class="btn btn-decline" onclick="declineRide()">Recusar</button>
+    <button class="btn btn-accept" onclick="acceptRide()">Aceitar</button>
+  </div>
+</div>
+
+<div class="accepted-overlay" id="acceptedOverlay">
+  <div class="accepted-check">✓</div>
+  <div class="accepted-text">Corrida aceita!</div>
+  <div class="accepted-sub">Dirija até o local de embarque</div>
+</div>
+
+<script>
+let timeLeft = 15;
+const timerDisplay = document.getElementById('timerDisplay');
+const notifIcon = document.getElementById('notifIcon');
+const actionButtons = document.getElementById('actionButtons');
+const mainContent = document.getElementById('mainContent');
+
+const countdown = setInterval(() => {
+  timeLeft--;
+  timerDisplay.textContent = timeLeft;
+
+  if (timeLeft <= 5) {
+    timerDisplay.style.color = 'var(--accent2)';
+  }
+
+  if (timeLeft <= 0) {
+    clearInterval(countdown);
+    expireRide();
+  }
+}, 1000);
+
+function acceptRide() {
+  clearInterval(countdown);
+  notifIcon.style.display = 'none';
+  timerDisplay.style.display = 'none';
+  document.querySelector('.timer-label').style.display = 'none';
+  actionButtons.style.display = 'none';
+  document.getElementById('acceptedOverlay').classList.add('show');
+
+  setTimeout(() => {
+    window.location.href = 'dashboard-motorista.html';
+  }, 2000);
+}
+
+function declineRide() {
+  clearInterval(countdown);
+  mainContent.innerHTML = '<div class="expired-text">Corrida recusada</div><p style="color:rgba(255,255,255,0.5);margin-top:8px;">Aguardando novas solicitações…</p>';
+  setTimeout(() => {
+    window.location.href = 'dashboard-motorista.html';
+  }, 2000);
+}
+
+function expireRide() {
+  mainContent.innerHTML = '<div class="expired-text">Tempo esgotado</div><p style="color:rgba(255,255,255,0.5);margin-top:8px;">Você perdeu esta corrida.</p>';
+  setTimeout(() => {
+    window.location.href = 'dashboard-motorista.html';
+  }, 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard Motorista{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-dvh flex flex-col" x-data="dashboard()">
+    <!-- HEADER DARK -->
+    <div class="bg-fg text-bg rounded-b-3xl px-5 pt-5 pb-10">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xs font-bold">{{ motorista.nome_completo|truncatechars:1 }}</div>
+                <div>
+                    <p class="font-semibold text-sm">Olá, {{ motorista.nome_completo }}</p>
+                    <p class="text-xs text-bg/60">{{ motorista.modelo_moto }}</p>
+                </div>
+            </div>
+            <a href="/motorista/conta/" class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">⚙️</a>
+        </div>
+
+        <!-- EARNINGS CARD -->
+        <div class="bg-white/10 rounded-2xl p-5 -mb-8">
+            <p class="text-xs text-bg/60 uppercase tracking-wider mb-1">Ganhos hoje</p>
+            <p class="text-3xl font-extrabold">R$ {{ ganhos_hoje|default:"0,00" }}</p>
+            <div class="grid grid-cols-3 gap-3 mt-4">
+                <div class="text-center">
+                    <p class="text-xs text-bg/60">Corridas</p>
+                    <p class="font-bold">{{ corridas_hoje|default:"0" }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-bg/60">Semana</p>
+                    <p class="font-bold">R$ {{ ganhos_semana|default:"0" }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-bg/60">Mês</p>
+                    <p class="font-bold">R$ {{ ganhos_mes|default:"0" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOGGLE ONLINE -->
+    <div class="px-5 mt-12 mb-6">
+        <div class="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between">
+            <div>
+                <p class="font-semibold text-sm">Modo motorista</p>
+                <p class="text-xs text-muted" x-text="online ? 'Aceitando novas corridas' : 'Indisponível para corridas'"></p>
+            </div>
+            <button @click="toggleOnline()" class="w-[52px] h-[30px] rounded-full transition-colors relative cursor-pointer" :class="online ? 'bg-accent' : 'bg-border'">
+                <span class="absolute top-[3px] left-[3px] w-[24px] h-[24px] bg-white rounded-full shadow transition-transform duration-300" :class="online ? 'translate-x-[22px]' : 'translate-x-0'"></span>
+            </button>
+            </button>
+        </div>
+    </div>
+
+    <!-- RECENT RIDES -->
+    <div class="px-5 flex-1">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Corridas recentes</h3>
+        <div class="flex flex-col gap-3">
+            {% for corrida in corridas_recentes %}
+            <div class="bg-surface border border-border rounded-xl p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                    <span class="text-accent">🏍️</span>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold">{{ corrida.origem_lat }}, {{ corrida.origem_lon }}</p>
+                    <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m H:i" }}</p>
+                </div>
+                <p class="font-bold text-sm">R$ {{ corrida.valor|default:"-" }}</p>
+            </div>
+            {% empty %}
+            <div class="text-center py-8">
+                <p class="text-muted text-sm">Nenhuma corrida ainda</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bg-surface border-t border-border px-5 py-3 flex justify-around">
+        <a href="/motorista/dashboard/" class="flex flex-col items-center gap-1 text-accent">
+            <span class="text-lg">📊</span>
+            <span class="text-xs font-semibold">Painel</span>
+        </a>
+        <a href="/motorista/historico/" class="flex flex-col items-center gap-1 text-muted">
+            <span class="text-lg">📋</span>
+            <span class="text-xs">Histórico</span>
+        </a>
+        <a href="/motorista/conta/" class="flex flex-col items-center gap-1 text-muted">
+            <span class="text-lg">👤</span>
+            <span class="text-xs">Conta</span>
+        </a>
+    </nav>
+</div>
+
+<script>
+function dashboard() {
+    return {
+        online: {{ motorista.activo|yesno:"true,false" }},
+
+        toggleOnline() {
+            const novo = !this.online;
+            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            fetch('/api/motoristas/toggle-online/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf,
+                },
+                body: JSON.stringify({ activo: novo }),
+            }).then(() => {
+                this.online = novo;
+            }).catch(() => {});
+        },
+    };
+}
+</script>
+{% endblock %}

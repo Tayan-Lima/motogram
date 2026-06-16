@@ -1,0 +1,236 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Dashboard Motorista</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --gold: #C4942A;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow-x: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; font-size: inherit; }
+
+/* Top area */
+.top-area { background: var(--fg); color: var(--bg); padding: 12px 20px 28px; border-radius: 0 0 24px 24px; position: relative; overflow: hidden; }
+.top-area::after { content: ''; position: absolute; top: -40px; right: -20px; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.08); pointer-events: none; }
+.status-bar-light { display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
+.status-bar-light svg { opacity: 0.6; }
+.greeting { display: flex; align-items: center; justify-content: space-between; }
+.greeting h1 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.03em; }
+.greeting p { font-size: 0.78rem; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.driver-avatar-sm { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), #E8906A); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 1.1rem; color: #fff; flex-shrink: 0; }
+
+/* Earnings card */
+.earnings-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; margin: -14px 16px 0; padding: 20px; position: relative; z-index: 5; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+.earnings-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.earnings-header h3 { font-size: 0.82rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.earnings-amount { font-size: 2.4rem; font-weight: 850; letter-spacing: -0.04em; margin-bottom: 4px; }
+.earnings-change { font-size: 0.82rem; color: var(--accent); font-weight: 600; }
+.earnings-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+.earnings-stat { text-align: center; }
+.earnings-stat .val { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+.earnings-stat .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+
+/* Scroll area */
+.scroll-area { flex: 1; overflow-y: auto; padding: 20px 16px 16px; }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+.toggle-info h4 { font-weight: 700; font-size: 0.95rem; }
+.toggle-info p { font-size: 0.78rem; color: var(--muted); }
+.toggle-switch { width: 52px; height: 30px; border-radius: 30px; background: var(--border); cursor: pointer; position: relative; transition: background 0.3s; }
+.toggle-switch.active { background: var(--accent); }
+.toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.3s; }
+.toggle-switch.active::after { transform: translateX(22px); }
+
+/* Section title */
+.section-title { font-size: 0.82rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px; }
+
+/* Chart placeholder */
+.chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 100px; margin-bottom: 20px; }
+.chart-bar { flex: 1; background: var(--border); border-radius: 6px 6px 0 0; transition: background 0.3s; position: relative; }
+.chart-bar.today { background: var(--accent); }
+.chart-day { text-align: center; font-size: 0.65rem; color: var(--muted); margin-top: 6px; }
+
+/* Ride list */
+.ride-item { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.ride-item:last-child { border-bottom: none; }
+.ride-item-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+.ride-item-icon.done { background: rgba(27,122,61,0.08); }
+.ride-item-icon.cancel { background: rgba(199,91,57,0.08); }
+.ride-item-info { flex: 1; min-width: 0; }
+.ride-item-info h5 { font-size: 0.9rem; font-weight: 650; }
+.ride-item-info p { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ride-item-amount { font-weight: 700; font-size: 0.9rem; text-align: right; }
+.ride-item-amount.positive { color: var(--accent); }
+.ride-item-amount.negative { color: var(--accent2); }
+
+/* Bottom nav */
+.bottom-nav { display: flex; align-items: center; justify-content: space-around; padding: 10px 8px 20px; background: var(--surface); border-top: 1px solid var(--border); }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.65rem; color: var(--muted); transition: color 0.2s; cursor: pointer; text-decoration: none; }
+.nav-item.active { color: var(--fg); }
+.nav-item-icon { font-size: 1.2rem; }
+</style>
+</head>
+<body>
+
+<!-- Top area -->
+<div class="top-area">
+  <div class="status-bar-light">
+    <span>14:35</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+  </div>
+  <div class="greeting">
+    <div>
+      <h1>Boa tarde, Marcos</h1>
+      <p>Você está online</p>
+    </div>
+    <div class="driver-avatar-sm">MS</div>
+  </div>
+</div>
+
+<!-- Earnings -->
+<div class="earnings-card">
+  <div class="earnings-header">
+    <h3>Seus ganhos hoje</h3>
+    <span style="font-size:0.72rem;color:var(--muted);">14:35</span>
+  </div>
+  <div class="earnings-amount">R$ 142,50</div>
+  <div class="earnings-change">↑ 18% vs ontem</div>
+  <div class="earnings-stats">
+    <div class="earnings-stat">
+      <div class="val">7</div>
+      <div class="lbl">Corridas</div>
+    </div>
+    <div class="earnings-stat">
+      <div class="val">4,9</div>
+      <div class="lbl">Nota</div>
+    </div>
+    <div class="earnings-stat">
+      <div class="val">38 km</div>
+      <div class="lbl">Rodados</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scroll area -->
+<div class="scroll-area">
+  <!-- Toggle online -->
+  <div class="toggle-row">
+    <div class="toggle-info">
+      <h4>Modo motorista</h4>
+      <p>Aceitando novas corridas</p>
+    </div>
+    <div class="toggle-switch active" id="toggleSwitch" onclick="toggleOnline()"></div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section-title">Últimos 7 dias</div>
+  <div class="chart-bars">
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar" style="height:45px;"></div>
+      <div class="chart-day">Seg</div>
+    </div>
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar" style="height:62px;"></div>
+      <div class="chart-day">Ter</div>
+    </div>
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar" style="height:38px;"></div>
+      <div class="chart-day">Qua</div>
+    </div>
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar" style="height:75px;"></div>
+      <div class="chart-day">Qui</div>
+    </div>
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar" style="height:55px;"></div>
+      <div class="chart-day">Sex</div>
+    </div>
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar today" style="height:90px;"></div>
+      <div class="chart-day">Hoje</div>
+    </div>
+    <div style="flex:1;text-align:center;">
+      <div class="chart-bar" style="height:30px;opacity:0.4;"></div>
+      <div class="chart-day">Amanhã</div>
+    </div>
+  </div>
+
+  <!-- Recent rides -->
+  <div class="section-title">Corridas recentes</div>
+  <div class="ride-item">
+    <div class="ride-item-icon done">🏍</div>
+    <div class="ride-item-info">
+      <h5>Ana Souza</h5>
+      <p>Mercado Municipal → Av. Getúlio Vargas</p>
+    </div>
+    <div class="ride-item-amount positive">+R$ 8,50</div>
+  </div>
+  <div class="ride-item">
+    <div class="ride-item-icon done">🏍</div>
+    <div class="ride-item-info">
+      <h5>Carlos Lima</h5>
+      <p>Rodoviária → Centro</p>
+    </div>
+    <div class="ride-item-amount positive">+R$ 12,00</div>
+  </div>
+  <div class="ride-item">
+    <div class="ride-item-icon cancel">✕</div>
+    <div class="ride-item-info">
+      <h5>Pedro Santos</h5>
+      <p>Cancelada pelo passageiro</p>
+    </div>
+    <div class="ride-item-amount negative">R$ 0</div>
+  </div>
+  <div class="ride-item">
+    <div class="ride-item-icon done">🏍</div>
+    <div class="ride-item-info">
+      <h5>Júlia Costa</h5>
+      <p>Hospital Regional → Farmácia Central</p>
+    </div>
+    <div class="ride-item-amount positive">+R$ 15,50</div>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="dashboard-motorista.html" class="nav-item active">
+    <span class="nav-item-icon">☰</span> Painel
+  </a>
+  <a href="historico-corridas.html" class="nav-item">
+    <span class="nav-item-icon">⏱</span> Histórico
+  </a>
+  <a href="perfil-passageiro.html" class="nav-item">
+    <span class="nav-item-icon">👤</span> Perfil
+  </a>
+  <a href="solicitar-corrida.html" class="nav-item">
+    <span class="nav-item-icon">⚙</span> Ajustes
+  </a>
+</nav>
+
+<script>
+const toggleSwitch = document.getElementById('toggleSwitch');
+const toggleInfo = toggleSwitch.parentElement.querySelector('.toggle-info p');
+
+function toggleOnline() {
+  toggleSwitch.classList.toggle('active');
+  const isActive = toggleSwitch.classList.contains('active');
+  toggleInfo.textContent = isActive ? 'Aceitando novas corridas' : 'Indisponível para corridas';
+}
+</script>
+</body>
+</html>

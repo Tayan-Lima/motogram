@@ -1,0 +1,183 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Onboarding</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* Status bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 6px; font-size: 0.72rem; font-weight: 600; color: var(--fg); }
+.status-bar svg { width: 14px; height: 14px; }
+
+/* Splash screen */
+.splash { position: fixed; inset: 0; background: var(--fg); z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.6s ease; }
+.splash.hide { opacity: 0; pointer-events: none; }
+.splash-inner { text-align: center; }
+.splash-logo { font-size: 2.8rem; font-weight: 850; letter-spacing: -0.06em; color: #fff; margin-bottom: 16px; }
+.splash-logo span { display: inline-block; width: 10px; height: 10px; background: var(--accent); border-radius: 2px; margin-left: 4px; }
+.splash-loader { width: 40px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 4px; margin: 0 auto; overflow: hidden; }
+.splash-loader-bar { width: 60%; height: 100%; background: var(--accent); border-radius: 4px; animation: splash-load 1.2s ease-in-out infinite; }
+@keyframes splash-load { 0%,100% { transform: translateX(-40%); } 50% { transform: translateX(80%); } }
+
+/* Onboarding */
+.onboarding { flex: 1; display: flex; flex-direction: column; }
+.slides { flex: 1; position: relative; overflow: hidden; }
+.slide { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 32px; opacity: 0; transform: translateX(30px); transition: all 0.5s cubic-bezier(0.22,0.61,0.36,1); }
+.slide.active { opacity: 1; transform: translateX(0); }
+.slide.done { opacity: 0; transform: translateX(-30px); }
+.slide-illustration { width: 200px; height: 200px; margin-bottom: 40px; position: relative; }
+.slide-circle { width: 120px; height: 120px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.slide-circle.lg { width: 180px; height: 180px; border: 2px solid var(--border); }
+.slide-circle.md { width: 100px; height: 100px; background: var(--fg); }
+.slide-circle.sm { width: 50px; height: 50px; background: var(--accent); top: 65%; left: 65%; }
+.slide-circle.xs { width: 28px; height: 28px; background: var(--accent2); top: 30%; left: 35%; opacity: 0.7; }
+.slide h2 { font-size: 1.8rem; font-weight: 850; letter-spacing: -0.04em; text-align: center; margin-bottom: 12px; line-height: 1.15; }
+.slide p { font-size: 0.95rem; color: var(--muted); text-align: center; max-width: 280px; line-height: 1.55; }
+
+/* Bottom controls */
+.onboard-bottom { padding: 24px 24px 36px; }
+.dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 28px; }
+.dot { width: 8px; height: 8px; border-radius: 4px; background: var(--border); transition: all 0.3s; }
+.dot.active { width: 24px; background: var(--fg); }
+.actions { display: flex; gap: 12px; }
+.btn { flex: 1; padding: 16px 24px; border-radius: 100px; font-weight: 650; font-size: 0.95rem; text-align: center; transition: all 0.2s; letter-spacing: -0.01em; display: block; cursor: pointer; border: none; font-family: inherit; }
+.btn-solid { background: var(--fg); color: var(--bg); }
+.btn-solid:hover { background: var(--accent); color: #fff; }
+.btn-ghost { color: var(--muted); background: none; }
+.btn-ghost:hover { color: var(--fg); }
+.skip { text-align: center; margin-top: 12px; font-size: 0.82rem; color: var(--muted); cursor: pointer; padding: 8px; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="splash" id="splash">
+  <div class="splash-inner">
+    <div class="splash-logo">MotoGram<span></span></div>
+    <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div class="onboarding" id="onboarding">
+  <div class="status-bar">
+    <span>9:41</span>
+    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+  </div>
+
+  <div class="slides" id="slides">
+    <div class="slide active" data-index="0">
+      <div class="slide-illustration">
+        <div class="slide-circle lg"></div>
+        <div class="slide-circle md"></div>
+        <div class="slide-circle sm"></div>
+      </div>
+      <h2>Moto táxi<br>do seu jeito</h2>
+      <p>Chame uma moto em segundos. Preço na hora, sem surpresa.</p>
+    </div>
+    <div class="slide" data-index="1">
+      <div class="slide-illustration">
+        <div class="slide-circle lg"></div>
+        <div class="slide-circle sm"></div>
+        <div class="slide-circle xs"></div>
+      </div>
+      <h2>Segurança<br>em primeiro lugar</h2>
+      <p>Motoristas verificados, rota compartilhada com quem você confia.</p>
+    </div>
+    <div class="slide" data-index="2">
+      <div class="slide-illustration">
+        <div class="slide-circle md"></div>
+        <div class="slide-circle sm" style="top:40%;left:40%;"></div>
+        <div class="slide-circle xs" style="top:60%;left:55%;background:var(--accent2);"></div>
+      </div>
+      <h2>Feito para<br>a Amazônia</h2>
+      <p>Leve, funciona com internet fraca. Da cidade ao interior.</p>
+    </div>
+  </div>
+
+  <div class="onboard-bottom">
+    <div class="dots" id="dots">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-solid" id="btnNext" onclick="nextSlide()">Próximo</button>
+    </div>
+    <div class="skip" onclick="finishOnboarding()">Pular introdução</div>
+  </div>
+</div>
+
+<script>
+let currentSlide = 0;
+const totalSlides = 3;
+const splash = document.getElementById('splash');
+
+// Hide splash after 1.5s
+setTimeout(() => {
+  splash.classList.add('hide');
+  setTimeout(() => splash.remove(), 600);
+}, 1500);
+
+function updateSlides() {
+  const dots = document.querySelectorAll('#dots .dot');
+  const slides = document.querySelectorAll('.slide');
+  const btnNext = document.getElementById('btnNext');
+
+  slides.forEach((s, i) => {
+    s.classList.remove('active', 'done');
+    if (i < currentSlide) s.classList.add('done');
+    if (i === currentSlide) s.classList.add('active');
+  });
+
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === currentSlide);
+  });
+
+  btnNext.textContent = currentSlide === totalSlides - 1 ? 'Começar' : 'Próximo';
+}
+
+function nextSlide() {
+  if (currentSlide < totalSlides - 1) {
+    currentSlide++;
+    updateSlides();
+  } else {
+    finishOnboarding();
+  }
+}
+
+function finishOnboarding() {
+  window.location.href = 'cadastro-passageiro.html';
+}
+
+// Swipe support
+let touchStartX = 0;
+document.getElementById('slides').addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+});
+document.getElementById('slides').addEventListener('touchend', (e) => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) {
+    if (diff > 0 && currentSlide < totalSlides - 1) { currentSlide++; updateSlides(); }
+    else if (diff < 0 && currentSlide > 0) { currentSlide--; updateSlides(); }
+  }
+});
+</script>
+</body>
+</html>

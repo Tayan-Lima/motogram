@@ -1,0 +1,286 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Solicitar Corrida</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --gold: #C4942A;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; position: relative; overflow-x: hidden; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+button, input, textarea, select { font-family: inherit; font-size: inherit; }
+
+/* Status bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; }
+
+/* Header */
+.header { display: flex; align-items: center; gap: 12px; padding: 8px 16px 12px; }
+.header-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; transition: all 0.2s; flex-shrink: 0; }
+.header-back:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.header-title { font-size: 1.1rem; font-weight: 750; letter-spacing: -0.02em; }
+
+/* Map area */
+.map-area { flex: 1; background: #E5DDD2; position: relative; min-height: 340px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.map-bg { position: absolute; inset: 0; opacity: 0.5; }
+.map-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(26,24,21,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(26,24,21,0.04) 1px, transparent 1px); background-size: 32px 32px; }
+.map-road { position: absolute; top: 20%; left: -5%; width: 140%; height: 3px; background: var(--fg); opacity: 0.12; transform: rotate(-15deg); }
+.map-road:nth-child(3) { top: 50%; transform: rotate(8deg); height: 2px; opacity: 0.08; }
+.map-road:nth-child(4) { top: 72%; transform: rotate(-22deg); height: 3px; opacity: 0.1; width: 110%; left: 10%; }
+.map-pin { position: absolute; top: 42%; left: 45%; z-index: 2; }
+.map-pin-dot { width: 16px; height: 16px; background: var(--accent2); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 8px rgba(199,91,57,0.3); }
+.map-pin-ripple { position: absolute; top: -18px; left: -18px; width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(199,91,57,0.25); animation: pin-ripple 2s ease-out infinite; }
+@keyframes pin-ripple { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
+.map-current { position: absolute; bottom: 28%; right: 22%; z-index: 2; }
+.map-current-dot { width: 12px; height: 12px; background: var(--accent); border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+.map-river { position: absolute; bottom: 0; left: -10%; width: 140%; height: 60px; background: rgba(27,122,61,0.06); border-radius: 40% 60% 0 0; pointer-events: none; }
+
+/* Bottom sheet */
+.sheet { background: var(--surface); border-radius: 20px 20px 0 0; margin-top: -20px; position: relative; z-index: 10; box-shadow: 0 -4px 24px rgba(0,0,0,0.06); padding: 20px 20px 28px; }
+.sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 16px; }
+
+/* Destination input */
+.dest-input-wrap { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 14px; padding: 4px 4px 4px 16px; border: 1.5px solid var(--border); transition: all 0.2s; }
+.dest-input-wrap:focus-within { border-color: var(--fg); }
+.dest-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent2); flex-shrink: 0; }
+.dest-input { flex: 1; border: none; background: none; padding: 12px 0; font-size: 0.95rem; font-weight: 500; outline: none; color: var(--fg); }
+.dest-input::placeholder { color: var(--muted); }
+.dest-search { width: 40px; height: 40px; border-radius: 10px; background: var(--fg); color: var(--bg); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+.dest-search:hover { background: var(--accent); }
+
+/* Saved places */
+.saved-places { display: flex; gap: 10px; margin-top: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.saved-places::-webkit-scrollbar { display: none; }
+.place-chip { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 100px; font-size: 0.8rem; font-weight: 550; white-space: nowrap; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.place-chip:hover, .place-chip.selected { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.place-chip-icon { font-size: 0.85rem; }
+
+/* Price estimate */
+.price-estimate { margin-top: 20px; padding: 16px; background: var(--bg); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; }
+.price-info h4 { font-size: 0.78rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.price-amount { font-size: 1.6rem; font-weight: 850; letter-spacing: -0.03em; }
+.price-detail { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+.price-cta { padding: 14px 28px; background: var(--fg); color: var(--bg); border-radius: 100px; font-weight: 650; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; border: none; }
+.price-cta:hover { background: var(--accent); color: #fff; }
+
+/* Modal - confirming */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,24,21,0.6); z-index: 50; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; padding: 24px 20px 36px; transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.22,0.61,0.36,1); }
+.modal-overlay.active .modal-sheet { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 20px; }
+.modal-title { font-size: 1.3rem; font-weight: 850; letter-spacing: -0.03em; margin-bottom: 4px; }
+.modal-sub { font-size: 0.88rem; color: var(--muted); margin-bottom: 20px; }
+.driver-card { display: flex; align-items: center; gap: 14px; padding: 16px; background: var(--bg); border-radius: 14px; margin-bottom: 16px; }
+.driver-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), #E8906A); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 1.1rem; color: #fff; }
+.driver-info h4 { font-weight: 700; font-size: 0.95rem; }
+.driver-info p { font-size: 0.8rem; color: var(--muted); }
+.driver-rating { margin-left: auto; text-align: right; font-weight: 700; font-size: 0.9rem; }
+.driver-rating span { color: var(--gold); }
+.confirm-btn { width: 100%; padding: 16px; background: var(--fg); color: var(--bg); border-radius: 100px; font-weight: 650; font-size: 1rem; cursor: pointer; transition: all 0.2s; border: none; letter-spacing: -0.01em; }
+.confirm-btn:hover { background: var(--accent); color: #fff; }
+.cancel-link { text-align: center; margin-top: 12px; font-size: 0.85rem; color: var(--muted); cursor: pointer; }
+
+/* Toast */
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--fg); color: #fff; padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.85rem; z-index: 60; opacity: 0; transition: all 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; top: 30px; }
+</style>
+</head>
+<body>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span>9:41</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <a href="index.html" class="header-back">←</a>
+  <div class="header-title">Solicitar corrida</div>
+</div>
+
+<!-- Map -->
+<div class="map-area" id="mapArea">
+  <div class="map-grid"></div>
+  <div class="map-road"></div>
+  <div class="map-road"></div>
+  <div class="map-road"></div>
+  <div class="map-river"></div>
+  <div class="map-pin">
+    <div class="map-pin-dot"></div>
+    <div class="map-pin-ripple"></div>
+  </div>
+  <div class="map-current">
+    <div class="map-current-dot"></div>
+  </div>
+</div>
+
+<!-- Bottom sheet -->
+<div class="sheet">
+  <div class="sheet-handle"></div>
+
+  <label class="sr-only" for="destInput">Para onde?</label>
+  <div class="dest-input-wrap">
+    <span class="dest-dot"></span>
+    <input type="text" class="dest-input" id="destInput" placeholder="Para onde você vai?" autocomplete="off">
+    <button class="dest-search" onclick="searchDestination()" aria-label="Buscar destino">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+  </div>
+
+  <div class="saved-places" id="savedPlaces">
+    <button class="place-chip selected" onclick="selectPlace(this, 'Mercado Municipal')">
+      <span class="place-chip-icon">🏠</span> Casa
+    </button>
+    <button class="place-chip" onclick="selectPlace(this, 'Avenida Getúlio Vargas, 420')">
+      <span class="place-chip-icon">💼</span> Trabalho
+    </button>
+    <button class="place-chip" onclick="selectPlace(this, 'Terminal de Ônibus')">
+      <span class="place-chip-icon">📍</span> Terminal
+    </button>
+    <button class="place-chip" onclick="selectPlace(this, 'Hospital Regional')">
+      <span class="place-chip-icon">🏥</span> Hospital
+    </button>
+  </div>
+
+  <div class="price-estimate" id="priceEstimate">
+    <div>
+      <h4>Preço estimado</h4>
+      <div class="price-amount" id="priceValue">R$ 8,50</div>
+      <div class="price-detail" id="priceDetail">~3 min de espera • 2,4 km</div>
+    </div>
+    <button class="price-cta" onclick="confirmRide()">Confirmar</button>
+  </div>
+</div>
+
+<!-- Confirmation modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Confirmar corrida</div>
+    <div class="modal-sub" id="modalDest">Mercado Municipal — R$ 8,50</div>
+    <div class="driver-card">
+      <div class="driver-avatar">MS</div>
+      <div class="driver-info">
+        <h4>Marcos Silva</h4>
+        <p>Honda CG 160 • Azul</p>
+      </div>
+      <div class="driver-rating"><span>★</span> 4.9</div>
+    </div>
+    <button class="confirm-btn" onclick="finishRide()">Confirmar corrida</button>
+    <div class="cancel-link" onclick="closeModal()">Cancelar</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">Corrida solicitada com sucesso!</div>
+
+<script>
+const destInput = document.getElementById('destInput');
+const priceValue = document.getElementById('priceValue');
+const priceDetail = document.getElementById('priceDetail');
+const priceEstimate = document.getElementById('priceEstimate');
+const modal = document.getElementById('confirmModal');
+const modalDest = document.getElementById('modalDest');
+const toast = document.getElementById('toast');
+
+// Price table based on destination
+const prices = {
+  'Mercado Municipal': { price: 'R$ 8,50', detail: '~3 min de espera • 2,4 km' },
+  'Avenida Getúlio Vargas, 420': { price: 'R$ 12,00', detail: '~5 min de espera • 4,1 km' },
+  'Terminal de Ônibus': { price: 'R$ 6,00', detail: '~2 min de espera • 1,6 km' },
+  'Hospital Regional': { price: 'R$ 15,50', detail: '~7 min de espera • 5,8 km' },
+};
+let currentDest = 'Mercado Municipal';
+
+function selectPlace(chip, destName) {
+  document.querySelectorAll('.place-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  currentDest = destName;
+  destInput.value = destName;
+  updatePrice(destName);
+}
+
+function updatePrice(dest) {
+  const p = prices[dest] || { price: 'R$ 10,00', detail: '~4 min de espera • 3,0 km' };
+  priceValue.textContent = p.price;
+  priceDetail.textContent = p.detail;
+  priceEstimate.style.display = 'flex';
+}
+
+function searchDestination() {
+  const val = destInput.value.trim();
+  if (val) {
+    currentDest = val;
+    document.querySelectorAll('.place-chip').forEach(c => c.classList.remove('selected'));
+    updatePrice(val);
+  }
+}
+
+destInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') searchDestination();
+});
+
+destInput.addEventListener('input', () => {
+  if (destInput.value.trim().length > 0) {
+    priceEstimate.style.display = 'flex';
+    currentDest = destInput.value.trim();
+    updatePrice(currentDest);
+  }
+});
+
+function confirmRide() {
+  modalDest.textContent = currentDest + ' — ' + priceValue.textContent;
+  modal.classList.add('active');
+}
+
+function closeModal() {
+  modal.classList.remove('active');
+}
+
+function finishRide() {
+  modal.classList.remove('active');
+  showToast('Motorista a caminho!');
+  setTimeout(() => {
+    window.location.href = 'pedido-corrida.html';
+  }, 800);
+}
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// Tap map to drop pin
+document.getElementById('mapArea').addEventListener('click', function(e) {
+  const pin = this.querySelector('.map-pin');
+  const rect = this.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  pin.style.left = (x / rect.width * 100) + '%';
+  pin.style.top = (y / rect.height * 100) + '%';
+  // Update price slightly
+  const p = prices[currentDest] || prices['Mercado Municipal'];
+  const rand = Math.floor(Math.random() * 3);
+  const newPrice = 'R$ ' + (parseFloat(p.price.replace('R$ ','').replace(',','.')) + rand).toFixed(2).replace('.',',');
+  priceValue.textContent = newPrice;
+  priceEstimate.style.display = 'flex';
+});
+</script>
+</body>
+</html>

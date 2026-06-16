@@ -1,0 +1,189 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoGram — Perfil</title>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --fg: #1A1815;
+  --muted: #6B6560;
+  --border: #E8E3DB;
+  --accent: #1B7A3D;
+  --accent2: #C75B39;
+  --gold: #C4942A;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); min-height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow-x: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; font-size: inherit; }
+a { text-decoration: none; color: inherit; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 6px; font-size: 0.7rem; font-weight: 600; }
+.header { display: flex; align-items: center; gap: 12px; padding: 8px 16px 12px; }
+.header-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; text-decoration: none; color: var(--fg); transition: all 0.2s; }
+.header-back:hover { background: var(--fg); color: var(--bg); }
+.header-title { font-size: 1.1rem; font-weight: 750; letter-spacing: -0.02em; }
+
+/* Profile header */
+.profile-header { text-align: center; padding: 20px 16px 24px; }
+.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), #E8906A); display: inline-flex; align-items: center; justify-content: center; font-weight: 750; font-size: 2rem; color: #fff; margin-bottom: 12px; }
+.profile-name { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.03em; }
+.profile-phone { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+.profile-stats { display: flex; justify-content: center; gap: 28px; margin-top: 16px; }
+.profile-stat { text-align: center; }
+.profile-stat .num { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+.profile-stat .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* Menu */
+.menu-section { padding: 0 16px 8px; }
+.menu-label { font-size: 0.7rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 16px 4px 8px; }
+.menu-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
+.menu-item:hover { border-color: var(--fg); }
+.menu-item-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.menu-item-icon.green { background: rgba(27,122,61,0.08); }
+.menu-item-icon.red { background: rgba(199,91,57,0.08); }
+.menu-item-icon.gold { background: rgba(196,148,42,0.08); }
+.menu-item-icon.gray { background: var(--bg); }
+.menu-item-info { flex: 1; }
+.menu-item-info h4 { font-size: 0.92rem; font-weight: 650; }
+.menu-item-info p { font-size: 0.75rem; color: var(--muted); }
+.menu-item-arrow { color: var(--border); font-size: 0.85rem; transition: all 0.2s; }
+.menu-item:hover .menu-item-arrow { color: var(--fg); transform: translateX(2px); }
+
+.logout-item { color: var(--accent2); }
+
+/* Bottom nav */
+.bottom-nav { display: flex; align-items: center; justify-content: space-around; padding: 10px 8px 20px; background: var(--surface); border-top: 1px solid var(--border); margin-top: auto; }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.65rem; color: var(--muted); transition: color 0.2s; cursor: pointer; }
+.nav-item.active { color: var(--fg); }
+.nav-item-icon { font-size: 1.2rem; }
+
+/* Switch */
+.switch { width: 46px; height: 26px; border-radius: 26px; background: var(--border); cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+.switch.active { background: var(--accent); }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.3s; }
+.switch.active::after { transform: translateX(20px); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,24,21,0.6); z-index: 50; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; margin: 0 auto; padding: 24px 20px 36px; transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.22,0.61,0.36,1); }
+.modal-overlay.active .modal-sheet { transform: translateY(0); }
+.modal-sheet h3 { font-size: 1.2rem; font-weight: 850; letter-spacing: -0.03em; margin-bottom: 12px; }
+.modal-sheet p { font-size: 0.88rem; color: var(--muted); margin-bottom: 20px; }
+.btn-sm { width: 100%; padding: 14px; border-radius: 100px; font-weight: 650; font-size: 0.9rem; transition: all 0.2s; }
+.btn-solid { background: var(--fg); color: var(--bg); }
+.btn-solid:hover { background: var(--accent); color: #fff; }
+.btn-ghost { background: none; color: var(--muted); margin-top: 8px; }
+.btn-ghost:hover { color: var(--fg); }
+.btn-danger { background: var(--accent2); color: #fff; }
+.btn-danger:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>9:41</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+</div>
+
+<div class="header">
+  <a href="solicitar-corrida.html" class="header-back">←</a>
+  <div class="header-title">Meu perfil</div>
+</div>
+
+<div class="profile-header">
+  <div class="profile-avatar">AS</div>
+  <div class="profile-name">Ana Souza</div>
+  <div class="profile-phone">+55 (92) 9 9123-4567</div>
+  <div class="profile-stats">
+    <div class="profile-stat">
+      <div class="num">28</div>
+      <div class="lbl">Corridas</div>
+    </div>
+    <div class="profile-stat">
+      <div class="num">4,8</div>
+      <div class="lbl">Nota</div>
+    </div>
+    <div class="profile-stat">
+      <div class="num">3</div>
+      <div class="lbl">Favoritos</div>
+    </div>
+  </div>
+</div>
+
+<div class="menu-section">
+  <div class="menu-label">Conta</div>
+  <div class="menu-item" onclick="alert('Editar perfil')">
+    <div class="menu-item-icon gray">👤</div>
+    <div class="menu-item-info">
+      <h4>Editar perfil</h4>
+      <p>Nome, telefone e foto</p>
+    </div>
+    <span class="menu-item-arrow">→</span>
+  </div>
+  <div class="menu-item" onclick="alert('Métodos de pagamento')">
+    <div class="menu-item-icon green">💳</div>
+    <div class="menu-item-info">
+      <h4>Pagamento</h4>
+      <p>Cartão terminado em 8890</p>
+    </div>
+    <span class="menu-item-arrow">→</span>
+  </div>
+  <div class="menu-item">
+    <div class="menu-item-icon gold">📍</div>
+    <div class="menu-item-info">
+      <h4>Endereços salvos</h4>
+      <p>Casa, Trabalho, Terminal</p>
+    </div>
+    <span class="menu-item-arrow">→</span>
+  </div>
+
+  <div class="menu-label">Preferências</div>
+  <div class="menu-item">
+    <div class="menu-item-icon gray">🔔</div>
+    <div class="menu-item-info">
+      <h4>Notificações</h4>
+      <p>Push e SMS</p>
+    </div>
+    <div class="switch active" onclick="this.classList.toggle('active')"></div>
+  </div>
+  <div class="menu-item">
+    <div class="menu-item-icon gray">🌙</div>
+    <div class="menu-item-info">
+      <h4>Modo escuro</h4>
+      <p>Aparência do app</p>
+    </div>
+    <div class="switch" onclick="this.classList.toggle('active')"></div>
+  </div>
+  <div class="menu-item">
+    <div class="menu-item-icon gray">🔒</div>
+    <div class="menu-item-info">
+      <h4>Compartilhar rota</h4>
+      <p>Contatos de confiança</p>
+    </div>
+    <span class="menu-item-arrow">→</span>
+  </div>
+
+  <div class="menu-label">Suporte</div>
+  <div class="menu-item" onclick="alert('Central de ajuda')">
+    <div class="menu-item-icon green">❓</div>
+    <div class="menu-item-info">
+      <h4>Central de ajuda</h4>
+      <p>Dúvidas e problemas</p>
+    </div>
+    <span class="menu-item-arrow">→</span>
+  </div>
+  <div class="menu-item" onclick="alert('Termos de uso')">
+    <div class="menu-item-icon gray">📄</div>
+    <div class="menu-item-info">
+      <h4>Termos de uso</h4>
+      <p>Regras do MotoGram</p>
+    </div>
+    <span class="menu-item-arrow">→</span>
+  </div>

@@ -1,0 +1,91 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Cadastros Pendentes{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-5 py-6">
+    <header class="flex items-center gap-3 mb-8">
+        <a href="/admin_mg/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tighter">Cadastros Pendentes</h1>
+            <p class="text-sm text-muted">{{ motoristas|length }} motorista(s) por analisar</p>
+        </div>
+    </header>
+
+    {% for motorista in motoristas %}
+    <div class="bg-surface border border-border rounded-2xl p-5 mb-4">
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-accent2"></div>
+                <div>
+                    <p class="font-bold">{{ motorista.nome_completo }}</p>
+                    <p class="text-sm text-muted">{{ motorista.modelo_moto }} — {{ motorista.placa }}</p>
+                    <p class="text-xs text-muted">{{ motorista.cidade }} • {{ motorista.telefone }}</p>
+                </div>
+            </div>
+            <span class="text-xs px-3 py-1 rounded-pill font-semibold
+                {% if motorista.status_cadastro == 'pendente' %}bg-yellow-100 text-yellow-700
+                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                {{ motorista.get_status_cadastro_display }}
+            </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+            <div>
+                <p class="text-muted">CPF</p>
+                <p class="font-semibold">{{ motorista.cpf }}</p>
+            </div>
+            <div>
+                <p class="text-muted">Nascimento</p>
+                <p class="font-semibold">{{ motorista.data_nascimento|date:"d/m/Y" }}</p>
+            </div>
+            <div>
+                <p class="text-muted">Moto</p>
+                <p class="font-semibold">{{ motorista.ano_moto }} • {{ motorista.cor_moto }}</p>
+            </div>
+            <div>
+                <p class="text-muted">Consumo</p>
+                <p class="font-semibold">{{ motorista.consumo_km_l }} km/L</p>
+            </div>
+        </div>
+
+        {% if motorista.cnh_frente or motorista.antecedentes or motorista.foto_rosto %}
+        <div class="flex gap-2 mb-4">
+            {% if motorista.cnh_frente %}
+            <a href="{{ motorista.cnh_frente.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">CNH</a>
+            {% endif %}
+            {% if motorista.antecedentes %}
+            <a href="{{ motorista.antecedentes.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">Antecedentes</a>
+            {% endif %}
+            {% if motorista.foto_rosto %}
+            <a href="{{ motorista.foto_rosto.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">Foto</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="flex gap-3">
+            <form method="POST" action="/admin_mg/cadastros/{{ motorista.id }}/analisar/" class="flex-1">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="aprovar">
+                <button type="submit" class="w-full bg-accent text-white py-3 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all">
+                    ✅ Aprovar
+                </button>
+            </form>
+            <form method="POST" action="/admin_mg/cadastros/{{ motorista.id }}/analisar/" class="flex-1">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="reprovar">
+                <input type="text" name="motivo" placeholder="Motivo da reprovação" class="w-full px-4 py-3 bg-bg border border-border rounded-xl text-sm mb-2">
+                <button type="submit" class="w-full bg-red-500 text-white py-3 rounded-pill font-semibold text-sm hover:bg-red-600 transition-all">
+                    ❌ Reprovar
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-12">
+        <p class="text-muted">Nenhum cadastro pendente</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

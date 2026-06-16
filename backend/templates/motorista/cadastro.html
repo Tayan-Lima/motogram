@@ -1,0 +1,182 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Cadastro Motorista{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-dvh flex flex-col" x-data="cadastroMotorista()">
+    <!-- HEADER -->
+    <header class="px-5 py-4 flex items-center gap-3">
+        <a href="/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <h1 class="text-lg font-bold tracking-tight">Cadastro Motorista</h1>
+    </header>
+
+    <!-- PROGRESS -->
+    <div class="flex gap-1.5 px-5 mb-6">
+        <div class="flex-1 h-1 rounded" :class="step >= 1 ? 'bg-accent' : 'bg-border'"></div>
+        <div class="flex-1 h-1 rounded" :class="step >= 2 ? 'bg-accent' : 'bg-border'"></div>
+        <div class="flex-1 h-1 rounded" :class="step >= 3 ? 'bg-accent' : 'bg-border'"></div>
+    </div>
+
+    <!-- FORM -->
+    <form method="POST" action="/motorista/cadastro/" class="flex-1 px-5 overflow-y-auto" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% if erro %}
+        <div class="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm mb-4 border border-red-200">
+            {{ erro }}
+        </div>
+        {% endif %}
+
+        <!-- STEP 1: Dados pessoais -->
+        <div x-show="step === 1" class="flex flex-col gap-5">
+            <div>
+                <h2 class="text-2xl font-extrabold tracking-tighter mb-1">Dados pessoais</h2>
+                <p class="text-sm text-muted">Conta-nos sobre ti</p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Nome completo</label>
+                <input type="text" name="nome_completo" required placeholder="Maria das Graças Silva" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">CPF</label>
+                <input type="text" name="cpf" required placeholder="000.000.000-00" x-mask="999.999.999-99" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Data de nascimento</label>
+                <input type="date" name="data_nascimento" required class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Telefone (WhatsApp)</label>
+                <input type="tel" name="telefone" required placeholder="(92) 9 9999-9999" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail</label>
+                <input type="email" name="email" required placeholder="teu@email.com" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Cidade</label>
+                <input type="text" name="cidade" required placeholder="Manaus" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+        </div>
+
+        <!-- STEP 2: Dados da moto -->
+        <div x-show="step === 2" class="flex flex-col gap-5">
+            <div>
+                <h2 class="text-2xl font-extrabold tracking-tighter mb-1">Dados da moto</h2>
+                <p class="text-sm text-muted">Informações do veículo</p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Marca e modelo</label>
+                <input type="text" name="modelo_moto" required placeholder="Honda CG 160" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-muted uppercase tracking-wider">Ano</label>
+                    <input type="number" name="ano_moto" required placeholder="2020" min="1990" max="2030" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-muted uppercase tracking-wider">Cor</label>
+                    <input type="text" name="cor_moto" required placeholder="Vermelha" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Placa</label>
+                <input type="text" name="placa" required placeholder="ABC-1234" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Consumo médio (km/L)</label>
+                <input type="number" name="consumo_km_l" placeholder="35" step="0.1" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+        </div>
+
+        <!-- STEP 3: Documentos -->
+        <div x-show="step === 3" class="flex flex-col gap-5">
+            <div>
+                <h2 class="text-2xl font-extrabold tracking-tighter mb-1">Documentos</h2>
+                <p class="text-sm text-muted">Envia os teus documentos para análise</p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">CNH (frente)</label>
+                <label class="bg-surface border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-accent transition-all">
+                    <div class="text-3xl mb-2">📎</div>
+                    <p class="text-sm font-semibold">Arrasta ou clica para enviar</p>
+                    <p class="text-xs text-muted mt-1">JPG, PNG ou PDF — Máx. 5MB</p>
+                    <input type="file" name="cnh_frente" accept=".jpg,.jpeg,.png,.pdf" class="hidden">
+                </label>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">CNH (verso)</label>
+                <label class="bg-surface border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-accent transition-all">
+                    <div class="text-3xl mb-2">📎</div>
+                    <p class="text-sm font-semibold">Arrasta ou clica para enviar</p>
+                    <p class="text-xs text-muted mt-1">JPG, PNG ou PDF — Máx. 5MB</p>
+                    <input type="file" name="cnh_verso" accept=".jpg,.jpeg,.png,.pdf" class="hidden">
+                </label>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Antecedentes criminais</label>
+                <label class="bg-surface border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-accent transition-all">
+                    <div class="text-3xl mb-2">📎</div>
+                    <p class="text-sm font-semibold">Arrasta ou clica para enviar</p>
+                    <p class="text-xs text-muted mt-1">PDF ou foto — Máx. 10MB</p>
+                    <input type="file" name="antecedentes" accept=".jpg,.jpeg,.png,.pdf" class="hidden">
+                </label>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Foto do rosto</label>
+                <label class="bg-surface border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-accent transition-all">
+                    <div class="text-3xl mb-2">📸</div>
+                    <p class="text-sm font-semibold">Selfie nítida, fundo claro</p>
+                    <p class="text-xs text-muted mt-1">JPG ou PNG — Máx. 5MB</p>
+                    <input type="file" name="foto_rosto" accept=".jpg,.jpeg,.png" class="hidden">
+                </label>
+            </div>
+        </div>
+    </form>
+
+    <!-- BOTTOM BUTTONS -->
+    <div class="px-5 pb-7 pt-4">
+        <button @click="nextStep()" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold hover:bg-accent transition-all" x-text="step === 3 ? 'Enviar cadastro' : 'Continuar'"></button>
+        <button x-show="step > 1" @click="step--" class="w-full py-3 text-sm text-muted hover:text-fg transition-colors">Voltar</button>
+    </div>
+
+    <!-- TOAST -->
+    <div x-show="showToast" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-fg text-bg px-6 py-3 rounded-pill text-sm font-semibold shadow-lg z-50">
+        Cadastro enviado para análise!
+    </div>
+</div>
+
+<script>
+function cadastroMotorista() {
+    return {
+        step: 1,
+        showToast: false,
+        nextStep() {
+            if (this.step < 3) {
+                this.step++;
+            } else {
+                this.showToast = true;
+                setTimeout(() => {
+                    document.querySelector('form').submit();
+                }, 1500);
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

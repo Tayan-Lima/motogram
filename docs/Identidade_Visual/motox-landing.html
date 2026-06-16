@@ -1,0 +1,489 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MotoX — Moto Táxi Rápido na Amazônia</title>
+<style>
+/* ═══════════════════════ DESIGN TOKENS ═══════════════════════ */
+:root {
+  --bg:       #121218;
+  --surface:  #1A1A24;
+  --surface2: #222230;
+  --fg:       #F0F0F7;
+  --muted:    #9B9BA6;
+  --border:   #2A2A3A;
+  --accent:   #E8C500;
+  --accent-2: #C9A800;
+  --green:    #2D8A56;
+  --red:      #E5484D;
+  --radius:   12px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+
+/* ═══════════════════════ RESET ═══════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--fg); line-height: 1.5; overflow-x: hidden; min-height: 100dvh; }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+ul, ol { list-style: none; }
+
+/* ═══════════════════════ UTILITIES ═══════════════════════ */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 28px; border-radius: 100px; font-weight: 600; font-size: 1rem;
+  transition: all 0.2s ease; white-space: nowrap; letter-spacing: -0.01em;
+}
+.btn-primary { background: var(--accent); color: #121218; }
+.btn-primary:hover { background: var(--accent-2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(232,197,0,0.25); }
+.btn-ghost { border: 1.5px solid var(--border); color: var(--fg); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,197,0,0.06); }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 100px; font-size: 0.8rem; font-weight: 600;
+  letter-spacing: 0.02em; text-transform: uppercase;
+}
+.badge-green { background: rgba(45,138,86,0.15); color: var(--green); }
+
+/* ═══════════════════════ NAV ═══════════════════════ */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 16px 0; transition: background 0.3s; }
+.nav.scrolled { background: rgba(18,18,24,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+.nav .container { display: flex; align-items: center; justify-content: space-between; }
+.nav-logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; display: flex; align-items: center; gap: 8px; }
+.nav-logo span { color: var(--accent); }
+.nav-links { display: flex; gap: 32px; align-items: center; }
+.nav-links a { font-size: 0.9rem; font-weight: 500; color: var(--muted); transition: color 0.2s; letter-spacing: -0.01em; }
+.nav-links a:hover { color: var(--fg); }
+
+/* ═══════════════════════ HERO ═══════════════════════ */
+.hero { padding: 140px 0 80px; text-align: center; position: relative; overflow: hidden; }
+.hero-glow { position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 400px; background: radial-gradient(ellipse, rgba(232,197,0,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero-tag { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+.hero h1 { font-size: clamp(2.5rem, 8vw, 4.5rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 20px; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero p { font-size: clamp(1rem, 2.5vw, 1.25rem); color: var(--muted); max-width: 540px; margin: 0 auto 36px; line-height: 1.6; }
+.hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.hero-mockup { margin-top: 60px; position: relative; }
+.hero-mockup-inner {
+  max-width: 320px; margin: 0 auto; background: var(--surface);
+  border-radius: 28px; border: 2px solid var(--border); overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+}
+.mockup-status { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 8px; font-size: 0.75rem; font-weight: 600; }
+.mockup-time { color: var(--fg); }
+.mockup-icons { display: flex; gap: 4px; }
+.mockup-icons svg { width: 14px; height: 14px; }
+.mockup-screen { padding: 0 20px 28px; }
+.mockup-card { background: var(--surface2); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.mockup-row { display: flex; align-items: center; gap: 12px; }
+.mockup-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #F0A000); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; color: #121218; }
+.mockup-info { flex: 1; }
+.mockup-info .name { font-weight: 600; font-size: 0.95rem; }
+.mockup-info .detail { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.mockup-price { text-align: right; }
+.mockup-price .value { font-weight: 700; font-size: 1.2rem; color: var(--accent); }
+.mockup-price .label { font-size: 0.72rem; color: var(--muted); }
+.mockup-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.mockup-location { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+.mockup-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mockup-dot.from { background: var(--accent); }
+.mockup-dot.to { background: var(--red); }
+.mockup-homebar { width: 120px; height: 5px; border-radius: 100px; background: var(--border); margin: 0 auto 10px; }
+
+/* ═══════════════════════ SECTIONS ═══════════════════════ */
+.section { padding: 80px 0; }
+.section-label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 12px; }
+.section h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 16px; }
+.section p.lead { font-size: 1.05rem; color: var(--muted); max-width: 500px; line-height: 1.6; }
+
+/* Steps */
+.steps { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 48px; }
+.step { background: var(--surface); border-radius: var(--radius-lg); padding: 28px; border: 1px solid var(--border); transition: border-color 0.2s; position: relative; overflow: hidden; }
+.step:hover { border-color: var(--accent); }
+.step-num { font-family: var(--font-mono); font-size: 3.5rem; font-weight: 800; color: rgba(232,197,0,0.12); position: absolute; top: 8px; right: 20px; line-height: 1; pointer-events: none; }
+.step-icon { width: 44px; height: 44px; border-radius: var(--radius); background: rgba(232,197,0,0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.step h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+.step p { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+
+/* Features grid */
+.features { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 48px; }
+.feature { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; border: 1px solid var(--border); }
+.feature-icon { width: 40px; height: 40px; border-radius: var(--radius-sm); margin-bottom: 16px; display: flex; align-items: center; justify-content: center; }
+.feature-icon.yellow { background: rgba(232,197,0,0.1); color: var(--accent); }
+.feature-icon.green { background: rgba(45,138,86,0.12); color: var(--green); }
+.feature-icon.red { background: rgba(229,72,77,0.1); color: var(--red); }
+.feature h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+.feature p { font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+
+/* Trust bar */
+.trust-bar { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px 24px; margin-top: 48px; display: flex; flex-direction: column; gap: 24px; }
+.trust-item { display: flex; align-items: flex-start; gap: 14px; }
+.trust-check { width: 24px; height: 24px; border-radius: 50%; background: rgba(45,138,86,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.trust-item h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 2px; }
+.trust-item p { font-size: 0.82rem; color: var(--muted); }
+
+/* CTA */
+.cta { padding: 80px 0 100px; text-align: center; }
+.cta-card { background: var(--surface); border-radius: 28px; border: 1px solid var(--border); padding: 48px 28px; position: relative; overflow: hidden; max-width: 680px; margin: 0 auto; }
+.cta-card::before { content: ''; position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(232,197,0,0.1) 0%, transparent 70%); pointer-events: none; }
+.cta h2 { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px; }
+.cta p { color: var(--muted); margin-bottom: 28px; font-size: 1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* Footer */
+.footer { padding: 40px 0; border-top: 1px solid var(--border); }
+.footer .container { display: flex; flex-direction: column; gap: 20px; align-items: center; text-align: center; }
+.footer-logo { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.03em; }
+.footer-logo span { color: var(--accent); }
+.footer-links { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+.footer-links a { font-size: 0.85rem; color: var(--muted); transition: color 0.2s; }
+.footer-links a:hover { color: var(--fg); }
+.footer-copy { font-size: 0.78rem; color: var(--muted); }
+
+/* Launcher cards */
+.launcher { padding: 0 0 80px; }
+.launcher-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 32px; }
+.launcher-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 20px; transition: all 0.2s; cursor: pointer;
+}
+.launcher-card:hover { border-color: var(--accent); background: var(--surface2); }
+.launcher-card-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); background: rgba(232,197,0,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.launcher-card-info { flex: 1; min-width: 0; }
+.launcher-card-info h4 { font-size: 0.9rem; font-weight: 700; }
+.launcher-card-info p { font-size: 0.78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.launcher-card-arrow { color: var(--muted); flex-shrink: 0; }
+
+/* ═══════════════════════ RESPONSIVE ═══════════════════════ */
+@media (min-width: 600px) {
+  .steps { grid-template-columns: repeat(2, 1fr); }
+  .features { grid-template-columns: repeat(2, 1fr); }
+  .launcher-grid { grid-template-columns: repeat(2, 1fr); }
+  .trust-bar { flex-direction: row; gap: 16px; }
+  .trust-item { flex: 1; }
+  .hero-mockup-inner { max-width: 340px; }
+}
+@media (min-width: 900px) {
+  .steps { grid-template-columns: repeat(4, 1fr); }
+  .features { grid-template-columns: repeat(3, 1fr); }
+  .launcher-grid { grid-template-columns: repeat(3, 1fr); }
+  .hero { padding: 160px 0 100px; }
+  .hero-mockup-inner { max-width: 360px; }
+  .section { padding: 100px 0; }
+  .trust-bar { padding: 36px 40px; }
+}
+@media (min-width: 1200px) {
+  .hero { display: flex; align-items: center; text-align: left; padding: 140px 0 100px; }
+  .hero .container { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .hero-text { max-width: 560px; }
+  .hero p { margin: 0 0 36px; }
+  .hero-actions { justify-content: flex-start; }
+  .hero-mockup { margin-top: 0; }
+  .hero-glow { left: 30%; }
+  .features { grid-template-columns: repeat(4, 1fr); }
+  .launcher-grid { grid-template-columns: repeat(5, 1fr); }
+  .footer .container { flex-direction: row; justify-content: space-between; text-align: left; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav class="nav" id="nav">
+  <div class="container">
+    <a href="#" class="nav-logo">Moto<span>X</span></a>
+    <div class="nav-links">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#vantagens">Vantagens</a>
+      <a href="#seguranca">Segurança</a>
+      <a href="splash.html" class="btn btn-primary" style="padding:10px 20px;font-size:0.85rem;">Abrir App</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="container">
+    <div class="hero-text">
+      <div class="hero-tag">
+        <span class="badge badge-green">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/></svg>
+          Disponível na Amazônia
+        </span>
+      </div>
+      <h1>Moto táxi <em>rápido</em>, do seu jeito</h1>
+      <p>Chame uma moto em segundos, veja o preço antes de aceitar e acompanhe sua corrida em tempo real. Feito para a realidade da Amazônia — leve, simples e confiável.</p>
+      <div class="hero-actions">
+        <a href="splash.html" class="btn btn-primary">Começar agora</a>
+        <a href="#como-funciona" class="btn btn-ghost">Ver como funciona</a>
+      </div>
+    </div>
+    <div class="hero-mockup">
+      <div class="hero-mockup-inner">
+        <div class="mockup-status">
+          <span class="mockup-time">9:41</span>
+          <span class="mockup-icons">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="0.6"/><rect x="6" y="4" width="3" height="14" rx="0.6"/><rect x="11" y="2" width="3" height="16" rx="0.6"/><rect x="16" y="0" width="3" height="18" rx="0.6"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2 4-4" stroke="currentColor" stroke-width="1.5" fill="none"/><rect x="0" y="16" width="24" height="8" rx="1.5"/></svg>
+          </span>
+        </div>
+        <div class="mockup-screen">
+          <div class="mockup-card">
+            <div class="mockup-row">
+              <div class="mockup-avatar">M</div>
+              <div class="mockup-info">
+                <div class="name">Marcos Silva</div>
+                <div class="detail">Honda CG 160 • 4.9 ★</div>
+              </div>
+              <div class="mockup-price">
+                <div class="value">R$ 8,50</div>
+                <div class="label">3 min</div>
+              </div>
+            </div>
+            <div class="mockup-divider"></div>
+            <div class="mockup-location">
+              <span class="mockup-dot from"></span>
+              <span>Mercado Municipal</span>
+            </div>
+            <div class="mockup-location">
+              <span class="mockup-dot to"></span>
+              <span>Av. Getúlio Vargas, 420</span>
+            </div>
+          </div>
+        </div>
+        <div class="mockup-homebar"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ COMO FUNCIONA ═══════════════ -->
+<section class="section" id="como-funciona">
+  <div class="container">
+    <div class="section-label">Como funciona</div>
+    <h2>Quatro toques,<br>você chegou</h2>
+    <p class="lead">Simples como pedir um café. Sem taxa surpresa, sem demora.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3>Abra o app</h3>
+        <p>Cadastro rápido com seu telefone. Sem burocracia, sem papel.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <h3>Escolha o destino</h3>
+        <p>Digite ou selecione no mapa. O preço aparece na hora.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
+        </div>
+        <h3>Confirme a corrida</h3>
+        <p>Veja o motorista, a moto e o tempo estimado. Sem surpresas.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>Acompanhe em tempo real</h3>
+        <p>Siga o trajeto no mapa. Compartilhe sua rota com quem confia.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ VANTAGENS ═══════════════ -->
+<section class="section" id="vantagens" style="padding-top:0;">
+  <div class="container">
+    <div class="section-label">Por que MotoX</div>
+    <h2>Rápido como a cidade,<br>simples como a região</h2>
+    <p class="lead">Pensado para a Amazônia urbana e ribeirinha — onde agilidade e clareza fazem diferença.</p>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon yellow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3>Preço na hora</h3>
+        <p>Você vê o valor exato antes de confirmar. Sem bandeirada, sem tarifa dinâmica escondida.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Motoristas verificados</h3>
+        <p>CNH checada, documento da moto em dia, avaliações reais de outros passageiros.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon yellow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="22" height="22" rx="2"/><line x1="1" y1="7" x2="23" y2="7"/></svg>
+        </div>
+        <h3>Leve e rápido</h3>
+        <p>App de menos de 2 MB. Funciona bem mesmo com internet 3G ou sinal fraco.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon red">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <h3>Chat direto</h3>
+        <p>Fale com o motorista pelo chat integrado. Combine ponto de encontro sem sair do app.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SEGURANÇA ═══════════════ -->
+<section class="section" id="seguranca" style="padding-top:0;">
+  <div class="container">
+    <div class="section-label">Segurança</div>
+    <h2>Você no controle<br>o tempo todo</h2>
+    <p class="lead">Cada corrida é registrada, cada motorista é verificado. Sua tranquilidade vem em primeiro lugar.</p>
+    <div class="trust-bar">
+      <div class="trust-item">
+        <div class="trust-check">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <h4>Compartilhe sua rota</h4>
+          <p>Envie o trajeto ao vivo para alguém de confiança com um toque.</p>
+        </div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-check">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <h4>Botão de emergência</h4>
+          <p>Acesso rápido a contatos de emergência e autoridades locais.</p>
+        </div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-check">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <h4>Histórico completo</h4>
+          <p>Todas as suas corridas ficam salvas com trajeto, valor e motorista.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ CTA ═══════════════ -->
+<section class="cta">
+  <div class="container">
+    <div class="cta-card">
+      <h2>Pronto para acelerar?</h2>
+      <p>MotoX é grátis para passageiros. Motoristas pagam uma taxa fixa por corrida, sem porcentagem abusiva.</p>
+      <div class="cta-buttons">
+        <a href="splash.html" class="btn btn-primary">Quero ser passageiro</a>
+        <a href="cadastro-motorista.html" class="btn btn-ghost">Quero dirigir</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ TELAS DO APP ═══════════════ -->
+<section class="launcher" id="app-telas">
+  <div class="container">
+    <div class="section-label">App MotoX</div>
+    <h2>Telas do aplicativo</h2>
+    <p class="lead">Protótipo interativo — clique para acessar cada fluxo.</p>
+    <div class="launcher-grid">
+      <a href="splash.html" class="launcher-card">
+        <div class="launcher-card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16"/></svg>
+        </div>
+        <div class="launcher-card-info">
+          <h4>Splash / Onboarding</h4>
+          <p>Abertura do app</p>
+        </div>
+        <span class="launcher-card-arrow">→</span>
+      </a>
+      <a href="cadastro-passageiro.html" class="launcher-card">
+        <div class="launcher-card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+        </div>
+        <div class="launcher-card-info">
+          <h4>Cadastro Passageiro</h4>
+          <p>Criar conta rápida</p>
+        </div>
+        <span class="launcher-card-arrow">→</span>
+      </a>
+      <a href="solicitar-corrida.html" class="launcher-card">
+        <div class="launcher-card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="launcher-card-info">
+          <h4>Solicitar Corrida</h4>
+          <p>Mapa, destino e preço</p>
+        </div>
+        <span class="launcher-card-arrow">→</span>
+      </a>
+      <a href="dashboard-motorista.html" class="launcher-card">
+        <div class="launcher-card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <div class="launcher-card-info">
+          <h4>Dashboard Motorista</h4>
+          <p>Ganhos e estatísticas</p>
+        </div>
+        <span class="launcher-card-arrow">→</span>
+      </a>
+      <a href="pedido-corrida.html" class="launcher-card">
+        <div class="launcher-card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </div>
+        <div class="launcher-card-info">
+          <h4>Pedido de Corrida</h4>
+          <p>Visão do motorista</p>
+        </div>
+        <span class="launcher-card-arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-logo">Moto<span>X</span></div>
+    <div class="footer-links">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#vantagens">Vantagens</a>
+      <a href="#seguranca">Segurança</a>
+      <a href="#">Termos de uso</a>
+      <a href="#">Privacidade</a>
+    </div>
+    <div class="footer-copy">© 2025 MotoX — Feito para a Amazônia</div>
+  </div>
+</footer>
+
+<script>
+/* Nav scroll effect */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+</script>
+
+</body>
+</html>
