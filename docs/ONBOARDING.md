@@ -47,7 +47,7 @@ PASSO 1 — Dados básicos
 │  ┌───────────────────────────────────────────┐  │
 │  │ ••••••••                                  │  │
 │  └───────────────────────────────────────────┘  │
-│  Mínimo 8 caracteres                             │
+│  Mínimo 6 caracteres                             │
 │                                                  │
 │  Confirmar senha *                               │
 │  ┌───────────────────────────────────────────┐  │
@@ -57,7 +57,7 @@ PASSO 1 — Dados básicos
 │  [Criar conta]                                   │
 └─────────────────────────────────────────────────┘
 
-PASSO 2 — Confirmar telefone
+PASSO 2 — Confirmar telefone (planejado — não implementado no MVP)
   → SMS com código de 6 dígitos enviado ao número informado
   → Passageiro digita o código no site
   → Código válido por 10 minutos
@@ -248,6 +248,27 @@ urlpatterns = [
 
 ---
 
+### 1.7 Recuperar senha (implementado)
+
+```
+Fluxo:
+  Passageiro → /passageiro/recuperar-senha/ → digita e-mail
+  Django:
+    → Se existe passageiro com esse e-mail:
+      → Gera nova senha aleatória
+      → Se tem telegram_id: envia nova senha via Telegram
+      → Senão: mostra "contacte o suporte"
+    → Sempre mostra mensagem genérica (não revela se e-mail existe)
+```
+
+URLs:
+```
+/passageiro/recuperar-senha/ → RecuperarSenhaPassageiroView
+/motorista/recuperar-senha/  → RecuperarSenhaMotoristaView
+```
+
+---
+
 ---
 
 ## PARTE 2 — CADASTRO DO MOTORISTA
@@ -275,8 +296,9 @@ PASSO 1 — Dados pessoais
 │  Data de nascimento *                            │
 │  Telefone (WhatsApp) *                           │
 │  E-mail *                                        │
-│  Senha *  /  Confirmar senha *                   │
 │  Cidade de operação *                            │
+│  Senha *  (mín. 6 caracteres)                    │
+│  Confirmar senha *                               │
 │  Bairros de operação (múltipla escolha)          │
 └─────────────────────────────────────────────────┘
 

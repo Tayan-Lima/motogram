@@ -59,23 +59,37 @@ PASSO 2 — Django cria a corrida e procura motoristas
       (chave: corrida:{id}:motoristas_notificados, TTL: 10min)
 
 PASSO 3 — Django notifica motoristas via Telegram API
-  Django D → POST api.telegram.org/bot{TOKEN}/sendMessage
-  Para cada motorista (máx. 5, em paralelo com threading):
-  {
-    "chat_id": motorista.telegram_id,
-    "text": "🏍️ *Nova corrida!*\n\n
-             📍 Distância: 2.3 km\n
-             📌 [Ver localização](maps.google.com?q=-3.119,-60.021)\n
-             📞 Passageiro: (92) 99999-9999\n
-             🕐 Pedido há 0 min",
-    "parse_mode": "Markdown",
-    "reply_markup": {
-      "inline_keyboard": [[
-        {"text": "✅ Aceitar",  "callback_data": "aceitar:456"},
-        {"text": "❌ Recusar", "callback_data": "recusar:456"}
-      ]]
-    }
-  }
+   Django D → POST api.telegram.org/bot{TOKEN}/sendLocation
+                + POST api.telegram.org/bot{TOKEN}/sendMessage
+   Para cada motorista (máx. 5, em paralelo com threading):
+   
+   Primeiro envia pin no mapa (sendLocation):
+   {
+     "chat_id": motorista.telegram_id,
+     "latitude": corrida.origem_lat,
+     "longitude": corrida.origem_lon
+   }
+   Se houver destino, envia segundo pin com destino_lat/destino_lon.
+   
+   Depois envia texto com teclado inline:
+   {
+     "chat_id": motorista.telegram_id,
+     "text": "🚨 *Nova solicitação!*\n\n
+              💰 Passageiro oferece: R$ {valor:.2f}\n
+              📍 De: {origem}\n
+              📍 Para: {destino}\n
+              📏 Distância: ~{distancia} km\n
+              📍 Ref: {ponto_referencia}\n
+              ⏱️ Responde em até 60 segundos!",
+     "parse_mode": "Markdown",
+     "reply_markup": {
+       "inline_keyboard": [
+         [{"text": "✅ Aceitar R$ XX", "callback_data": "aceitar:{id}:{valor}"}],
+         [{"text": "💬 Oferecer outro valor", "callback_data": "ofertar:{id}"},
+          {"text": "❌ Recusar", "callback_data": "recusar:{id}"}]
+       ]
+     }
+   }
 
 PASSO 4 — Django retorna ao site do passageiro
   Django D → Resposta ao site A:
@@ -93,31 +107,45 @@ PASSO 5 — Polling do site do passageiro
     se aceite:     {"status": "aceite", "motorista": {nome, telefone, moto, cor}}
     se cancelada:  {"status": "cancelada", "motivo": "sem_motoristas"}
 
-PASSO 6 — Motorista aceita no Telegram
-  Telegram B → callback_query ao bot (LibreTaxi/aiogram)
-  callback_data: "aceitar:456"
-  Bot → POST /api/corridas/456/aceitar/
-  {
-    "motorista_telegram_id": 987654
-  }
+PASSO 6 — Motorista responde no Telegram (InDrive)
+   Motorista clica num dos botoes:
+     ✅ Aceitar R$ XX  → callback_data: "aceitar:{id}:{valor}"
+     💬 Oferecer outro → callback_data: "ofertar:{id}" → FSM pede valor → contra-oferta
+     ❌ Recusar        → callback_data: "recusar:{id}"
 
-PASSO 7 — Django processa aceitação
-  Django D:
-    → Corrida.motorista = João Silva
-    → Corrida.status = 'aceite'
-    → Corrida.aceite_em = agora
-    → Remove outros motoristas da fila (Redis)
+   Bot → POST /api/corridas/{id}/aceitar/  (aceite = cria Oferta)
+   Bot → POST /api/corridas/{id}/ofertar/  (contra-oferta = cria Oferta com valor diferente)
+   Bot → POST /api/corridas/{id}/recusar/  (recusa)
 
-PASSO 8 — Django confirma ao motorista via Telegram
-  Django D → POST api.telegram.org/sendMessage
-  {
-    "chat_id": motorista.telegram_id,
-    "text": "✅ *Corrida confirmada!*\n\n
-             📞 Passageiro: (92) 99999-9999\n
-             📍 [Localização](maps.google.com?q=-3.119,-60.021)\n\n
-             Boa corrida! 🏍️",
-    "parse_mode": "Markdown"
-  }
+PASSO 7 — Passageiro ve ofertas e escolhe motorista
+   Site A → GET /api/corridas/{id}/ofertas/  (polling)
+   Django D responde com lista de motoristas que ofertaram:
+   [
+     {"motorista_nome": "Joao Silva", "moto": "Honda CG 160", "valor": 12.00, "tipo": "aceite"},
+     {"motorista_nome": "Pedro Santos", "moto": "Yamaha Fazer", "valor": 10.00, "tipo": "contra_oferta"}
+   ]
+
+   Passageiro escolhe um motorista:
+   Site A → POST /api/corridas/{id}/escolher/  {"oferta_id": 1}
+
+PASSO 8 — Django processa escolha e notifica
+   Django D:
+     → Oferta escolhida.status = 'aceita', outras = 'rejeitada'
+     → Corrida.motorista = motorista escolhido
+     → Corrida.status = 'aceite'
+     → Corrida.valor = oferta.valor
+
+   Django D → sendLocation (pin no mapa da origem + destino, se existir)
+   Django D → sendMessage ao motorista vencedor:
+   {
+     "text": "🎉 *Corrida confirmada!*\n💰 Valor: R$ 12.00\n👤 Passageiro: Maria\n📞 Contacto: ****-8888\n📍 Origem: -3.1190, -60.0217",
+     "reply_markup": {"inline_keyboard": [[{"text": "✅ Concluir corrida", "callback_data": "concluir:{id}"}]]}
+   }
+
+   Django D → sendMessage aos perdedores:
+   {
+     "text": "🤷 O passageiro escolheu outro motorista."
+   }
 
 PASSO 9 — Site do passageiro detecta mudança via polling
   GET /api/corridas/456/status/ retorna status='aceite'
@@ -130,18 +158,21 @@ PASSO 9 — Site do passageiro detecta mudança via polling
   → Polling para automaticamente
 
 DIAGRAMA SIMPLIFICADO:
-  Passageiro                 Django                Motorista
-  (Chrome)                   (Railway)             (Telegram)
-      │                          │                      │
-      ├──POST /criar/────────────►│                      │
-      │                          ├──sendMessage──────────►│
-      │◄─{corrida_id: 456}───────┤                      │
-      │                          │         ✅ Aceitar ◄──┤
-      ├──GET /status/ (polling)─►│                      │
-      │                          │◄─POST /aceitar/───────┤
-      │                          ├──sendMessage (confirm)─►│
-      │◄─{status: "aceite"}──────┤                      │
-      │  mostra dados motorista  │                      │
+   Passageiro                 Django                Motorista
+   (Chrome)                   (Railway)             (Telegram)
+       │                          │                      │
+       ├──POST /criar/────────────►│                      │
+       │                          ├──sendLocation─────────►│
+       │                          ├──sendMessage──────────►│
+       │◄─{corrida_id: 456}───────┤                      │
+       │                          │         ✅ Aceitar ◄──┤
+       ├──GET /ofertas/ (polling)─►│                      │
+       │                          │◄─POST /ofertar/───────┤
+       ├──POST /escolher/─────────►│                      │
+       │                          ├──sendLocation (pin)───►│
+       │                          ├──sendMessage (confirm)─►│
+       │◄─{status: "aceite"}──────┤                      │
+       │  mostra dados motorista  │                      │
 ```
 
 ---
@@ -153,16 +184,14 @@ DIAGRAMA SIMPLIFICADO:
 ACTORES: Motorista no Telegram, Django, Dashboard do motorista
 
 PASSO 1 — Motorista conclui corrida no Telegram
-  Motorista envia /concluir no Telegram
-  ou clica botão [✅ Corrida concluída] enviado pelo bot
+   Motorista clica "✅ Concluir corrida" enviado no PASSO 8
+   callback_data: "concluir:{corrida_id}"
 
 PASSO 2 — Bot repassa ao Django
-  Bot → POST /api/corridas/456/concluir/
-  {
-    "motorista_telegram_id": 987654,
-    "valor_cobrado": 12.50,       (motorista informa o valor negociado)
-    "distancia_km": 3.2           (calculado pelo bot com base nas coords)
-  }
+   Bot → POST /api/corridas/{id}/concluir/
+   {
+     "motorista_telegram_id": 987654
+   }
 
 PASSO 3 — Django actualiza a corrida
   Django D:
@@ -194,59 +223,43 @@ PASSO 5 — Bot confirma ao motorista
 ```
 ACTORES: Motorista no site, Django, Telegram
 
-PASSO 1 — Motorista paga assinatura no site
-  Site C → POST /api/assinaturas/criar/
-  Django D:
-    → Cria Assinatura(status='pendente', pix_txid=uuid)
-    → Chama Mercado Pago API → gera QR Code Pix
-    → Retorna QR Code ao site
+PASSO 1 — Motorista gera token Telegram no site
+   Motorista logado → /motorista/conta/ → "Gerar Link Telegram"
+   Django D:
+     → Gera token único (secrets.token_urlsafe(16))
+     → Salva no Motorista com expiração de 24h
+     → Mostra link: https://t.me/MotoGram_Go_bot?start={TOKEN}
 
-PASSO 2 — Motorista paga via Pix no banco
-  (fora do sistema — banco do motorista)
+PASSO 2 — Motorista clica no link (ou digita /start TOKEN no Telegram)
+   App Telegram abre o bot @MotoGram_Go_bot com /start TOKEN
 
-PASSO 3 — Mercado Pago confirma via webhook
-  Mercado Pago → POST /api/webhook/mercadopago/
-  Django D:
-    → Valida assinatura HMAC do webhook
-    → Assinatura.status = 'paga'
-    → Motorista.activo = True
-    → Motorista.assinatura_ate = hoje + 30 dias
-    → Gera token único: secrets.token_urlsafe(16)
-    → Salva token com expiração de 24h
+PASSO 3 — Bot valida o token
+   Bot recebe /start TOKEN
+   Bot → POST /api/motoristas/activar-telegram/
+   {
+     "token": "xK9mP2qR7nL4vW8j",
+     "telegram_id": 987654
+   }
+   Django D:
+     → Motorista com este token? Expirado?
+     → Motorista.telegram_id = 987654
+     → Token apagado (uso único, 24h)
 
-PASSO 4 — Site mostra link de activação Telegram
-  Página /motorista/assinatura/sucesso/ mostra:
-  "✅ Pagamento confirmado!\n
-   Agora activa o Telegram para receber corridas:"
-  [Activar Telegram] → abre t.me/motogram_bot?start=TOKEN
+PASSO 4 — Bot confirma ao motorista
+   Bot → Telegram:
+   "🎉 Conta activada, {nome}!
+    🟢 Ficar Online
+    📊 Meu Status    📋 Ganhos
+    🏍️ Minha Conta  ❓ Ajuda"
 
-PASSO 5 — Motorista clica no link
-  App Telegram abre o bot com /start TOKEN
+   Motorista clica 🟢 Ficar Online → pronto para receber corridas
 
-PASSO 6 — Bot valida o token
-  Bot recebe /start xK9mP2qR7nL4vW8j
-  Bot → POST /api/motoristas/activar-telegram/
-  {
-    "token": "xK9mP2qR7nL4vW8j",
-    "telegram_id": 987654
-  }
-  Django D:
-    → Motorista com este token? Expirado?
-    → Motorista.telegram_id = 987654
-    → Token apagado (uso único)
-
-PASSO 7 — Bot confirma ao motorista
-  Bot → Telegram:
-  "🎉 Conta activada, {nome}!\n
-   Já estás pronto para receber corridas.\n\n
-   Comandos úteis:\n
-   /ganhos — ver ganhos do dia\n
-   /status — estado da assinatura\n
-   /ajuda — lista completa"
-
-PASSO 8 — Site detecta activação (polling opcional)
-  Site C faz GET /api/motoristas/verificar-telegram/ a cada 3s (por 60s)
-  → Quando telegram_id preenchido: mostra ✅ na página de conta
+PASSO 5 — Recuperar senha (se necessário)
+   Motorista → /motorista/recuperar-senha/ → digita e-mail
+   Django:
+     → Se existe motorista com esse e-mail: gera nova senha
+     → Se tem telegram_id: envia nova senha via Telegram
+     → Senão: mostra "contacte o suporte"
 ```
 
 ---
@@ -387,19 +400,19 @@ CASO C — Timeout sem resposta (10 minutos sem aceitação)
 
 | Evento | De | Para | Canal | Quem executa |
 |--------|-----|------|-------|-------------|
-| Nova corrida disponível | Django | Motorista | Telegram API | Django directo |
-| Motorista aceita | Motorista | Django | HTTP POST (bot) | Bot/LibreTaxi |
-| Confirmação de aceitação | Django | Motorista | Telegram API | Django directo |
+| Nova corrida disponível | Django | Motorista | Telegram API (sendLocation + sendMessage) | Django directo |
+| Motorista aceita/oferece | Motorista | Django | HTTP POST (bot callback) | Bot aiogram |
+| Passageiro escolhe motorista | Passageiro | Django | HTTP POST (site) | Site polling |
+| Confirmação de aceitação (vencedor) | Django | Motorista | Telegram API (sendLocation + sendMessage) | Django directo |
+| Rejeição (perdedores) | Django | Motorista | Telegram API (sendMessage) | Django directo |
 | Dados do motorista | Django | Passageiro | HTTP JSON (polling) | Site polling |
-| Corrida concluída | Motorista | Django | HTTP POST (bot) | Bot/LibreTaxi |
-| Resumo de ganhos | Django | Motorista | Telegram API | Django directo |
+| Corrida concluída | Motorista | Django | HTTP POST (bot callback) | Bot aiogram |
 | Dashboard actualizado | Django | Site motorista | HTTP JSON (polling) | Site polling |
 | Assinatura paga | Mercado Pago | Django | Webhook HTTP | Mercado Pago |
-| Link activação Telegram | Django | Motorista | Página web | Site (redirect) |
-| Token Telegram validado | Bot | Django | HTTP POST | Bot/LibreTaxi |
+| Link activação Telegram | Django | Motorista | Página web | Site |
+| Token Telegram validado | Bot | Django | HTTP POST | Bot aiogram |
 | Conta Telegram activa | Django | Bot | HTTP response | Django |
 | Aviso vencimento | Django | Motorista | Telegram API | Cron job |
-| Cadastro aprovado | Django | Motorista | E-mail | Django |
-| Cadastro reprovado | Django | Motorista | E-mail | Django |
-| Código SMS | Django | Passageiro | SMS (Zenvia) | Django |
-| Confirmação e-mail | Django | Passageiro | E-mail | Django |
+| Cadastro aprovado | Django | Motorista | Telegram API (sendMessage) | Admin Django |
+| Cadastro reprovado | Django | Motorista | Telegram API (sendMessage) | Admin Django |
+| Recuperar senha | Django | Motorista | Telegram API (sendMessage) | Django |

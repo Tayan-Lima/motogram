@@ -59,6 +59,8 @@ class CadastroPassageiroTest(TestCase):
             "telefone": "(92) 9 9999-8888",
             "nome": "Maria Silva",
             "email": "maria@test.com",
+            "password": "teste123",
+            "password_confirm": "teste123",
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(

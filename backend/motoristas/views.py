@@ -133,18 +133,56 @@ class CadastroMotoristaView(View):
 
     def post(self, request):
         dados = {
-            "nome_completo": request.POST.get("nome_completo"),
-            "cpf": request.POST.get("cpf"),
-            "data_nascimento": request.POST.get("data_nascimento"),
-            "telefone": request.POST.get("telefone"),
-            "email": request.POST.get("email"),
-            "cidade": request.POST.get("cidade"),
-            "modelo_moto": request.POST.get("modelo_moto"),
-            "ano_moto": request.POST.get("ano_moto"),
-            "cor_moto": request.POST.get("cor_moto"),
-            "placa": request.POST.get("placa"),
-            "consumo_km_l": request.POST.get("consumo_km_l", 35),
+            "nome_completo": request.POST.get("nome_completo", "").strip(),
+            "cpf": request.POST.get("cpf", "").strip(),
+            "data_nascimento": request.POST.get("data_nascimento", "").strip(),
+            "telefone": request.POST.get("telefone", "").strip(),
+            "email": request.POST.get("email", "").strip(),
+            "cidade": request.POST.get("cidade", "").strip(),
+            "modelo_moto": request.POST.get("modelo_moto", "").strip(),
+            "ano_moto": request.POST.get("ano_moto", "").strip(),
+            "cor_moto": request.POST.get("cor_moto", "").strip(),
+            "placa": request.POST.get("placa", "").strip(),
+            "consumo_km_l": request.POST.get("consumo_km_l", "35").strip(),
         }
+
+        faltando = []
+        if not dados["nome_completo"]:
+            faltando.append("Nome completo")
+        if not dados["cpf"]:
+            faltando.append("CPF")
+        if not dados["data_nascimento"]:
+            faltando.append("Data de nascimento")
+        if not dados["telefone"]:
+            faltando.append("Telefone")
+        if not dados["email"]:
+            faltando.append("E-mail")
+        if not dados["cidade"]:
+            faltando.append("Cidade")
+        if not dados["modelo_moto"]:
+            faltando.append("Modelo da moto")
+        if not dados["ano_moto"]:
+            faltando.append("Ano da moto")
+        if not dados["cor_moto"]:
+            faltando.append("Cor da moto")
+        if not dados["placa"]:
+            faltando.append("Placa")
+        if faltando:
+            return render(request, "motorista/cadastro.html", {
+                "erro": f"Preencha todos os campos obrigatórios: {', '.join(faltando)}.",
+            })
+
+        try:
+            ano_moto = int(dados["ano_moto"])
+        except (ValueError, TypeError):
+            return render(request, "motorista/cadastro.html", {
+                "erro": "Ano da moto inválido. Digite um número (ex: 2020).",
+            })
+
+        try:
+            consumo_km_l = float(dados["consumo_km_l"]) if dados["consumo_km_l"] else 35.0
+        except (ValueError, TypeError):
+            consumo_km_l = 35.0
 
         if Utilizador.objects.filter(email=dados["email"]).exists():
             return render(request, "motorista/cadastro.html", {"erro": "E-mail já registado."})
@@ -156,7 +194,22 @@ class CadastroMotoristaView(View):
             return render(request, "motorista/cadastro.html", {"erro": "Placa já registada."})
 
         import secrets as _secrets
-        password = request.POST.get("password") or _secrets.token_urlsafe(12)
+        password = request.POST.get("password", "").strip()
+        password_confirm = request.POST.get("password_confirm", "").strip()
+
+        if not password:
+            return render(request, "motorista/cadastro.html", {
+                "erro": "Cria uma senha para a tua conta.",
+            })
+        if len(password) < 6:
+            return render(request, "motorista/cadastro.html", {
+                "erro": "A senha deve ter pelo menos 6 caracteres.",
+            })
+        if password != password_confirm:
+            return render(request, "motorista/cadastro.html", {
+                "erro": "As senhas não coincidem. Verifica e tenta de novo.",
+            })
+
         utilizador = Utilizador.objects.create_user(
             username=dados["email"],
             email=dados["email"],
@@ -173,13 +226,12 @@ class CadastroMotoristaView(View):
             telefone=dados["telefone"],
             cidade=dados["cidade"],
             modelo_moto=dados["modelo_moto"],
-            ano_moto=int(dados["ano_moto"]),
+            ano_moto=ano_moto,
             cor_moto=dados["cor_moto"],
             placa=dados["placa"],
-            consumo_km_l=float(dados["consumo_km_l"]),
+            consumo_km_l=consumo_km_l,
         )
 
-        # Validar documentos
         erros_validacao = []
         for campo, validator_func in [
             ("cnh_frente", validar_documento),
@@ -195,6 +247,7 @@ class CadastroMotoristaView(View):
                     erros_validacao.append(str(e))
 
         if erros_validacao:
+            utilizador.delete()
             return render(request, "motorista/cadastro.html", {
                 "erro": " ".join(erros_validacao),
             })
@@ -237,6 +290,53 @@ class LogoutMotoristaView(View):
     def post(self, request):
         logout(request)
         return redirect("/")
+
+
+class RecuperarSenhaMotoristaView(View):
+    """GET/POST /motorista/recuperar-senha/ — recuperação de senha do motorista."""
+
+    def get(self, request):
+        return render(request, "motorista/recuperar_senha.html")
+
+    def post(self, request):
+        import secrets
+        from .services import notificar_motorista_telegram_private
+
+        email = request.POST.get("email", "").strip().lower()
+
+        if not email:
+            return render(request, "motorista/recuperar_senha.html", {
+                "erro": "Informa o teu e-mail.",
+                "email": email,
+            })
+
+        try:
+            utilizador = Utilizador.objects.get(email=email, tipo="motorista")
+        except Utilizador.DoesNotExist:
+            return render(request, "motorista/recuperar_senha.html", {"enviado": True})
+
+        nova_senha = secrets.token_urlsafe(8)
+        utilizador.set_password(nova_senha)
+        utilizador.save()
+
+        try:
+            motorista = utilizador.motorista
+            if motorista.telegram_id:
+                from corridas.services import notificar_motorista_telegram
+                notificar_motorista_telegram(
+                    motorista.telegram_id,
+                    f"🔑 *Nova senha*\n\nA tua nova senha é: `{nova_senha}`\n\nGuarda-a e troca depois no site.\n{motorista_login_url()}",
+                )
+        except Exception:
+            pass
+
+        return render(request, "motorista/recuperar_senha.html", {"enviado": True})
+
+
+def motorista_login_url():
+    from django.conf import settings
+    site = getattr(settings, "SITE_URL", "http://localhost:8000")
+    return f"{site}/motorista/login/"
 
 
 class DashboardMotoristaView(LoginRequiredMixin, View):
@@ -315,7 +415,7 @@ class GerarLinkTelegramView(LoginRequiredMixin, View):
             return JsonResponse({"erro": "Motorista não encontrado."}, status=404)
 
         token = gerar_token_telegram(motorista)
-        link = f"https://t.me/motogram_bot?start={token}"
+        link = f"https://t.me/MotoGram_Go_bot?start={token}"
 
         return JsonResponse({"link": link, "token": token})
 

@@ -8,6 +8,7 @@ urlpatterns = [
     path("passageiro/", views.pedir_corrida, name="pedir_corrida"),
     path("passageiro/cadastro/", views.CadastroPassageiroView.as_view(), name="cadastro"),
     path("passageiro/login/", views.LoginPassageiroView.as_view(), name="login"),
+    path("passageiro/recuperar-senha/", views.RecuperarSenhaPassageiroView.as_view(), name="recuperar_senha"),
     path("passageiro/logout/", views.LogoutPassageiroView.as_view(), name="logout"),
     path("passageiro/perfil/", views.PerfilPassageiroView.as_view(), name="perfil"),
     path("passageiro/confirmacao/<int:corrida_id>/", views.confirmacao, name="confirmacao"),

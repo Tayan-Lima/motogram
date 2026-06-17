@@ -13,6 +13,7 @@ urlpatterns = [
     # Site pages
     path("motorista/cadastro/", views.CadastroMotoristaView.as_view(), name="cadastro"),
     path("motorista/login/", views.LoginMotoristaView.as_view(), name="login"),
+    path("motorista/recuperar-senha/", views.RecuperarSenhaMotoristaView.as_view(), name="recuperar_senha"),
     path("motorista/logout/", views.LogoutMotoristaView.as_view(), name="logout"),
     path("motorista/dashboard/", views.DashboardMotoristaView.as_view(), name="dashboard"),
     path("motorista/historico/", views.HistoricoMotoristaView.as_view(), name="historico"),

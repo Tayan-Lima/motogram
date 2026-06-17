@@ -18,22 +18,27 @@ Para um projecto em fase de validação com OpenCode/VibeCoding, o foco é em te
 backend/
 ├── corridas/
 │   └── tests/
-│       ├── test_models.py
-│       └── test_views.py
+│       ├── test_models.py      (4 testes — Corrida lifecycle)
+│       └── test_views.py       (8 testes — endpoints + Oferta/InDrive)
 ├── motoristas/
 │   └── tests/
-│       ├── test_models.py
-│       ├── test_services.py
-│       ├── test_site.py
-│       └── test_views.py
+│       ├── test_models.py      (9 testes — assinatura, Utilizador)
+│       ├── test_services.py    (7 testes — token Telegram, activação)
+│       ├── test_site.py        (8 testes — cadastro, login, dashboard)
+│       └── test_views.py       (9 testes — verificar assinatura, activar Telegram)
 ├── pagamentos/
 │   └── tests/
-│       └── test_webhook.py
+│       └── test_webhook.py     (2 testes — webhook Mercado Pago)
 ├── site_publico/
 │   └── tests/
-│       └── test_views.py
-└── test_e2e.py
+│       └── test_views.py       (8 testes — landing, pedir corrida, cadastro)
+└── test_e2e.py                 (5 testes — fluxos completos)
 ```
+
+**Total: 62 testes, 0 falhas**
+
+**Nota (2026-06-17):** Testes de cadastro (`test_cadastro_sucesso`) agora exigem os campos
+`password` e `password_confirm` nos POSTs (mín. 6 caracteres).
 
 ---
 

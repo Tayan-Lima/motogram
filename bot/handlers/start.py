@@ -5,8 +5,6 @@ from aiogram import Router
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.deep_linking import decode_payload
-
 import messages
 import services
 from states import MotoristaStates
@@ -52,7 +50,7 @@ def _menu_online_keyboard():
 @router.message(CommandStart(deep_link=True))
 async def cmd_start_token(message: Message, command: CommandStart, state: FSMContext):
     """Valida token enviado via deep link."""
-    token = decode_payload(command.args)
+    token = command.args
     telegram_id = message.from_user.id
 
     resultado = services.activar_telegram(token=token, telegram_id=telegram_id)

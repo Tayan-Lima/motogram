@@ -39,10 +39,34 @@ class CadastroPassageiroView(View):
         telefone = request.POST.get("telefone", "").strip()
         nome = request.POST.get("nome", "").strip()
         email = request.POST.get("email", "").strip() or None
+        password = request.POST.get("password", "").strip()
+        password_confirm = request.POST.get("password_confirm", "").strip()
 
         if not telefone or not nome:
             return render(request, "passageiro/cadastro.html", {
                 "erro": "Telefone e nome são obrigatórios.",
+                "telefone": telefone,
+                "nome": nome,
+                "email": email or "",
+            })
+
+        if not password:
+            return render(request, "passageiro/cadastro.html", {
+                "erro": "Cria uma senha para a tua conta.",
+                "telefone": telefone,
+                "nome": nome,
+                "email": email or "",
+            })
+        if len(password) < 6:
+            return render(request, "passageiro/cadastro.html", {
+                "erro": "A senha deve ter pelo menos 6 caracteres.",
+                "telefone": telefone,
+                "nome": nome,
+                "email": email or "",
+            })
+        if password != password_confirm:
+            return render(request, "passageiro/cadastro.html", {
+                "erro": "As senhas não coincidem. Verifica e tenta de novo.",
                 "telefone": telefone,
                 "nome": nome,
                 "email": email or "",
@@ -55,7 +79,6 @@ class CadastroPassageiroView(View):
                 "nome": nome,
             })
 
-        password = secrets.token_urlsafe(12)
         username = email or f"tel_{telefone.replace('(', '').replace(')', '').replace(' ', '').replace('-', '')}"
 
         if Utilizador.objects.filter(username=username).exists():
@@ -71,6 +94,45 @@ class CadastroPassageiroView(View):
 
         login(request, utilizador)
         return redirect("site_publico:perfil")
+
+
+class RecuperarSenhaPassageiroView(View):
+    """GET/POST /passageiro/recuperar-senha/ — recuperação de senha."""
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return redirect("site_publico:perfil")
+        return render(request, "passageiro/recuperar_senha.html")
+
+    def post(self, request):
+        email = request.POST.get("email", "").strip().lower()
+
+        if not email:
+            return render(request, "passageiro/recuperar_senha.html", {
+                "erro": "Informa o teu e-mail.",
+                "email": email,
+            })
+
+        try:
+            utilizador = Utilizador.objects.get(email=email, tipo="passageiro")
+        except Utilizador.DoesNotExist:
+            return render(request, "passageiro/recuperar_senha.html", {"enviado": True})
+
+        nova_senha = secrets.token_urlsafe(8)
+        utilizador.set_password(nova_senha)
+        utilizador.save()
+
+        if utilizador.telegram_id:
+            try:
+                from corridas.services import notificar_motorista_telegram
+                notificar_motorista_telegram(
+                    utilizador.telegram_id,
+                    f"🔑 *Nova senha*\n\nA tua nova senha é: `{nova_senha}`\n\nEntra no site e troca a senha.",
+                )
+            except Exception:
+                pass
+
+        return render(request, "passageiro/recuperar_senha.html", {"enviado": True})
 
 
 class LoginPassageiroView(View):

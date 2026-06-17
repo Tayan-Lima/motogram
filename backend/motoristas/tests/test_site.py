@@ -28,6 +28,8 @@ class CadastroMotoristaTest(TestCase):
             "ano_moto": "2020",
             "cor_moto": "Vermelha",
             "placa": "ABC-1234",
+            "password": "teste123",
+            "password_confirm": "teste123",
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Utilizador.objects.filter(email="joao@test.com").exists())
@@ -50,6 +52,8 @@ class CadastroMotoristaTest(TestCase):
             "ano_moto": "2020",
             "cor_moto": "Vermelha",
             "placa": "ABC-1234",
+            "password": "teste123",
+            "password_confirm": "teste123",
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "E-mail já registado")

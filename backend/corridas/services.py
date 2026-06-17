@@ -5,8 +5,27 @@ import requests
 from django.conf import settings
 
 
+def _token():
+    return os.environ.get("TELEGRAM_TOKEN")
+
+
+def enviar_localizacao_telegram(telegram_id: int, lat: float, lon: float):
+    token = _token()
+    if not token:
+        return None
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{token}/sendLocation",
+            json={"chat_id": telegram_id, "latitude": lat, "longitude": lon},
+            timeout=5,
+        )
+        return resp.json()
+    except requests.RequestException:
+        return None
+
+
 def notificar_motorista_telegram(telegram_id: int, mensagem: str, reply_markup: dict = None):
-    token = os.environ.get("TELEGRAM_TOKEN")
+    token = _token()
     if not token:
         return None
 
@@ -59,6 +78,11 @@ def notificar_motoristas_proximos(corrida):
 
     for motorista in motoristas:
         distancia_km = round(motorista.distancia.km, 1) if motorista.distancia else "?"
+
+        enviar_localizacao_telegram(motorista.telegram_id, corrida.origem_lat, corrida.origem_lon)
+
+        if corrida.destino_lat and corrida.destino_lon:
+            enviar_localizacao_telegram(motorista.telegram_id, corrida.destino_lat, corrida.destino_lon)
 
         mensagem = (
             f"🚨 *Nova solicitação!*\n\n"

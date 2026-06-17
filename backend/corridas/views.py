@@ -379,7 +379,7 @@ def _mascarar_telefone(telefone: str) -> str:
 
 
 def _notificar_resultado_ofertas(corrida):
-    from .services import notificar_motorista_telegram
+    from .services import notificar_motorista_telegram, enviar_localizacao_telegram
 
     for oferta in corrida.ofertas.all():
         motorista = oferta.motorista
@@ -387,6 +387,10 @@ def _notificar_resultado_ofertas(corrida):
             continue
 
         if oferta.status == "aceita":
+            enviar_localizacao_telegram(motorista.telegram_id, corrida.origem_lat, corrida.origem_lon)
+            if corrida.destino_lat and corrida.destino_lon:
+                enviar_localizacao_telegram(motorista.telegram_id, corrida.destino_lat, corrida.destino_lon)
+
             nome_passageiro = corrida.passageiro.first_name or corrida.passageiro.username
             msg = (
                 f"🎉 *Corrida confirmada!*\n\n"

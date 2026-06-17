@@ -28,6 +28,8 @@ class FluxoCompletoTest(TestCase):
             "ano_moto": "2020",
             "cor_moto": "Vermelha",
             "placa": "ABC-1234",
+            "password": "teste123",
+            "password_confirm": "teste123",
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Motorista.objects.filter(cpf="123.456.789-00").exists())
