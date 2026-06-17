@@ -1,73 +1,121 @@
-"""Handlers do fluxo do motorista."""
+"""Handlers do motorista — menu, status, toggle online/offline."""
 
+import os
 from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 
 import messages
 import services
 from states import MotoristaStates
 
 router = Router()
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
 
-@router.message(F.text == "🏍️ Sou motorista")
-async def sou_motorista(message: Message):
-    """Verifica estado do motorista."""
-    resultado = services.verificar_assinatura(message.from_user.id)
-
-    if resultado.get("active"):
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="🟢 Ficar disponível")],
-                [KeyboardButton(text="📊 Meu status")],
-                [KeyboardButton(text="📋 Ajuda")],
+def _menu_principal():
+    from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🟢 Ficar Online")],
+            [
+                KeyboardButton(text="📊 Meu Status"),
+                KeyboardButton(text="📋 Ganhos"),
             ],
-            resize_keyboard=True,
-        )
-        await message.answer(
-            messages.MOTORISTA_STATUS_ATIVO.format(data="activa"),
-            parse_mode="Markdown",
-            reply_markup=keyboard,
-        )
-    else:
-        link = resultado.get("link", "motogram.app/motorista/conta")
-        await message.answer(
-            messages.MOTORISTA_STATUS_INATIVO.format(link=link),
-            parse_mode="Markdown",
-        )
+            [
+                KeyboardButton(text="🏍️ Minha Conta"),
+                KeyboardButton(text="❓ Ajuda"),
+            ],
+        ],
+        resize_keyboard=True,
+    )
 
 
-@router.message(F.text == "📊 Meu status")
-async def meu_status(message: Message):
-    """Mostra status da assinatura do motorista."""
+def _menu_online():
+    from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🔴 Ficar Offline")],
+            [
+                KeyboardButton(text="📊 Meu Status"),
+                KeyboardButton(text="📋 Ganhos"),
+            ],
+            [
+                KeyboardButton(text="🏍️ Minha Conta"),
+                KeyboardButton(text="❓ Ajuda"),
+            ],
+        ],
+        resize_keyboard=True,
+    )
+
+
+@router.message(F.text == "🟢 Ficar Online")
+async def ficar_online(message: Message, state: FSMContext):
     resultado = services.verificar_assinatura(message.from_user.id)
-
-    if resultado.get("active"):
-        await message.answer(
-            messages.MOTORISTA_STATUS_ATIVO_SIMPLES,
-            parse_mode="Markdown",
-        )
-    else:
-        link = resultado.get("link", "motogram.app/motorista/conta")
-        await message.answer(
-            messages.MOTORISTA_STATUS_INATIVO_SIMPLES.format(link=link),
-        )
-
-
-@router.message(F.text == "🟢 Ficar disponível")
-async def ficar_disponivel(message: Message):
-    """Motorista fica disponível para receber corridas."""
-    resultado = services.verificar_assinatura(message.from_user.id)
-
     if not resultado.get("active"):
-        link = resultado.get("link", "motogram.app/motorista/conta")
+        link = resultado.get("link", f"{SITE_URL}/motorista/conta/")
         await message.answer(
-            messages.MOTORISTA_STATUS_INATIVO.format(link=link),
+            messages.STATUS_INATIVO.format(link=link),
             parse_mode="Markdown",
         )
         return
 
     await message.answer(
-        messages.MOTORISTA_DISPONIVEL,
+        messages.FICAR_ONLINE,
+        parse_mode="Markdown",
+        reply_markup=_menu_online(),
+    )
+    await state.set_state(MotoristaStates.disponivel)
+
+
+@router.message(F.text == "🔴 Ficar Offline")
+async def ficar_offline(message: Message, state: FSMContext):
+    await message.answer(
+        messages.FICAR_OFFLINE,
+        parse_mode="Markdown",
+        reply_markup=_menu_principal(),
+    )
+    await state.set_state(MotoristaStates.menu_principal)
+
+
+@router.message(F.text == "📊 Meu Status")
+async def meu_status(message: Message):
+    resultado = services.verificar_assinatura(message.from_user.id)
+    if resultado.get("active"):
+        await message.answer(
+            messages.STATUS_ATIVO.format(data=resultado.get("valida_ate", "N/A")),
+            parse_mode="Markdown",
+        )
+    else:
+        link = resultado.get("link", f"{SITE_URL}/motorista/conta/")
+        await message.answer(
+            messages.STATUS_INATIVO.format(link=link),
+            parse_mode="Markdown",
+        )
+
+
+@router.message(F.text == "📋 Ganhos")
+async def ganhos(message: Message):
+    await message.answer(
+        f"📊 *Ganhos*\n\nO resumo completo está no site:\n{SITE_URL}/motorista/dashboard/",
         parse_mode="Markdown",
     )
+
+
+@router.message(F.text == "🏍️ Minha Conta")
+async def minha_conta(message: Message):
+    await message.answer(
+        f"🏍️ *Minha Conta*\n\nGere o seu token, veja assinatura e mais:\n{SITE_URL}/motorista/conta/",
+        parse_mode="Markdown",
+    )
+
+
+@router.message(Command("status"))
+async def cmd_status(message: Message):
+    await meu_status(message)
+
+
+@router.message(Command("ganhos"))
+async def cmd_ganhos(message: Message):
+    await ganhos(message)

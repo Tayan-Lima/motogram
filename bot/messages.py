@@ -1,106 +1,123 @@
-"""Mensagens do bot Telegram — constantes em PT-BR."""
+"""Mensagens do bot Telegram — motorista apenas."""
 
-START_ESCOLHA = (
+BOAS_VINDAS = (
     "🏍️ *Bem-vindo ao MotoGram!*\n\n"
+    "Este bot é exclusivo para motoristas cadastrados.\n\n"
+    "Para começar, envie o *token de activação* que está no seu painel "
+    "em {link}"
+)
+
+TOKEN_INVALIDO = (
+    "❌ *Token inválido ou expirado.*\n\n"
+    "Gere um novo no site:\n{link}"
+)
+
+TOKEN_JA_VINCULADO = (
+    "⚠️ Este motorista já está vinculado a outra conta Telegram.\n"
+    "Contacte o suporte se precisar de ajuda."
+)
+
+MENU_PRINCIPAL = (
+    "🏍️ *Olá, {nome}!*\n\n"
     "O que queres fazer?"
 )
 
-PASSAGEIRO_LOCALIZACAO = (
-    "📍 *Pedir corrida*\n\n"
-    "Envia a tua localização actual para encontrarmos um mototaxista perto de ti.\n\n"
-    "Usa o botão 📎 abaixo e escolhe 'Localização'."
+STATUS_ATIVO = (
+    "✅ *Assinatura activa*\n"
+    "Válida até {data}\n\n"
+    "Usa o botão abaixo para ficar online."
 )
 
-PASSAGEIRO_DESTINO = (
-    "📍 Localização recebida!\n\n"
-    "Agora podes indicar o destino (opcional).\n"
-    "Envia o nome do local ou coordenadas, ou clica /pular para continuar sem destino."
-)
-
-PASSAGEIRO_CORRIDA_CRIADA = (
-    "✅ *Pedido enviado!*\n\n"
-    "Estamos a procurar mototaxistas na tua zona.\n"
-    "Receberás uma notificação quando alguém aceitar.\n\n"
-    "Podes fechar o bot — eu aviso-te! 🏍️"
-)
-
-PASSAGEIRO_SEM_MOTORISTAS = (
-    "😔 *Nenhum mototaxista disponível agora.*\n\n"
-    "Tenta novamente em alguns minutos.\n"
-    "Pode ser que haja mais motoristas activos noutra hora."
-)
-
-PASSAGEIRO_CORRIDA_ACEITE = (
-    "✅ *Corrida aceite!*\n\n"
-    "👤 Motorista: {nome}\n"
-    "📞 Telefone: {telefone}\n"
-    "🏍️ Moto: {moto}\n\n"
-    "O motorista está a caminho! Liga-lhe se precisares."
-)
-
-MOTORISTA_STATUS_ATIVO = (
-    "✅ *Estás activo!*\n\n"
-    "Assinatura válida até: {data}\n"
-    "Receberás notificações de corridas na tua zona."
-)
-
-MOTORISTA_STATUS_INATIVO = (
+STATUS_INATIVO = (
     "❌ *Assinatura inactiva*\n\n"
-    "Para receber corridas, renova a tua assinatura:\n"
-    "{link}"
+    "Renove em: {link}"
 )
 
-MOTORISTA_NOVA_CORRIDA = (
-    "🏍️ *Nova corrida disponível!*\n\n"
-    "📍 Distância: {distancia} km\n"
-    "💰 Valor: R$ {valor}\n"
-    "🕐 Pedido há {tempo} min\n\n"
-    "Responde rápido — outros motoristas também receberam!"
+FICAR_ONLINE = (
+    "🟢 *Estás online!*\n\n"
+    "Receberás notificações de corridas na tua zona.\n"
+    "Se receberes uma solicitação, responde rápido — "
+    "o passageiro escolhe entre os motoristas que responderem."
 )
 
-MOTORISTA_CORRIDA_ACEITA = (
-    "✅ *Corrida aceite!*\n\n"
-    "📍 Passageiro em: {origem}\n"
+FICAR_OFFLINE = (
+    "🔴 *Estás offline.*\n\n"
+    "Não receberás novas solicitações de corrida."
+)
+
+JA_ESTA_ONLINE = (
+    "🟢 Já estás online e pronto para corridas!"
+)
+
+JA_ESTA_OFFLINE = (
+    "🔴 Já estás offline."
+)
+
+NOVA_CORRIDA = (
+    "🚨 *Nova solicitação!*\n\n"
+    "💰 Passageiro oferece: R$ {valor:.2f}\n"
+    "📍 De: {origem}\n"
+    "📍 Para: {destino}\n"
+    "📏 Distância: ~{distancia} km\n"
+    "{ponto_referencia}"
+    "⏱️ Responde em até 60 segundos!"
+)
+
+OFERTA_ENVIADA = (
+    "💬 *Contra-oferta enviada!*\n\n"
+    "Ofereceste R$ {valor:.2f}\n"
+    "Aguardando resposta do passageiro..."
+)
+
+OFERTA_RECUSADA = (
+    "❌ Solicitação recusada."
+)
+
+CORRIDA_CONFIRMADA = (
+    "🎉 *Corrida confirmada!*\n\n"
+    "💰 Valor: R$ {valor:.2f}\n"
+    "📍 Origem: {origem}\n"
+    "📍 Destino: {destino}\n"
+    "👤 Passageiro: {passageiro}\n"
     "📞 Contacto: {telefone}\n\n"
     "Boa corrida! 🏍️"
 )
 
-MOTORISTA_CORRIDA_RECUSADA = (
-    "❌ Corrida recusada.\n"
-    "A notificação foi enviada para o próximo motorista."
+CORRIDA_NAO_ESCOLHIDA = (
+    "🤷 O passageiro escolheu outro motorista.\n"
+    "Fica online para novas solicitações!"
+)
+
+CORRIDA_EXPIRADA = (
+    "⏰ A solicitação expirou. O passageiro não escolheu nenhum motorista a tempo."
 )
 
 CORRIDA_CONCLUIDA = (
     "✅ *Corrida concluída!*\n\n"
     "💰 Valor: R$ {valor}\n"
-    "📍 Distância: {distancia} km\n\n"
-    "Obrigado por usar o MotoGram!"
+    "🛣️ Distância: {distancia} km\n\n"
+    "Obrigado! 🏍️"
+)
+
+DIGITE_OFERTA = (
+    "💬 Qual o valor que queres cobrar?\n\n"
+    "Digite apenas o número (ex: 15.50)"
+)
+
+VALOR_INVALIDO = (
+    "❌ Valor inválido. Digite um número (ex: 12.50)"
+)
+
+AJUDA = (
+    "📋 *MotoGram — Motorista*\n\n"
+    "🟢 *Ficar Online* — começa a receber corridas\n"
+    "📊 *Status* — vê estado da assinatura\n"
+    "📋 *Ganhos* — resumo no site\n"
+    "🏍️ *Conta* — gere seu cadastro\n"
+    "❓ *Ajuda* — esta mensagem\n\n"
+    "Dúvidas? motogram.app"
 )
 
 ERRO_GENERICO = (
     "❌ Ocorreu um erro. Tenta novamente mais tarde."
-)
-
-AJUDA = (
-    "📋 *Comandos disponíveis:*\n\n"
-    "/start — Iniciar conversa\n"
-    "/corrida — Pedir corrida (passageiro)\n"
-    "/status — Ver estado da assinatura (motorista)\n"
-    "/ganhos — Resumo de ganhos do dia (motorista)\n"
-    "/renovar — Link para renovar assinatura (motorista)\n"
-    "/concluir — Concluir corrida activa (motorista)\n"
-    "/ajuda — Esta mensagem"
-)
-
-MOTORISTA_STATUS_ATIVO_SIMPLES = (
-    "✅ Assinatura activa. Podes receber corridas!"
-)
-
-MOTORISTA_STATUS_INATIVO_SIMPLES = (
-    "❌ Assinatura inactiva.\n\nRenova em: {link}"
-)
-
-MOTORISTA_DISPONIVEL = (
-    "🟢 *Estás disponível!*\n\n"
-    "Receberás notificações de corridas na tua zona."
 )

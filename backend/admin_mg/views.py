@@ -1,30 +1,59 @@
-"""Views do painel admin customizado."""
+"""Views do painel admin — rota secreta."""
 
+import os
+import requests
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views import View
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.utils import timezone
 from django.db.models import Sum, Count
-from django.core.mail import send_mail
 from django.conf import settings
 
 from motoristas.models import Motorista
 from corridas.models import Corrida
 
+PREFIX = os.environ.get("ADMIN_SECRET_PATH", "admin_mg")
+
 
 class AdminMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Mixin para verificar se o utilizador é admin."""
-
-    login_url = "/motorista/login/"
+    login_url = f"/{PREFIX}/entrar/"
 
     def test_func(self):
         return self.request.user.is_staff or self.request.user.tipo == "admin"
 
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(
+                self.request.get_full_path(),
+                self.get_login_url(),
+                self.get_redirect_field_name(),
+            )
+        raise Http404("Página não encontrada")
+
+
+class AdminLoginView(View):
+    """GET/POST /{prefix}/entrar/ — login do admin."""
+
+    def get(self, request):
+        return render(request, "admin_mg/login.html", {"prefix": PREFIX})
+
+    def post(self, request):
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        if user and (user.is_staff or user.tipo == "admin"):
+            login(request, user)
+            return redirect("admin_mg:dashboard")
+        return render(request, "admin_mg/login.html", {
+            "prefix": PREFIX,
+            "erro": "Credenciais inválidas ou sem permissão de administrador.",
+        })
+
 
 class AdminDashboardView(AdminMixin, View):
-    """GET /admin_mg/ — dashboard admin."""
-
     def get(self, request):
         motoristas_total = Motorista.objects.count()
         motoristas_pendentes = Motorista.objects.filter(status_cadastro="pendente").count()
@@ -37,6 +66,7 @@ class AdminDashboardView(AdminMixin, View):
         ).aggregate(total=Sum("valor"))["total"] or 0
 
         context = {
+            "prefix": PREFIX,
             "motoristas_total": motoristas_total,
             "motoristas_pendentes": motoristas_pendentes,
             "motoristas_activos": motoristas_activos,
@@ -48,18 +78,17 @@ class AdminDashboardView(AdminMixin, View):
 
 
 class CadastrosPendentesView(AdminMixin, View):
-    """GET /admin_mg/cadastros/ — lista de cadastros pendentes."""
-
     def get(self, request):
         motoristas = Motorista.objects.filter(
             status_cadastro__in=["pendente", "em_analise"]
         ).order_by("criado_em")
-        return render(request, "admin_mg/cadastros_pendentes.html", {"motoristas": motoristas})
+        return render(request, "admin_mg/cadastros_pendentes.html", {
+            "motoristas": motoristas,
+            "prefix": PREFIX,
+        })
 
 
 class AnalisarCadastroView(AdminMixin, View):
-    """POST /admin_mg/cadastros/{id}/analisar/ — aprovar ou reprovar."""
-
     def post(self, request, motorista_id):
         motorista = get_object_or_404(Motorista, id=motorista_id)
         accao = request.POST.get("accao")
@@ -69,7 +98,7 @@ class AnalisarCadastroView(AdminMixin, View):
             motorista.analisado_por = request.user
             motorista.analisado_em = timezone.now()
             motorista.save()
-            self._notificar_aprovado(motorista)
+            _notificar_telegram_aprovado(motorista)
 
         elif accao == "reprovar":
             motivo = request.POST.get("motivo", "")
@@ -78,62 +107,85 @@ class AnalisarCadastroView(AdminMixin, View):
             motorista.analisado_por = request.user
             motorista.analisado_em = timezone.now()
             motorista.save()
-            self._notificar_reprovado(motorista, motivo)
+            _notificar_telegram_reprovado(motorista, motivo)
+
+        elif accao == "suspender":
+            motorista.status_cadastro = "suspenso"
+            motorista.activo = False
+            motorista.save()
+
+        elif accao == "reactivar":
+            motorista.status_cadastro = "aprovado"
+            motorista.save()
 
         return redirect("admin_mg:cadastros_pendentes")
 
-    def _notificar_aprovado(self, motorista):
-        if not motorista.utilizador.email:
-            return
-        try:
-            send_mail(
-                subject="✅ MotoGram — Cadastro aprovado!",
-                message=(
-                    f"Parabéns, {motorista.nome_completo}!\n\n"
-                    f"O teu cadastro foi aprovado. Já podes pagar a assinatura e começar a receber corridas.\n\n"
-                    f"Acede agora: {settings.SITE_URL}/motorista/conta/\n\n"
-                    f"Equipa MotoGram"
-                ),
-                from_email="noreply@motogram.app",
-                recipient_list=[motorista.utilizador.email],
-                fail_silently=True,
-            )
-        except Exception:
-            pass
-
-    def _notificar_reprovado(self, motorista, motivo):
-        if not motorista.utilizador.email:
-            return
-        try:
-            send_mail(
-                subject="❌ MotoGram — Cadastro não aprovado",
-                message=(
-                    f"Olá, {motorista.nome_completo}.\n\n"
-                    f"Infelizmente não conseguimos aprovar o teu cadastro.\n\n"
-                    f"Motivo: {motivo}\n\n"
-                    f"Podes corrigir e reenviar os documentos em:\n"
-                    f"{settings.SITE_URL}/motorista/cadastro/\n\n"
-                    f"Equipa MotoGram"
-                ),
-                from_email="noreply@motogram.app",
-                recipient_list=[motorista.utilizador.email],
-                fail_silently=True,
-            )
-        except Exception:
-            pass
-
 
 class HistoricoCorridasView(AdminMixin, View):
-    """GET /admin_mg/corridas/ — histórico de corridas."""
-
     def get(self, request):
         corridas = Corrida.objects.all().order_by("-criada_em")[:100]
-        return render(request, "admin_mg/historico_corridas.html", {"corridas": corridas})
+        return render(request, "admin_mg/historico_corridas.html", {
+            "corridas": corridas,
+            "prefix": PREFIX,
+        })
 
 
 class MotoristasListView(AdminMixin, View):
-    """GET /admin_mg/motoristas/ — lista de motoristas."""
-
     def get(self, request):
         motoristas = Motorista.objects.all().order_by("-criado_em")
-        return render(request, "admin_mg/motoristas.html", {"motoristas": motoristas})
+        return render(request, "admin_mg/motoristas.html", {
+            "motoristas": motoristas,
+            "prefix": PREFIX,
+        })
+
+
+def _notificar_telegram_aprovado(motorista):
+    if not motorista.telegram_id:
+        return
+    token = os.environ.get("TELEGRAM_TOKEN")
+    if not token:
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={
+                "chat_id": motorista.telegram_id,
+                "text": (
+                    f"✅ *Cadastro aprovado!*\n\n"
+                    f"Parabéns, {motorista.nome_completo}!\n"
+                    f"O teu cadastro foi aprovado.\n"
+                    f"Já podes receber corridas!"
+                ),
+                "parse_mode": "Markdown",
+            },
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+def _notificar_telegram_reprovado(motorista, motivo):
+    if not motorista.telegram_id:
+        return
+    token = os.environ.get("TELEGRAM_TOKEN")
+    if not token:
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={
+                "chat_id": motorista.telegram_id,
+                "text": (
+                    f"❌ *Cadastro não aprovado*\n\n"
+                    f"Olá, {motorista.nome_completo}.\n"
+                    f"Infelizmente não conseguimos aprovar o teu cadastro.\n\n"
+                    f"Motivo: {motivo}\n\n"
+                    f"Corrige os dados e reenvia em:\n"
+                    f"{settings.SITE_URL}/motorista/cadastro/"
+                ),
+                "parse_mode": "Markdown",
+            },
+            timeout=5,
+        )
+    except Exception:
+        pass

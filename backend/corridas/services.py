@@ -6,7 +6,6 @@ from django.conf import settings
 
 
 def notificar_motorista_telegram(telegram_id: int, mensagem: str, reply_markup: dict = None):
-    """Envia mensagem ao motorista via Telegram API."""
     token = os.environ.get("TELEGRAM_TOKEN")
     if not token:
         return None
@@ -31,7 +30,6 @@ def notificar_motorista_telegram(telegram_id: int, mensagem: str, reply_markup: 
 
 
 def notificar_motoristas_proximos(corrida):
-    """Notifica motoristas próximos sobre nova corrida (requer PostGIS)."""
     try:
         from django.contrib.gis.geos import Point
         from django.contrib.gis.db.models.functions import Distance
@@ -54,19 +52,34 @@ def notificar_motoristas_proximos(corrida):
         distancia__lte=D(km=5)
     ).order_by("distancia")[:5]
 
+    valor = float(corrida.valor_sugerido) if corrida.valor_sugerido else 0
+    origem = f"{corrida.origem_lat:.4f}, {corrida.origem_lon:.4f}"
+    destino = f"{corrida.destino_lat:.4f}, {corrida.destino_lon:.4f}" if corrida.destino_lat else "(sem destino)"
+    ponto_ref = f"📍 Ref: {corrida.ponto_referencia}\n" if corrida.ponto_referencia else ""
+
     for motorista in motoristas:
         distancia_km = round(motorista.distancia.km, 1) if motorista.distancia else "?"
+
         mensagem = (
-            f"🏍️ *Nova corrida disponível!*\n\n"
-            f"📍 Distância: {distancia_km} km\n"
-            f"💰 Valor: R$ {corrida.valor or 'a negociar'}\n"
-            f"🕐 Agora mesmo\n\n"
-            f"Responde rápido!"
+            f"🚨 *Nova solicitação!*\n\n"
+            f"💰 Passageiro oferece: R$ {valor:.2f}\n"
+            f"📍 De: {origem}\n"
+            f"📍 Para: {destino}\n"
+            f"📏 Distância: ~{distancia_km} km\n"
+            f"{ponto_ref}"
+            f"⏱️ Responde em até 60 segundos!"
         )
+
         reply_markup = {
-            "inline_keyboard": [[
-                {"text": "✅ Aceitar", "callback_data": f"aceitar:{corrida.id}"},
-                {"text": "❌ Recusar", "callback_data": f"recusar:{corrida.id}"},
-            ]]
+            "inline_keyboard": [
+                [
+                    {"text": f"✅ Aceitar R$ {valor:.2f}", "callback_data": f"aceitar:{corrida.id}:{valor}"},
+                ],
+                [
+                    {"text": "💬 Oferecer outro valor", "callback_data": f"ofertar:{corrida.id}"},
+                    {"text": "❌ Recusar", "callback_data": f"recusar:{corrida.id}"},
+                ],
+            ]
         }
+
         notificar_motorista_telegram(motorista.telegram_id, mensagem, reply_markup)

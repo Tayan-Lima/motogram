@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
-from handlers import passageiro, motorista, corridas, start
+from handlers import motorista, corridas, start
 
 load_dotenv()
 
@@ -21,7 +21,6 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     dp.include_router(start.router)
-    dp.include_router(passageiro.router)
     dp.include_router(motorista.router)
     dp.include_router(corridas.router)
 

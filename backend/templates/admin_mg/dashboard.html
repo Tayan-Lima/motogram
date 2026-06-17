@@ -10,7 +10,7 @@
             <h1 class="text-2xl font-extrabold tracking-tighter">Painel Admin</h1>
             <p class="text-sm text-muted">Gestão do MotoGram</p>
         </div>
-        <a href="/admin_mg/cadastros/" class="relative bg-fg text-bg px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-accent transition-all">
+        <a href="/{{ prefix }}/cadastros/" class="relative bg-fg text-bg px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-accent transition-all">
             Cadastros
             {% if motoristas_pendentes > 0 %}
             <span class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">{{ motoristas_pendentes }}</span>
@@ -44,15 +44,15 @@
 
     <!-- QUICK LINKS -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <a href="/admin_mg/cadastros/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+        <a href="/{{ prefix }}/cadastros/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
             <h3 class="font-bold mb-1">📋 Cadastros pendentes</h3>
             <p class="text-sm text-muted">Analisar novos motoristas</p>
         </a>
-        <a href="/admin_mg/corridas/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+        <a href="/{{ prefix }}/corridas/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
             <h3 class="font-bold mb-1">🏍️ Histórico de corridas</h3>
             <p class="text-sm text-muted">Ver todas as corridas</p>
         </a>
-        <a href="/admin_mg/motoristas/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+        <a href="/{{ prefix }}/motoristas/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
             <h3 class="font-bold mb-1">👤 Motoristas</h3>
             <p class="text-sm text-muted">Gerir motoristas</p>
         </a>

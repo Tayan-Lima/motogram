@@ -54,7 +54,7 @@
             </button>
         </div>
 
-        <!-- Status: entering destination -->
+        <!-- Status: entering details -->
         <div x-show="step === 'destination'">
             <p class="text-sm font-semibold mb-3">Destino (opcional)</p>
 
@@ -73,9 +73,18 @@
                 </template>
             </div>
 
-            <input type="text" x-model="destino" placeholder="Nome do local ou endereço" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors mb-4">
+            <input type="text" x-model="destino" placeholder="Nome do local ou endereço" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors mb-3">
+
+            <p class="text-sm font-semibold mb-2">Quanto queres pagar?</p>
+            <div class="relative mb-3">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold">R$</span>
+                <input type="number" x-model="valor" step="0.50" min="5" placeholder="12,00" class="w-full border-1.5 border-border rounded-xl pl-10 pr-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+            </div>
+
+            <input type="text" x-model="pontoRef" placeholder="Ponto de referência (opcional)" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors mb-4">
+
             <div class="flex gap-3">
-                <button @click="submitRide()" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all">
+                <button @click="submitRide()" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all" x-bind:disabled="!valor">
                     Pedir corrida
                 </button>
                 <button @click="submitRide()" class="px-4 py-3.5 border border-border rounded-pill text-sm text-muted hover:border-fg transition-all">
@@ -84,7 +93,7 @@
             </div>
         </div>
 
-        <!-- Status: waiting for driver -->
+        <!-- Status: waiting -->
         <div x-show="step === 'waiting'" class="text-center py-4">
             <div class="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
                 <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,10 +101,46 @@
                 </svg>
             </div>
             <p class="font-semibold mb-1">A procurar mototaxista...</p>
-            <p class="text-sm text-muted">Receberás uma notificação quando alguém aceitar</p>
+            <p class="text-sm text-muted" x-text="ofertasCount > 0 ? `${ofertasCount} motorista(s) responderam!` : 'Aguardando respostas...'"></p>
+            <button x-show="ofertasCount > 0" @click="verOfertas()" class="mt-3 bg-accent text-white px-6 py-2.5 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all">
+                Ver respostas
+            </button>
         </div>
 
-        <!-- Status: driver found -->
+        <!-- Status: viewing offers -->
+        <div x-show="step === 'ofertas'">
+            <p class="text-sm font-semibold mb-3">Motoristas que responderam</p>
+            <p class="text-xs text-muted mb-4">Escolha o motorista pela melhor oferta</p>
+
+            <template x-for="o in ofertasList" :key="o.id">
+                <div class="flex items-center gap-3 py-3 px-3 border border-border rounded-xl mb-2 bg-bg hover:border-fg transition-colors cursor-pointer"
+                     @click="escolherMotorista(o)">
+                    <div class="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm truncate" x-text="o.nome"></p>
+                        <p class="text-xs text-muted" x-text="o.moto"></p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="font-bold text-sm" x-text="'R$ ' + o.valor.toFixed(2)"></p>
+                        <p class="text-xs" x-bind:class="o.tipo === 'aceite' ? 'text-accent' : 'text-accent2'" x-text="o.tipo === 'aceite' ? '✅ aceitou' : '💬 oferta'"></p>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="ofertasList.length === 0">
+                <p class="text-muted text-sm text-center py-4">Nenhuma oferta encontrada.</p>
+            </template>
+
+            <button @click="step = 'waiting'; carregarOfertas()" class="w-full mt-2 text-sm text-muted hover:text-fg transition-colors py-2.5">
+                Atualizar lista
+            </button>
+        </div>
+
+        <!-- Status: found -->
         <div x-show="step === 'found'" class="text-center py-4">
             <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center mx-auto mb-4">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,9 +167,13 @@ function rideRequest() {
         lat: null,
         lon: null,
         destino: '',
+        pontoRef: '',
+        valor: null,
         corridaId: null,
         motorista: null,
         favoritos: [],
+        ofertasList: [],
+        ofertasCount: 0,
         tentativas: 0,
         intervalo: 5000,
 
@@ -190,17 +239,24 @@ function rideRequest() {
         },
 
         async submitRide() {
+            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
             try {
+                const body = {
+                    origem_lat: this.lat,
+                    origem_lon: this.lon,
+                };
+                if (this.valor) body.valor_sugerido = parseFloat(this.valor);
+                if (this.destino) body.destino_lat = this.lat;
+                if (this.destino) body.destino_lon = this.lon;
+                if (this.pontoRef) body.ponto_referencia = this.pontoRef;
+
                 const resp = await fetch('/api/corridas/web/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
+                        'X-CSRFToken': csrf,
                     },
-                    body: JSON.stringify({
-                        origem_lat: this.lat,
-                        origem_lon: this.lon,
-                    }),
+                    body: JSON.stringify(body),
                 });
                 const data = await resp.json();
                 if (data.erro) {
@@ -212,6 +268,7 @@ function rideRequest() {
                 if (data.id) {
                     this.corridaId = data.id;
                     this.step = 'waiting';
+                    this.tentativas = 0;
                     this.startPolling();
                 }
             } catch (e) {
@@ -249,6 +306,42 @@ function rideRequest() {
             }
         },
 
+        async carregarOfertas() {
+            if (!this.corridaId) return;
+            try {
+                const resp = await fetch(`/api/corridas/${this.corridaId}/ofertas/`);
+                const data = await resp.json();
+                this.ofertasList = data.ofertas || [];
+                this.ofertasCount = this.ofertasList.length;
+            } catch (e) {
+                console.error('Erro ao carregar ofertas:', e);
+            }
+        },
+
+        verOfertas() {
+            this.step = 'ofertas';
+            this.carregarOfertas();
+        },
+
+        async escolherMotorista(oferta) {
+            try {
+                const resp = await fetch(`/api/corridas/${this.corridaId}/escolher/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
+                    },
+                    body: JSON.stringify({ oferta_id: oferta.id }),
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    window.location.href = `/passageiro/confirmacao/${this.corridaId}/`;
+                }
+            } catch (e) {
+                console.error('Erro ao escolher motorista:', e);
+            }
+        },
+
         startPolling() {
             const poll = async () => {
                 try {
@@ -258,19 +351,22 @@ function rideRequest() {
                     if (data.status === 'aceite') {
                         window.location.href = `/passageiro/confirmacao/${this.corridaId}/`;
                         return;
-                    } else if (data.status === 'cancelada' || data.status === 'sem_motoristas') {
+                    }
+                    if (data.status === 'cancelada' || data.status === 'sem_motoristas') {
                         this.step = 'location';
                         return;
                     }
 
                     this.tentativas++;
+                    this.ofertasCount = data.ofertas || 0;
+
                     let proximo;
                     if (this.tentativas <= 6) {
-                        proximo = 5000; // 0-30s: polling a cada 5s
+                        proximo = 5000;
                     } else if (this.tentativas <= 20) {
-                        proximo = 15000; // 30s-5min: polling a cada 15s
+                        proximo = 15000;
                     } else {
-                        proximo = 30000; // >5min: polling a cada 30s
+                        proximo = 30000;
                     }
 
                     if (this.tentativas > 60) {
@@ -289,6 +385,12 @@ function rideRequest() {
     };
 }
 </script>
+
+<!-- Offline banner -->
+<div id="offline-banner" class="hidden fixed top-0 left-0 right-0 bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-center text-sm text-yellow-800 z-50">
+    ⚠️ Sem conexão. Verificando quando voltar...
+</div>
+<script>
 window.addEventListener('offline', () => {
     const banner = document.getElementById('offline-banner');
     if (banner) banner.classList.remove('hidden');
@@ -298,9 +400,4 @@ window.addEventListener('online', () => {
     if (banner) banner.classList.add('hidden');
 });
 </script>
-
-<!-- Offline banner -->
-<div id="offline-banner" class="hidden fixed top-0 left-0 right-0 bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-center text-sm text-yellow-800 z-50">
-    ⚠️ Sem conexão. Verificando quando voltar...
-</div>
 {% endblock %}

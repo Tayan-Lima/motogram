@@ -1,81 +1,100 @@
-"""Handler /start — menu inicial do bot e comandos gerais."""
+"""Handler /start — guardião de token e menu principal do motorista."""
 
-from aiogram import Router, F
+import os
+from aiogram import Router
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import CommandStart, Command
+from aiogram.fsm.context import FSMContext
+from aiogram.utils.deep_linking import decode_payload
 
 import messages
 import services
+from states import MotoristaStates
 
 router = Router()
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
+
+
+def _menu_principal_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🟢 Ficar Online")],
+            [
+                KeyboardButton(text="📊 Meu Status"),
+                KeyboardButton(text="📋 Ganhos"),
+            ],
+            [
+                KeyboardButton(text="🏍️ Minha Conta"),
+                KeyboardButton(text="❓ Ajuda"),
+            ],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def _menu_online_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🔴 Ficar Offline")],
+            [
+                KeyboardButton(text="📊 Meu Status"),
+                KeyboardButton(text="📋 Ganhos"),
+            ],
+            [
+                KeyboardButton(text="🏍️ Minha Conta"),
+                KeyboardButton(text="❓ Ajuda"),
+            ],
+        ],
+        resize_keyboard=True,
+    )
+
+
+@router.message(CommandStart(deep_link=True))
+async def cmd_start_token(message: Message, command: CommandStart, state: FSMContext):
+    """Valida token enviado via deep link."""
+    token = decode_payload(command.args)
+    telegram_id = message.from_user.id
+
+    resultado = services.activar_telegram(token=token, telegram_id=telegram_id)
+
+    if resultado.get("ok"):
+        nome = resultado.get("motorista", "Motorista")
+        await message.answer(
+            messages.MENU_PRINCIPAL.format(nome=nome),
+            parse_mode="Markdown",
+            reply_markup=_menu_principal_keyboard(),
+        )
+        await state.set_state(MotoristaStates.menu_principal)
+        return
+
+    await message.answer(
+        messages.TOKEN_INVALIDO.format(link=f"{SITE_URL}/motorista/conta/"),
+        parse_mode="Markdown",
+    )
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
-    """Menu inicial — escolha entre passageiro e motorista."""
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🏍️ Sou motorista")],
-            [KeyboardButton(text="📍 Pedir corrida")],
-            [KeyboardButton(text="📋 Ajuda")],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
-    )
-    await message.answer(
-        messages.START_ESCOLHA,
-        parse_mode="Markdown",
-        reply_markup=keyboard,
-    )
-
-
-@router.message(Command("corrida"))
-async def cmd_corrida(message: Message):
-    """Atalho para pedir corrida."""
-    await message.answer(
-        messages.PASSAGEIRO_LOCALIZACAO,
-        parse_mode="Markdown",
-    )
-
-
-@router.message(Command("status"))
-async def cmd_status(message: Message):
-    """Ver estado da assinatura."""
-    resultado = services.verificar_assinatura(message.from_user.id)
+async def cmd_start(message: Message, state: FSMContext):
+    """Sem token — barra entrada de estranhos."""
+    telegram_id = message.from_user.id
+    resultado = services.verificar_assinatura(telegram_id)
 
     if resultado.get("active"):
+        nome = resultado.get("nome", "Motorista")
         await message.answer(
-            messages.MOTORISTA_STATUS_ATIVO_SIMPLES,
+            messages.MENU_PRINCIPAL.format(nome=nome),
             parse_mode="Markdown",
+            reply_markup=_menu_principal_keyboard(),
         )
-    else:
-        link = resultado.get("link", "motogram.app/motorista/conta")
-        await message.answer(
-            messages.MOTORISTA_STATUS_INATIVO_SIMPLES.format(link=link),
-        )
+        await state.set_state(MotoristaStates.menu_principal)
+        return
 
-
-@router.message(Command("ganhos"))
-async def cmd_ganhos(message: Message):
-    """Resumo de ganhos (placeholder)."""
     await message.answer(
-        "📊 *Ganhos*\n\n"
-        "O resumo completo de ganhos está disponível no site:\n"
-        "motogram.app/motorista/dashboard/",
+        messages.BOAS_VINDAS.format(link=f"{SITE_URL}/motorista/conta/"),
         parse_mode="Markdown",
-    )
-
-
-@router.message(Command("renovar"))
-async def cmd_renovar(message: Message):
-    """Link para renovar assinatura."""
-    await message.answer(
-        "🔗 Renova a tua assinatura em:\n"
-        "motogram.app/motorista/conta/",
     )
 
 
 @router.message(Command("ajuda"))
 async def cmd_ajuda(message: Message):
-    """Mostra comandos disponíveis."""
     await message.answer(messages.AJUDA, parse_mode="Markdown")

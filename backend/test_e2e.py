@@ -1,10 +1,11 @@
 """Testes de ponta a ponta — fluxo completo."""
 
+import json
 from django.test import TestCase, Client, override_settings
 from django.utils import timezone
 from datetime import date, timedelta
 from motoristas.models import Utilizador, Motorista
-from corridas.models import Corrida
+from corridas.models import Corrida, Oferta
 
 
 @override_settings(BOT_SECRET="test-secret")
@@ -41,7 +42,7 @@ class FluxoCompletoTest(TestCase):
 
         response = self.client.post(
             "/api/corridas/",
-            data='{"passageiro_telegram_id": 111111111, "origem_lat": -3.1, "origem_lon": -60.0}',
+            data='{"passageiro_telegram_id": 111111111, "origem_lat": -3.1, "origem_lon": -60.0, "valor_sugerido": 12.00}',
             content_type="application/json",
             HTTP_X_BOT_SECRET="test-secret",
         )
@@ -49,7 +50,7 @@ class FluxoCompletoTest(TestCase):
         self.assertTrue(Corrida.objects.filter(passageiro=passageiro).exists())
 
     def test_fluxo_aceitar_corrida(self):
-        """Motorista aceita corrida."""
+        """Motorista aceita e passageiro escolhe — fluxo completo InDrive."""
         passageiro = Utilizador.objects.create_user(
             username="passageiro1",
             telegram_id=111111111,
@@ -72,6 +73,7 @@ class FluxoCompletoTest(TestCase):
             ano_moto=2020,
             cor_moto="Vermelha",
             placa="ABC-1234",
+            status_cadastro="aprovado",
             activo=True,
             assinatura_ate=date.today() + timedelta(days=15),
             telegram_id=999999999,
@@ -81,6 +83,7 @@ class FluxoCompletoTest(TestCase):
             passageiro=passageiro,
             origem_lat=-3.1,
             origem_lon=-60.0,
+            valor_sugerido=12.00,
             status="aguardando",
         )
 
@@ -91,9 +94,19 @@ class FluxoCompletoTest(TestCase):
             HTTP_X_BOT_SECRET="test-secret",
         )
         self.assertEqual(response.status_code, 200)
+        oferta = Oferta.objects.get(corrida=corrida, motorista=motorista)
+        self.assertEqual(oferta.tipo, "aceite")
+
+        response = self.client.post(
+            f"/api/corridas/{corrida.id}/escolher/",
+            data=json.dumps({"oferta_id": oferta.id}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
         corrida.refresh_from_db()
         self.assertEqual(corrida.status, "aceite")
         self.assertEqual(corrida.motorista, motorista)
+        self.assertEqual(float(corrida.valor), 12.00)
 
     def test_fluxo_polling_passageiro(self):
         """Passageiro faz polling e vê status."""

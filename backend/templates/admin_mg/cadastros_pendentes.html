@@ -50,10 +50,13 @@
             </div>
         </div>
 
-        {% if motorista.cnh_frente or motorista.antecedentes or motorista.foto_rosto %}
-        <div class="flex gap-2 mb-4">
+        {% if motorista.cnh_frente or motorista.cnh_verso or motorista.antecedentes or motorista.foto_rosto %}
+        <div class="flex gap-2 mb-4 flex-wrap">
             {% if motorista.cnh_frente %}
-            <a href="{{ motorista.cnh_frente.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">CNH</a>
+            <a href="{{ motorista.cnh_frente.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">CNH Frente</a>
+            {% endif %}
+            {% if motorista.cnh_verso %}
+            <a href="{{ motorista.cnh_verso.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">CNH Verso</a>
             {% endif %}
             {% if motorista.antecedentes %}
             <a href="{{ motorista.antecedentes.url }}" target="_blank" class="text-xs px-3 py-1.5 bg-bg rounded-pill border border-border hover:border-accent transition-all">Antecedentes</a>
@@ -65,14 +68,14 @@
         {% endif %}
 
         <div class="flex gap-3">
-            <form method="POST" action="/admin_mg/cadastros/{{ motorista.id }}/analisar/" class="flex-1">
+            <form method="POST" action="/{{ prefix }}/cadastros/{{ motorista.id }}/analisar/" class="flex-1">
                 {% csrf_token %}
                 <input type="hidden" name="accao" value="aprovar">
                 <button type="submit" class="w-full bg-accent text-white py-3 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all">
                     ✅ Aprovar
                 </button>
             </form>
-            <form method="POST" action="/admin_mg/cadastros/{{ motorista.id }}/analisar/" class="flex-1">
+            <form method="POST" action="/{{ prefix }}/cadastros/{{ motorista.id }}/analisar/" class="flex-1">
                 {% csrf_token %}
                 <input type="hidden" name="accao" value="reprovar">
                 <input type="text" name="motivo" placeholder="Motivo da reprovação" class="w-full px-4 py-3 bg-bg border border-border rounded-xl text-sm mb-2">
