@@ -80,12 +80,12 @@
 | Utilizador | Tipo | Motorista | Status | Localização |
 |---|---|---|---|---|
 | `admin` | admin | — | — | — |
-| `marvio@gmail.com` (senha: `moto123`) | motorista | Márvio Silva | aprovado | Point(-60.0, -3.1) |
+| `marvio@gmail.com` (senha: `***`) | motorista | Márvio Silva | aprovado | Point(-60.0, -3.1) |
 | `daniel@gmail.com` | motorista | Daniel Pereira | pendente | — |
 | `teste1@gmail.com` | motorista | *(sem Motorista)* | quebrou | — |
 
 - Token Telegram Márvio: link em `http://localhost:8000/motorista/conta/`
-- Admin secret: `http://localhost:8000/g7x9kadm/entrar/` (admin / senha123)
+- Admin secret: `http://localhost:8000/<ADMIN_SECRET_PATH>/entrar/` (*** / ***)
 
 ---
 
@@ -159,15 +159,15 @@ Ver `docs/CHECKLIST_TESTES_MANUAIS.md` — cobre 4 fluxos + edge cases + regress
 ## Env Variables Essenciais
 
 ```bash
-DATABASE_URL=postgresql://motogram:motogram_dev@localhost:5432/motogram  # local
+DATABASE_URL=postgresql://user:pass@host/db  # local
 TELEGRAM_TOKEN=<TELEGRAM_TOKEN>
-BOT_SECRET=dev-secret-token-change-in-production
+BOT_SECRET=<BOT_SECRET>
 SITE_URL=http://localhost:8000
 BACKEND_URL=http://localhost:8000
 MP_ACCESS_TOKEN=...
 MP_WEBHOOK_SECRET=...
 PRECO_ASSINATURA_MENSAL=6900
-ADMIN_SECRET_PATH=g7x9kadm
+ADMIN_SECRET_PATH=<ADMIN_SECRET_PATH>
 EMAIL_HOST=...
 EMAIL_PORT=587
 EMAIL_HOST_USER=...
