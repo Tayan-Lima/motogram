@@ -31,11 +31,12 @@ backend/
 │       └── test_webhook.py     (2 testes — webhook Mercado Pago)
 ├── site_publico/
 │   └── tests/
-│       └── test_views.py       (8 testes — landing, pedir corrida, cadastro)
+│       ├── test_views.py       (8 testes — landing, pedir corrida, cadastro)
+│       └── test_map.py         (12 testes — geocoding HERE + fallback + cache + auth)
 └── test_e2e.py                 (5 testes — fluxos completos)
 ```
 
-**Total: 70 testes Django, 0 falhas** (114 total incluindo Playwright + bot)
+**Total: 82 testes Django, 0 falhas** (126 total incluindo Playwright + bot)
 
 **Nota (2026-06-23):** Testes de cadastro agora exigem os campos
 `password` e `password_confirm` nos POSTs (mín. 6 caracteres). Ciclo de vida completo implementado — ver `docs/CHECKLIST_TESTES_MANUAIS.md` para testes manuais.

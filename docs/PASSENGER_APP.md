@@ -162,6 +162,8 @@ PASSO 2 — Localização
   → Browser pede permissão de localização (API nativa do Chrome)
   → Marcador posicionado automaticamente
   → Alternativa: campo de texto para endereço (se GPS falhar)
+  → Geocoding via HERE Maps API no backend (`/api/map/autocomplete/` + `/api/map/geocode/`),
+    nunca no frontend — chave HERE nunca exposta ao cliente
 
 PASSO 3 — Pedido
   Passageiro confirma localização + (opcional) destino

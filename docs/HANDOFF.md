@@ -49,7 +49,7 @@
 
 ---
 
-## Estatísticas de Testes (114 total)
+## Estatísticas de Testes (126 total)
 
 | Suite | Testes | Runner |
 |-------|--------|--------|
@@ -130,6 +130,16 @@
 - **Testes**: 12 novos testes em `site_publico/tests/test_map.py` (mock HERE + fallback + cache + auth)
 - **Env**: `HERE_API_KEY` adicionada ao `.env` e `.env.example`
 
+### Sessão 4 — Fixes de autocomplete + Cleanup de segurança
+- **Autocomplete fix (position)**: HERE Autocomplete API não retorna `position` — removido filtro `if item.get("position")` que eliminava todos os resultados. Autocomplete agora devolve `{label, lat:null, lng:null, id}`.
+- **Fluxo 2-passos**: `pedir.html` → `_geocodarSelecao()` faz 2º passo assíncrono (geocode do label selecionado para obter coordenadas). Autocomplete (label) → geocode (coords).
+- **Template fix (display_name)**: `s.display_name` → `s.label` nos templates de sugestão (2 locais em `pedir.html`). O serviço sempre devolveu `label`, nunca `display_name`.
+- **Bias fix (destino)**: `buscarEnderecos` usava sempre `this.lat`/`this.lon` (origem) como bias para o HERE Autocomplete, mesmo em buscas de destino. Agora usa bias per-type: `destinoLat`/`destinoLon` para destino, `lat`/`lon` para origem. Sem bias quando não há coords do mesmo tipo.
+- **Geocode bias removido**: `_geocodarSelecao` não passa mais `lat`/`lng` (label do autocomplete já é endereço completo).
+- **Blur race condition**: `usarTextoComoDestino/Origem` simplificados — removido trim que colidia com geocode assíncrono.
+- **Security cleanup**: 6 credenciais reais substituídas por placeholders em `HANDOFF.md` (TELEGRAM_TOKEN, DATABASE_URL, ADMIN_SECRET_PATH, etc). Token do Telegram expurgado do histórico com `git filter-branch` (12 commits reescritos). `g7x9kadm` substituído por `test-admin-path` nos ficheiros de teste.
+- **83/83 testes Django OK** (70 originais + 12 map + 1 HANDOFF cleanup)
+
 ### Fluxo de estados
 ```
 aguardando ──▶ aceite ──▶ em_curso ──▶ concluida
@@ -138,13 +148,13 @@ aguardando ──▶ aceite ──▶ em_curso ──▶ concluida
                       (motorista)
 ```
 
-### Estatísticas de Testes (114 confirmed — todas executadas)
+### Estatísticas de Testes (126 confirmed — todas executadas)
 | Suite | Testes | Status |
 |-------|--------|--------|
-| Django unit + integration | 70 | ✅ OK (0 falhas) |
+| Django unit + integration | 82 | ✅ OK (0 falhas) |
 | Playwright E2E | 18 | ✅ OK (0 falhas) |
 | Bot tests | 26 | ✅ OK (0 falhas) |
-| **Total** | **114** | ✅ |
+| **Total** | **126** | ✅ |
 
 ### Incidentes das Sessões
 - **1º crash** (manhã): venv Django ficou limpa; dependências reinstaladas; código 100% íntegro

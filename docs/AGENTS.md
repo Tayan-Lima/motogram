@@ -46,10 +46,11 @@ docs/             ARCHITECTURE.md, CONVENTIONS.md, HANDOFF.md, CHECKLIST_TESTES_
 source /home/gamer/Área/bin/activate && cd backend       # ou: source venv/bin/activate
 python manage.py migrate
 python manage.py runserver
-python manage.py test .                        # tudo: apps + test_e2e (~70 testes)
+python manage.py test .                        # tudo: apps + test_e2e (~82 testes)
 python manage.py test motoristas               # app única
 python manage.py test motoristas.tests.test_services.TokenTelegramTest  # classe única
 python manage.py test test_e2e                 # só fluxo completo E2E
+python manage.py test site_publico.tests.test_map  # 12 testes geocoding HERE
 python manage.py test --verbosity=2
 
 # Testes E2E (Playwright — site passageiro, motorista, admin)
