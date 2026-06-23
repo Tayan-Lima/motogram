@@ -63,10 +63,10 @@
                 </div>
                 <template x-if="sugestoesAtivas === 'origem' && sugestoesOrigem.length > 0">
                     <div class="mt-1 border border-border rounded-xl overflow-hidden bg-surface shadow-sm">
-                        <template x-for="s in sugestoesOrigem" :key="s.place_id">
+                        <template x-for="s in sugestoesOrigem" :key="s.id">
                             <div @click="selecionarEndereco('origem', s)" @mousedown.prevent
                                  class="px-4 py-2.5 text-sm hover:bg-bg cursor-pointer border-b border-border last:border-0">
-                                <span x-text="s.display_name"></span>
+                                <span x-text="s.label"></span>
                             </div>
                         </template>
                     </div>
@@ -97,10 +97,10 @@
                 </div>
                 <template x-if="sugestoesAtivas === 'destino' && sugestoesDestino.length > 0">
                     <div class="mt-1 border border-border rounded-xl overflow-hidden bg-surface shadow-sm">
-                        <template x-for="s in sugestoesDestino" :key="s.place_id">
+                        <template x-for="s in sugestoesDestino" :key="s.id">
                             <div @click="selecionarEndereco('destino', s)" @mousedown.prevent
                                  class="px-4 py-2.5 text-sm hover:bg-bg cursor-pointer border-b border-border last:border-0">
-                                <span x-text="s.display_name"></span>
+                                <span x-text="s.label"></span>
                             </div>
                         </template>
                     </div>
