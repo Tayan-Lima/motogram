@@ -1,0 +1,40 @@
+{% extends "base/base.html" %}
+
+{% block title %}Ranking Motoristas — Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <a href="{% url 'admin_mg:dashboard' %}" class="text-sm text-muted hover:text-fg transition-colors">← Dashboard</a>
+            <h1 class="text-xl font-bold mt-1">⭐ Ranking de Motoristas</h1>
+        </div>
+        <div class="flex gap-2 text-sm">
+            <a href="?dias=7" class="px-3 py-1.5 rounded-pill border border-border {% if dias == 7 %}bg-fg text-bg{% else %}text-muted hover:border-fg{% endif %} transition-all">7d</a>
+            <a href="?dias=30" class="px-3 py-1.5 rounded-pill border border-border {% if dias == 30 %}bg-fg text-bg{% else %}text-muted hover:border-fg{% endif %} transition-all">30d</a>
+            <a href="?dias=90" class="px-3 py-1.5 rounded-pill border border-border {% if dias == 90 %}bg-fg text-bg{% else %}text-muted hover:border-fg{% endif %} transition-all">90d</a>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col gap-3">
+        {% if motoristas %}
+            {% for m in motoristas %}
+            <a href="{% url 'admin_mg:motorista_detalhe' m.id %}" class="bg-surface border border-border rounded-2xl p-4 hover:border-fg transition-all">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-bold text-sm">{{ m.nome_completo }}</p>
+                        <p class="text-xs text-muted">{{ m.modelo_moto }} — {{ m.placa }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gold font-bold">⭐ {{ m.media|floatformat:1|default:"—" }}</p>
+                        <p class="text-xs text-muted">{{ m.total_avaliacoes }} avaliações</p>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-12 text-muted text-sm">Nenhuma avaliação no período selecionado.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

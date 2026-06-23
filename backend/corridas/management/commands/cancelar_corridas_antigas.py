@@ -8,7 +8,7 @@ from corridas.models import Corrida
 
 
 class Command(BaseCommand):
-    help = "Cancela corridas aguardando há mais de 10 minutos"
+    help = "Marca como sem_motoristas corridas aguardando há mais de 10 minutos"
 
     def handle(self, *args, **options):
         limite = timezone.now() - timedelta(minutes=10)
@@ -17,7 +17,7 @@ class Command(BaseCommand):
             criada_em__lt=limite,
         )
         count = corridas.count()
-        corridas.update(status="cancelada")
+        corridas.update(status="sem_motoristas")
         self.stdout.write(
-            self.style.SUCCESS(f"{count} corrida(s) cancelada(s).")
+            self.style.SUCCESS(f"{count} corrida(s) marcada(s) como sem motoristas.")
         )

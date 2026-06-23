@@ -9,17 +9,21 @@
     <div class="bg-fg text-bg rounded-b-3xl px-5 pt-5 pb-10">
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xs font-bold">{{ motorista.nome_completo|truncatechars:1 }}</div>
+                {% if motorista.utilizador.foto %}
+                <img src="{{ motorista.utilizador.foto.url }}" class="w-10 h-10 rounded-full object-cover">
+                {% else %}
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-accent2/40 flex items-center justify-center text-white text-xs font-bold">{{ motorista.nome_completo|slice:":1"|upper }}</div>
+                {% endif %}
                 <div>
                     <p class="font-semibold text-sm">Olá, {{ motorista.nome_completo }}</p>
                     <p class="text-xs text-bg/60">{{ motorista.modelo_moto }}</p>
                 </div>
             </div>
-            <a href="/motorista/conta/" class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">⚙️</a>
+            <a href="{% url 'motoristas:conta' %}" class="w-9 h-9 rounded-full bg-surface/10 flex items-center justify-center">⚙️</a>
         </div>
 
         <!-- EARNINGS CARD -->
-        <div class="bg-white/10 rounded-2xl p-5 -mb-8">
+        <div class="bg-surface/10 rounded-2xl p-5 -mb-8">
             <p class="text-xs text-bg/60 uppercase tracking-wider mb-1">Ganhos hoje</p>
             <p class="text-3xl font-extrabold">R$ {{ ganhos_hoje|default:"0,00" }}</p>
             <div class="grid grid-cols-3 gap-3 mt-4">
@@ -41,14 +45,19 @@
 
     <!-- TOGGLE ONLINE -->
     <div class="px-5 mt-12 mb-6">
+        {% if not motorista.assinatura_activa %}
+        <div class="bg-accent2/10 border border-accent2/20 rounded-xl px-4 py-3 mb-3 text-sm text-accent2">
+            ⚠️ Sua assinatura está inativa. Renove para voltar a receber corridas.
+            <a href="{% url 'motoristas:conta' %}" class="font-semibold underline">Renovar agora</a>
+        </div>
+        {% endif %}
         <div class="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between">
             <div>
                 <p class="font-semibold text-sm">Modo motorista</p>
                 <p class="text-xs text-muted" x-text="online ? 'Aceitando novas corridas' : 'Indisponível para corridas'"></p>
             </div>
-            <button @click="toggleOnline()" class="w-[52px] h-[30px] rounded-full transition-colors relative cursor-pointer" :class="online ? 'bg-accent' : 'bg-border'">
-                <span class="absolute top-[3px] left-[3px] w-[24px] h-[24px] bg-white rounded-full shadow transition-transform duration-300" :class="online ? 'translate-x-[22px]' : 'translate-x-0'"></span>
-            </button>
+            <button @click="toggleOnline()" class="w-11 h-6 rounded-full transition-colors relative cursor-pointer" :class="online ? 'bg-accent' : 'bg-border'">
+                <span class="absolute top-[3px] left-[3px] w-5 h-5 bg-surface rounded-full shadow transition-transform duration-300" :class="online ? 'translate-x-5' : 'translate-x-0'"></span>
             </button>
         </div>
     </div>
@@ -63,8 +72,8 @@
                     <span class="text-accent">🏍️</span>
                 </div>
                 <div class="flex-1">
-                    <p class="text-sm font-semibold">{{ corrida.origem_lat }}, {{ corrida.origem_lon }}</p>
-                    <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m H:i" }}</p>
+                    <p class="text-sm font-semibold">{{ corrida.endereco_origem }}</p>
+                    <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y" }}{% if corrida.iniciada_em and corrida.concluida_em %} · {{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}{% endif %}</p>
                 </div>
                 <p class="font-bold text-sm">R$ {{ corrida.valor|default:"-" }}</p>
             </div>
@@ -78,15 +87,15 @@
 
     <!-- BOTTOM NAV -->
     <nav class="bg-surface border-t border-border px-5 py-3 flex justify-around">
-        <a href="/motorista/dashboard/" class="flex flex-col items-center gap-1 text-accent">
+        <a href="{% url 'motoristas:dashboard' %}" class="flex flex-col items-center gap-1 text-accent">
             <span class="text-lg">📊</span>
             <span class="text-xs font-semibold">Painel</span>
         </a>
-        <a href="/motorista/historico/" class="flex flex-col items-center gap-1 text-muted">
+        <a href="{% url 'motoristas:historico' %}" class="flex flex-col items-center gap-1 text-muted">
             <span class="text-lg">📋</span>
             <span class="text-xs">Histórico</span>
         </a>
-        <a href="/motorista/conta/" class="flex flex-col items-center gap-1 text-muted">
+        <a href="{% url 'motoristas:conta' %}" class="flex flex-col items-center gap-1 text-muted">
             <span class="text-lg">👤</span>
             <span class="text-xs">Conta</span>
         </a>
@@ -101,7 +110,7 @@ function dashboard() {
         toggleOnline() {
             const novo = !this.online;
             const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
-            fetch('/api/motoristas/toggle-online/', {
+            fetch("{% url 'motoristas:toggle_online' %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

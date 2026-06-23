@@ -1,59 +1,146 @@
 {% extends "passageiro/base_passageiro.html" %}
+{% load l10n %}
 
 {% block title %}Acompanhando{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" />
+{% endblock %}
+
 {% block passageiro_content %}
 <div class="flex-1 flex flex-col" x-data="acompanhar({{ corrida.id }})">
-    <!-- Mapa (placeholder) -->
-    <div class="bg-border/20 flex-1 flex items-center justify-center">
-        <div class="text-center px-6">
-            <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                </svg>
+    <!-- Mapa -->
+    <div class="relative flex-1 min-h-[280px]">
+        <div id="mapa" class="w-full h-full absolute inset-0"></div>
+        <div x-show="!mapaPronto" class="absolute inset-0 bg-bg flex items-center justify-center z-10">
+            <div class="text-center px-6">
+                <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-bold mb-1">Carregando mapa...</h2>
             </div>
-            <h2 class="text-lg font-bold mb-1">Sua corrida</h2>
-            <p class="text-muted text-sm" x-text="statusTexto"></p>
         </div>
     </div>
 
     <!-- Info card -->
     <div class="bg-surface border-t border-border px-5 py-6">
-        <!-- Origem -->
-        <div class="flex items-start gap-3 mb-4">
-            <div class="w-8 h-8 rounded-full bg-accent2/10 flex items-center justify-center shrink-0 mt-0.5">
-                <div class="w-3 h-3 rounded-full bg-accent2"></div>
+        <!-- Aguardando / Em curso -->
+        <div x-show="status !== 'concluida' && status !== 'cancelada'">
+            <!-- Origem -->
+            <div class="flex items-start gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-accent2/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <div class="w-3 h-3 rounded-full bg-accent2"></div>
+                </div>
+                <div>
+                    <p class="text-xs text-muted uppercase tracking-wider mb-0.5">Origem</p>
+                    <p class="font-semibold text-sm">{{ corrida.endereco_origem }}</p>
+                </div>
             </div>
-            <div>
-                <p class="text-xs text-muted uppercase tracking-wider mb-0.5">Origem</p>
-                <p class="font-semibold text-sm">Lat: {{ corrida.origem_lat|floatformat:4 }}, Lon: {{ corrida.origem_lon|floatformat:4 }}</p>
+
+            <!-- Destino -->
+            {% if corrida.destino_lat %}
+            <div class="flex items-start gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <div class="w-3 h-3 rounded-full bg-accent"></div>
+                </div>
+                <div>
+                    <p class="text-xs text-muted uppercase tracking-wider mb-0.5">Destino</p>
+                    <p class="font-semibold text-sm">{{ corrida.endereco_destino }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Status -->
+            <div class="mb-4">
+                <p class="text-xs text-muted uppercase tracking-wider mb-1">Status</p>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-xs font-semibold"
+                      :class="statusClass">
+                    <span x-show="status === 'aceite' || status === 'em_curso'" class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                    <span x-text="statusTexto"></span>
+                </span>
+            </div>
+
+            <!-- Motorista -->
+            <div x-show="motorista" class="flex items-center gap-3 mt-4 pt-4 border-t border-border">
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-accent2 to-orange-300 shrink-0">
+                    <img x-show="motorista?.foto_url" :src="motorista.foto_url" class="w-10 h-10 object-cover">
+                    <span x-show="!motorista?.foto_url" class="w-10 h-10 flex items-center justify-center text-white text-xs font-bold" x-text="motorista?.nome?.[0] || 'M'"></span>
+                </div>
+                <div>
+                    <p class="font-bold text-sm" x-text="motorista?.nome"></p>
+                    <p class="text-xs text-muted"><span x-text="motorista?.moto"></span> &bull; <span x-text="motorista?.cor_moto"></span></p>
+                </div>
+                <a :href="`tel:${motorista?.telefone}`" class="ml-auto bg-accent text-white px-4 py-2 rounded-pill text-xs font-semibold hover:bg-accent/90 transition-all">
+                    Ligar
+                </a>
             </div>
         </div>
 
-        <!-- Destino -->
-        {% if corrida.destino_lat %}
-        <div class="flex items-start gap-3 mb-4">
-            <div class="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-                <div class="w-3 h-3 rounded-full bg-accent"></div>
+        <!-- Concluída -->
+        <div x-show="status === 'concluida'" class="text-center py-4">
+            <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
             </div>
-            <div>
-                <p class="text-xs text-muted uppercase tracking-wider mb-0.5">Destino</p>
-                <p class="font-semibold text-sm">Lat: {{ corrida.destino_lat|floatformat:4 }}, Lon: {{ corrida.destino_lon|floatformat:4 }}</p>
+            <h2 class="font-bold text-lg mb-2">Corrida concluída!</h2>
+            <div class="bg-bg border border-border rounded-xl p-4 mb-4 text-left" x-show="dadosConcluida.valor">
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-muted">Valor</span>
+                    <span class="font-bold" x-text="dadosConcluida.valor ? 'R$ ' + dadosConcluida.valor : '—'"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-muted">Distância</span>
+                    <span class="font-bold" x-text="dadosConcluida.distancia_km ? dadosConcluida.distancia_km.toFixed(1) + ' km' : '—'"></span>
+                </div>
             </div>
-        </div>
-        {% endif %}
 
-        <!-- Motorista -->
-        <div x-show="motorista" class="flex items-center gap-3 mt-4 pt-4 border-t border-border">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xs font-bold">
-                <span x-text="motorista?.nome?.[0] || 'M'"></span>
+            <!-- Avaliação (opcional) -->
+            <div x-show="!avaliado && !avaliacaoEnviada" class="mb-4">
+                <p class="text-sm font-semibold mb-2">Como foi o motorista?</p>
+                <div class="flex justify-center gap-1 mb-3">
+                    <template x-for="i in 5" :key="i">
+                        <button @click="notaAvaliacao = i"
+                                class="text-2xl transition-all"
+                                :class="i <= notaAvaliacao ? 'text-gold' : 'text-border'"
+                                x-text="i <= notaAvaliacao ? '★' : '☆'"></button>
+                    </template>
+                </div>
+                <div x-show="notaAvaliacao > 0 && notaAvaliacao <= 2" class="mb-3">
+                    <textarea x-model="comentarioAvaliacao" placeholder="Conta o que aconteceu (opcional)..."
+                              class="w-full border-1.5 border-border rounded-xl px-3 py-2.5 text-sm focus:border-fg focus:outline-none transition-colors resize-none"
+                              rows="2" maxlength="500"></textarea>
+                </div>
+                <button x-show="notaAvaliacao > 0" @click="enviarAvaliacao()"
+                        class="w-full bg-accent text-white py-2.5 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all"
+                        :disabled="enviandoAvaliacao">
+                    <span x-show="!enviandoAvaliacao">Enviar avaliação</span>
+                    <span x-show="enviandoAvaliacao">Enviando...</span>
+                </button>
             </div>
-            <div>
-                <p class="font-bold text-sm" x-text="motorista?.nome"></p>
-                <p class="text-xs text-muted"><span x-text="motorista?.moto"></span> &bull; <span x-text="motorista?.cor_moto"></span></p>
+            <p x-show="avaliacaoEnviada" class="text-sm text-accent font-semibold mb-4">✅ Obrigado pela avaliação!</p>
+
+            <a href="/passageiro/" class="inline-block w-full bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+                Pedir nova corrida
+            </a>
+            <a href="/passageiro/perfil/" class="inline-block w-full mt-3 border border-border py-3.5 rounded-pill font-semibold text-sm text-fg hover:border-fg transition-all text-center">
+                Ir ao Perfil
+            </a>
+        </div>
+
+        <!-- Cancelada -->
+        <div x-show="status === 'cancelada'" class="text-center py-4">
+            <div class="w-12 h-12 rounded-full bg-accent2/10 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-accent2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
             </div>
-            <a :href="`tel:${motorista?.telefone}`" class="ml-auto bg-accent text-white px-4 py-2 rounded-pill text-xs font-semibold hover:bg-accent/90 transition-all">
-                Ligar
+            <h2 class="font-bold text-lg mb-2">Corrida cancelada</h2>
+            <p class="text-muted text-sm mb-4">O motorista cancelou esta corrida.</p>
+            <a href="/passageiro/" class="inline-block w-full bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+                Pedir outra corrida
             </a>
         </div>
     </div>
@@ -64,8 +151,22 @@
 <script>
 function acompanhar(corridaId) {
     return {
-        motorista: null,
         status: '{{ corrida.status }}',
+        motorista: {% if corrida.motorista %}{
+            nome: "{{ corrida.motorista.nome_completo|escapejs }}",
+            telefone: "{{ corrida.motorista.telefone|escapejs }}",
+            moto: "{{ corrida.motorista.modelo_moto|escapejs }}",
+            cor_moto: "{{ corrida.motorista.cor_moto|default:'—'|escapejs }}",
+            foto_url: "{% if corrida.motorista.utilizador.foto %}{{ corrida.motorista.utilizador.foto.url }}{% endif %}",
+        }{% else %}null{% endif %},
+        mapaPronto: false,
+        tentativas: 0,
+        dadosConcluida: { valor: null, distancia_km: null },
+        avaliado: {{ avaliado_json|default:"false" }},
+        notaAvaliacao: 0,
+        comentarioAvaliacao: '',
+        enviandoAvaliacao: false,
+        avaliacaoEnviada: false,
 
         get statusTexto() {
             const textos = {
@@ -78,23 +179,139 @@ function acompanhar(corridaId) {
             return textos[this.status] || this.status;
         },
 
+        get statusClass() {
+            const classes = {
+                'aguardando': 'bg-gold/10 text-gold',
+                'aceite': 'bg-accent/10 text-accent',
+                'em_curso': 'bg-accent/10 text-accent',
+                'concluida': 'bg-accent/10 text-accent',
+                'cancelada': 'bg-accent2/10 text-accent2',
+            };
+            return classes[this.status] || 'bg-border/20 text-muted';
+        },
+
         init() {
-            this.poll();
+            this.initMap();
+            if (this.status !== 'concluida' && this.status !== 'cancelada') {
+                this.poll();
+            }
+        },
+
+        initMap() {
+            const container = document.getElementById('mapa');
+            if (!container) return;
+
+            const loadLeaflet = () => {
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/leaflet@1.9/dist/leaflet.js';
+                script.onload = () => this._renderMap(container);
+                document.head.appendChild(script);
+            };
+
+            if (window.L) {
+                this._renderMap(container);
+            } else {
+                loadLeaflet();
+            }
+        },
+
+        _renderMap(container) {
+            {% localize off %}
+            const origemLat = {{ corrida.origem_lat }};
+            const origemLon = {{ corrida.origem_lon }};
+            {% endlocalize %}
+
+            const map = L.map(container, {
+                zoomAnimation: false,
+                fadeAnimation: false,
+            }).setView([origemLat, origemLon], 15);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                crossOrigin: true,
+            }).addTo(map);
+
+            L.marker([origemLat, origemLon])
+                .addTo(map)
+                .bindPopup('Origem');
+
+            {% if corrida.destino_lat %}
+            {% localize off %}
+            const destinoLat = {{ corrida.destino_lat }};
+            const destinoLon = {{ corrida.destino_lon }};
+            {% endlocalize %}
+            L.marker([destinoLat, destinoLon])
+                .addTo(map)
+                .bindPopup('Destino');
+            map.fitBounds([[origemLat, origemLon], [destinoLat, destinoLon]], { padding: [50, 50] });
+            {% endif %}
+
+            setTimeout(() => map.invalidateSize(), 300);
+            setTimeout(() => map.invalidateSize(), 800);
+            this.mapaPronto = true;
+        },
+
+        async enviarAvaliacao() {
+            if (!this.notaAvaliacao) return;
+            this.enviandoAvaliacao = true;
+            try {
+                const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+                const resp = await fetch(`/api/corridas/${corridaId}/avaliar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({
+                        nota: this.notaAvaliacao,
+                        comentario: this.comentarioAvaliacao.trim(),
+                    }),
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    this.avaliacaoEnviada = true;
+                    this.avaliado = true;
+                }
+            } catch(e) {}
+            this.enviandoAvaliacao = false;
         },
 
         async poll() {
+            if (this.status === 'concluida' || this.status === 'cancelada') return;
+
             try {
                 const resp = await fetch(`/api/corridas/${corridaId}/status/`);
                 const data = await resp.json();
                 this.status = data.status;
 
-                if (data.status === 'aceite') {
+                if (data.motorista) {
                     this.motorista = data.motorista;
                 }
 
-                if (data.status !== 'concluida' && data.status !== 'cancelada') {
-                    setTimeout(() => this.poll(), 10000);
+                if (data.status === 'concluida') {
+                    this.dadosConcluida = {
+                        valor: data.valor,
+                        distancia_km: data.distancia_km,
+                    };
+                    if (data.avaliado) {
+                        this.avaliado = true;
+                        this.avaliacaoEnviada = true;
+                    }
+                    return;
                 }
+
+                if (data.status === 'cancelada') {
+                    return;
+                }
+
+                this.tentativas++;
+                let proximo;
+                if (this.tentativas <= 6) {
+                    proximo = 5000;
+                } else if (this.tentativas <= 20) {
+                    proximo = 15000;
+                } else {
+                    proximo = 30000;
+                }
+
+                setTimeout(() => this.poll(), proximo);
             } catch (e) {
                 setTimeout(() => this.poll(), 15000);
             }

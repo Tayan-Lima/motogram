@@ -5,8 +5,18 @@
 {% block passageiro_content %}
 <div class="flex-1 flex flex-col" x-data="perfil()">
     <div class="px-5 py-8 text-center border-b border-border">
-        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
-            {{ user.username|slice:":1"|upper }}
+        <div class="relative w-16 h-16 mx-auto mb-3">
+            {% if user.foto %}
+            <img src="{{ user.foto.url }}" class="w-16 h-16 rounded-full object-cover">
+            {% else %}
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xl font-bold">
+                {{ user.username|slice:":1"|upper }}
+            </div>
+            {% endif %}
+            <label class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-fg text-bg flex items-center justify-center cursor-pointer hover:bg-accent transition-all text-xs">
+                📷
+                <input type="file" name="foto" accept="image/*" class="hidden" @change="uploadFoto($event)">
+            </label>
         </div>
         <h1 class="text-xl font-bold">Olá, {{ user.username }}</h1>
         {% if user.telefone %}
@@ -18,10 +28,10 @@
     </div>
 
     <div class="px-5 py-5 flex gap-3">
-        <a href="/passageiro/" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm text-center hover:bg-accent transition-all">
+        <a href="{% url 'site_publico:pedir_corrida' %}" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm text-center hover:bg-accent transition-all">
             Pedir corrida
         </a>
-        <a href="/passageiro/logout/" class="px-5 py-3.5 border border-border rounded-pill text-sm text-muted hover:border-fg transition-all">
+        <a href="{% url 'site_publico:logout' %}" class="px-5 py-3.5 border border-border rounded-pill text-sm text-muted hover:border-fg transition-all">
             Sair
         </a>
     </div>
@@ -34,12 +44,12 @@
 
         <div x-show="mostrarForm" class="bg-surface border border-border rounded-2xl p-4 mb-3">
             <input type="text" x-model="novoNome" placeholder="Nome do local (ex: Casa, Trabalho)" class="w-full mb-2 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="60">
-            <input type="text" x-model="novoEndereco" placeholder="Endereço (opcional)" class="w-full mb-3 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="200">
-            <div class="flex gap-2">
-                <input type="text" x-model="novoLat" placeholder="Latitude" class="flex-1 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" inputmode="decimal">
-                <input type="text" x-model="novoLon" placeholder="Longitude" class="flex-1 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" inputmode="decimal">
+            <input type="text" x-model="novoRua" placeholder="Rua" class="w-full mb-2 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="120">
+            <div class="flex flex-col sm:flex-row gap-2 mb-2">
+                <input type="text" x-model="novoNumero" placeholder="Número" class="w-full sm:flex-1 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="10">
+                <input type="text" x-model="novoPontoRef" placeholder="Ponto de referência (opcional)" class="w-full sm:flex-[2] px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="200">
             </div>
-            <button @click="salvarFavorito()" class="w-full mt-3 bg-fg text-bg py-2.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+            <button @click="salvarFavorito()" class="w-full mt-1 bg-fg text-bg py-2.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
                 Salvar endereço
             </button>
         </div>
@@ -56,8 +66,11 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold truncate">{{ f.nome }}</p>
-                    {% if f.endereco %}
-                    <p class="text-xs text-muted truncate">{{ f.endereco }}</p>
+                    <p class="text-xs text-muted truncate">
+                        {% if f.rua %}{{ f.rua }}{% if f.numero %}, {{ f.numero }}{% endif %}{% elif f.endereco %}{{ f.endereco }}{% endif %}
+                    </p>
+                    {% if f.ponto_referencia %}
+                    <p class="text-xs text-muted truncate">Ref: {{ f.ponto_referencia }}</p>
                     {% endif %}
                 </div>
                 <button @click="removerFavorito({{ f.id }})" class="text-muted hover:text-accent2 transition-colors shrink-0">
@@ -90,22 +103,26 @@
                         {% else %}bg-border/20 text-muted{% endif %}">
                         {{ corrida.get_status_display }}
                     </span>
-                    <span class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y H:i" }}</span>
+                    <span class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y" }}{% if corrida.iniciada_em and corrida.concluida_em %} · {{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}{% endif %}</span>
                 </div>
                 <div class="flex items-center gap-2 text-sm">
                     <span class="w-2.5 h-2.5 rounded-full bg-accent2 shrink-0"></span>
-                    <span class="text-muted truncate">{{ corrida.origem_lat|floatformat:4 }}, {{ corrida.origem_lon|floatformat:4 }}</span>
+                    <span class="text-muted truncate">{{ corrida.endereco_origem }}</span>
                 </div>
                 {% if corrida.destino_lat %}
                 <div class="flex items-center gap-2 text-sm mt-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-accent shrink-0"></span>
-                    <span class="text-muted truncate">{{ corrida.destino_lat|floatformat:4 }}, {{ corrida.destino_lon|floatformat:4 }}</span>
+                    <span class="text-muted truncate">{{ corrida.endereco_destino }}</span>
                 </div>
                 {% endif %}
                 {% if corrida.motorista %}
                 <div class="mt-2 pt-2 border-t border-border flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-[10px] font-bold">
-                        {{ corrida.motorista.nome_completo|slice:":1" }}
+                    <span class="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-accent2 to-orange-300 shrink-0">
+                        {% if corrida.motorista.utilizador.foto %}
+                        <img src="{{ corrida.motorista.utilizador.foto.url }}" class="w-6 h-6 rounded-full object-cover">
+                        {% else %}
+                        <span class="w-6 h-6 flex items-center justify-center text-white text-[10px] font-bold">{{ corrida.motorista.nome_completo|slice:":1" }}</span>
+                        {% endif %}
                     </span>
                     <span class="text-xs font-semibold">{{ corrida.motorista.nome_completo }}</span>
                 </div>
@@ -125,6 +142,18 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Bottom Nav -->
+    <nav class="mt-auto bg-surface border-t border-border px-5 py-3 flex justify-around shrink-0">
+        <a href="/passageiro/" class="flex flex-col items-center gap-1 text-muted hover:text-fg transition-colors">
+            <span class="text-lg">📍</span>
+            <span class="text-xs">Pedir</span>
+        </a>
+        <span class="flex flex-col items-center gap-1 text-accent">
+            <span class="text-lg">👤</span>
+            <span class="text-xs font-semibold">Perfil</span>
+        </span>
+    </nav>
 </div>
 {% endblock %}
 
@@ -134,12 +163,22 @@ function perfil() {
     return {
         mostrarForm: false,
         novoNome: '',
-        novoEndereco: '',
-        novoLat: '',
-        novoLon: '',
+        novoRua: '',
+        novoNumero: '',
+        novoPontoRef: '',
+
+        uploadFoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('foto', file);
+            fetch('/passageiro/upload-foto/', { method: 'POST', headers: { 'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '' }, body: fd })
+                .then(r => r.json()).then(d => { if (d.ok) window.location.reload(); });
+        },
 
         async salvarFavorito() {
-            if (!this.novoNome.trim() || !this.novoLat || !this.novoLon) return;
+            if (!this.novoNome.trim()) return;
+            if (!this.novoRua.trim()) return;
             try {
                 const resp = await fetch('/api/passageiros/favoritos/criar/', {
                     method: 'POST',
@@ -149,9 +188,9 @@ function perfil() {
                     },
                     body: JSON.stringify({
                         nome: this.novoNome.trim(),
-                        endereco: this.novoEndereco.trim(),
-                        lat: parseFloat(this.novoLat),
-                        lon: parseFloat(this.novoLon),
+                        rua: this.novoRua.trim(),
+                        numero: this.novoNumero.trim(),
+                        ponto_referencia: this.novoPontoRef.trim(),
                     }),
                 });
                 if (resp.ok) {

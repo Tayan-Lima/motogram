@@ -1,0 +1,25 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Link Expirado{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-dvh flex flex-col">
+    <header class="px-5 py-4 flex items-center gap-3 border-b border-border">
+        <h1 class="text-lg font-bold tracking-tight">Link Expirado</h1>
+    </header>
+
+    <div class="flex-1 flex flex-col items-center justify-center px-5 text-center">
+        <div class="w-20 h-20 rounded-full bg-accent2/10 flex items-center justify-center mb-6">
+            <svg class="w-10 h-10 text-accent2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+        </div>
+        <h2 class="text-2xl font-extrabold tracking-tighter mb-2">Link expirado</h2>
+        <p class="text-muted text-sm mb-6">Este link de confirmação já não é válido. Podes solicitar um novo na página de perfil.</p>
+        <a href="{% url 'site_publico:perfil' %}" class="bg-fg text-bg w-full sm:w-auto px-7 py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+            Ir para o perfil
+        </a>
+    </div>
+</div>
+{% endblock %}

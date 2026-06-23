@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+
+{% block title %}Comentários — Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <a href="{% url 'admin_mg:dashboard' %}" class="text-sm text-muted hover:text-fg transition-colors">← Dashboard</a>
+            <h1 class="text-xl font-bold mt-1">💬 Comentários</h1>
+        </div>
+        <div class="flex gap-2 text-sm">
+            <a href="?dias=30" class="px-3 py-1.5 rounded-pill border border-border {% if dias == 30 %}bg-fg text-bg{% else %}text-muted hover:border-fg{% endif %} transition-all">30d</a>
+            <a href="?dias=90" class="px-3 py-1.5 rounded-pill border border-border {% if dias == 90 %}bg-fg text-bg{% else %}text-muted hover:border-fg{% endif %} transition-all">90d</a>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col gap-3">
+        {% if comentarios %}
+            {% for c in comentarios %}
+            <div class="bg-surface border border-border rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-pill {% if c.tipo == 'pm' %}bg-accent/10 text-accent{% else %}bg-accent2/10 text-accent2{% endif %}">
+                            {{ c.get_tipo_display }}
+                        </span>
+                        <span class="text-xs text-muted ml-2">{{ c.criada_em|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <span class="text-gold font-bold text-sm">
+                        {% if c.nota == 1 %}⭐
+                        {% elif c.nota == 2 %}⭐⭐{% endif %}
+                    </span>
+                </div>
+                <p class="text-sm text-muted mb-1">Corrida #{{ c.corrida_id }} — {{ c.avaliador.username }} → {{ c.avaliado.username }}</p>
+                <p class="text-sm">{{ c.comentario }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-12 text-muted text-sm">Nenhum comentário no período selecionado.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

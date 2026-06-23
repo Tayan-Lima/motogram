@@ -7,28 +7,28 @@
 <div class="max-w-md mx-auto min-h-dvh flex flex-col">
     <!-- HEADER -->
     <header class="px-5 py-4 flex items-center gap-3">
-        <a href="/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <a href="{% url 'site_publico:landing' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
         <h1 class="text-lg font-bold tracking-tight">Login Motorista</h1>
     </header>
 
     <!-- FORM -->
-    <form method="POST" action="/motorista/login/" class="flex-1 px-5 flex flex-col justify-center">
+    <form method="POST" action="{% url 'motoristas:login' %}" class="flex-1 px-5 flex flex-col justify-center">
         {% csrf_token %}
 
         <div class="mb-8">
-            <h2 class="text-3xl font-extrabold tracking-tighter mb-2">Bem-vindo de volta</h2>
+            <h2 class="text-2xl font-extrabold tracking-tighter mb-2">Bem-vindo de volta</h2>
             <p class="text-muted">Entra na tua conta para ver o dashboard</p>
         </div>
 
         {% if erro %}
-        <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-            <p class="text-sm text-red-600">{{ erro }}</p>
+        <div class="bg-accent2/10 border border-accent2/20 rounded-xl p-4 mb-4">
+            <p class="text-sm text-accent2">{{ erro }}</p>
         </div>
         {% endif %}
 
         <div class="flex flex-col gap-4 mb-6">
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail ou utilizador</label>
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail ou usuário</label>
                 <input type="text" name="username" required placeholder="teu@email.com" class="w-full px-4 py-3.5 bg-surface border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors">
             </div>
 
@@ -41,11 +41,11 @@
         <button type="submit" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold hover:bg-accent transition-all">Entrar</button>
 
         <p class="text-center text-sm text-muted mt-4">
-            <a href="/motorista/recuperar-senha/" class="text-accent hover:underline">Esqueceu a senha?</a>
+            <a href="{% url 'motoristas:recuperar_senha' %}" class="text-accent hover:underline">Esqueceu a senha?</a>
         </p>
 
         <p class="text-center text-sm text-muted mt-4">
-            Não tens conta? <a href="/motorista/cadastro/" class="text-accent font-semibold hover:underline">Cadastra-te</a>
+            Não tens conta? <a href="{% url 'motoristas:cadastro' %}" class="text-accent font-semibold hover:underline">Cadastra-te</a>
         </p>
     </form>
 </div>

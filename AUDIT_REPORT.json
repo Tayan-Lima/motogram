@@ -1,0 +1,296 @@
+{
+  "audit_date": "2026-06-17",
+  "repository": "Tayan-Lima/motogram",
+  "stack": "Django 5.2 + PostgreSQL/PostGIS + aiogram 3",
+  "summary": {
+    "critical": 4,
+    "high": 8,
+    "medium": 12,
+    "low": 10,
+    "total": 34
+  },
+  "issues": [
+    {
+      "id": "C1",
+      "severity": "critical",
+      "category": "security",
+      "title": "SECRET_KEY com fallback inseguro",
+      "file": "backend/motogram/settings.py",
+      "line": 10,
+      "cwe": "CWE-798",
+      "description": "SECRET_KEY usa valor público como fallback. Em produção, qualquer pessoa pode forjar sessões.",
+      "patch": "SECRET_KEY = os.environ.get('SECRET_KEY')\nif not SECRET_KEY:\n    from django.core.exceptions import ImproperlyConfigured\n    raise ImproperlyConfigured('SECRET_KEY must be set')"
+    },
+    {
+      "id": "C2",
+      "severity": "critical",
+      "category": "security",
+      "title": "EscolherMotoristaView sem autenticação",
+      "file": "backend/corridas/views.py",
+      "line": 292,
+      "cwe": "CWE-306",
+      "description": "Qualquer pessoa pode escolher um motorista para qualquer corrida, sem login.",
+      "patch": "Adicionar @login_required e verificar corrida.passageiro == request.user"
+    },
+    {
+      "id": "C3",
+      "severity": "critical",
+      "category": "security",
+      "title": "ListarOfertasView sem autenticação",
+      "file": "backend/corridas/views.py",
+      "line": 265,
+      "cwe": "CWE-306",
+      "description": "Qualquer pessoa pode ver ofertas e dados pessoais de motoristas.",
+      "patch": "Adicionar @login_required e verificar corrida.passageiro == request.user"
+    },
+    {
+      "id": "C4",
+      "severity": "critical",
+      "category": "security",
+      "title": "Reset de senha sem confirmação",
+      "file": "backend/motoristas/views.py",
+      "line": 295,
+      "cwe": "CWE-640",
+      "description": "Senha é resetada imediatamente ao pedir recuperação, sem dupla confirmação.",
+      "patch": "Enviar token de confirmação e só resetar após verificação"
+    },
+    {
+      "id": "H1",
+      "severity": "high",
+      "category": "security",
+      "title": "BotAuthMixin timing attack",
+      "file": "backend/motogram/mixins.py",
+      "line": 12,
+      "cwe": "CWE-208",
+      "description": "Comparação != é suscetível a timing attacks.",
+      "patch": "Usar hmac.compare_digest(bot_secret or '', settings.BOT_SECRET or '')"
+    },
+    {
+      "id": "H2",
+      "severity": "high",
+      "category": "security",
+      "title": "Telefone completo exposto na API",
+      "file": "backend/motoristas/views.py",
+      "line": 84,
+      "cwe": "CWE-200",
+      "description": "MotoristasProximosView retorna telefone completo em texto plano.",
+      "patch": "Usar _mascarar_telefone(m.telefone)"
+    },
+    {
+      "id": "H3",
+      "severity": "high",
+      "category": "security",
+      "title": "Webhook Mercado Pago aceita tudo sem secret",
+      "file": "backend/pagamentos/services.py",
+      "line": 56,
+      "cwe": "CWE-345",
+      "description": "Se MP_WEBHOOK_SECRET não configurado, retorna True para qualquer request.",
+      "patch": "if not secret: return False"
+    },
+    {
+      "id": "H4",
+      "severity": "high",
+      "category": "security",
+      "title": "Criação automática de utilizador sem validação",
+      "file": "backend/corridas/views.py",
+      "line": 42,
+      "cwe": "CWE-284",
+      "description": "CriarCorridaView cria contas automaticamente sem senha.",
+      "patch": "Requerer utilizador existente ou gerar senha e exigir cadastro"
+    },
+    {
+      "id": "H5",
+      "severity": "high",
+      "category": "security",
+      "title": "Login motorista sem rate limiting",
+      "file": "backend/motoristas/views.py",
+      "line": 269,
+      "cwe": "CWE-307",
+      "description": "Sem limite de tentativas de login, vulnerável a brute force.",
+      "patch": "Adicionar django-axes ou django-ratelimit"
+    },
+    {
+      "id": "H6",
+      "severity": "high",
+      "category": "security",
+      "title": "Login admin sem rate limiting",
+      "file": "backend/admin_mg/views.py",
+      "line": 37,
+      "cwe": "CWE-307",
+      "description": "Mesmo problema do H5 no login admin.",
+      "patch": "Adicionar django-axes ou django-ratelimit"
+    },
+    {
+      "id": "H7",
+      "severity": "high",
+      "category": "bug",
+      "title": "Destino copiado da origem no pedir.html",
+      "file": "backend/templates/passageiro/pedir.html",
+      "line": 249,
+      "cwe": null,
+      "description": "destino_lat/lon recebem mesma coordenada que origem_lat/lon.",
+      "patch": "Implementar seleção de destino no mapa"
+    },
+    {
+      "id": "H8",
+      "severity": "high",
+      "category": "bug",
+      "title": "hmac.new pode falhar com secret vazio",
+      "file": "backend/pagamentos/services.py",
+      "line": 64,
+      "cwe": null,
+      "description": "Se secret for string vazia, hmac.new causa erro.",
+      "patch": "Validar secret antes de usar"
+    },
+    {
+      "id": "M1",
+      "severity": "medium",
+      "category": "performance",
+      "title": "select_related/prefetch_related quase não usado",
+      "file": "backend/corridas/views.py",
+      "line": null,
+      "cwe": null,
+      "description": "Apenas 1 ocorrência de select_related em todo o projeto.",
+      "patch": "Adicionar select_related em views que acessam FKs"
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "category": "performance",
+      "title": "Nenhum índice de banco criado",
+      "file": "backend/corridas/models.py",
+      "line": 44,
+      "cwe": null,
+      "description": "Nenhum db_index ou Meta.indexes em nenhum model.",
+      "patch": "Adicionar indexes em status, criada_em, motorista"
+    },
+    {
+      "id": "M3",
+      "severity": "medium",
+      "category": "code_quality",
+      "title": "25 imports não usados",
+      "file": "múltiplos",
+      "line": null,
+      "cwe": null,
+      "description": "Ruff F401 detectou 25 imports não utilizados.",
+      "patch": "ruff check backend/ --fix"
+    },
+    {
+      "id": "M4",
+      "severity": "medium",
+      "category": "code_quality",
+      "title": "2 variáveis não usadas",
+      "file": "backend/corridas/views.py",
+      "line": 219,
+      "cwe": null,
+      "description": "Variável data atribuída mas não usada em RecusarCorridaView.",
+      "patch": "Remover ou usar a variável"
+    },
+    {
+      "id": "M5",
+      "severity": "medium",
+      "category": "code_quality",
+      "title": "2 f-strings sem placeholders",
+      "file": "backend/site_publico/views.py",
+      "line": 24,
+      "cwe": null,
+      "description": "f-string desnecessária em redirect.",
+      "patch": "Remover prefixo f"
+    },
+    {
+      "id": "M6",
+      "severity": "medium",
+      "category": "bug",
+      "title": "Fallback CharField para localizacao incompatível",
+      "file": "backend/motoristas/models.py",
+      "line": 88,
+      "cwe": null,
+      "description": "Se PostGIS indisponível, localizacao vira CharField mas código espera PointField.",
+      "patch": "Tratar exceção explicitamente"
+    },
+    {
+      "id": "M7",
+      "severity": "medium",
+      "category": "performance",
+      "title": "N+1 em _notificar_resultado_ofertas",
+      "file": "backend/corridas/views.py",
+      "line": 384,
+      "cwe": null,
+      "description": "for oferta in corrida.ofertas.all() sem select_related.",
+      "patch": "Usar .select_related('motorista')"
+    },
+    {
+      "id": "M8",
+      "severity": "medium",
+      "category": "ux",
+      "title": "Leaflet CSS no body causa flash",
+      "file": "backend/templates/passageiro/pedir.html",
+      "line": 157,
+      "cwe": null,
+      "description": "link rel=stylesheet no body causa flash de conteúdo sem estilo.",
+      "patch": "Mover para extra_head block"
+    },
+    {
+      "id": "M9",
+      "severity": "medium",
+      "category": "security",
+      "title": "CSRF token sem fallback robusto",
+      "file": "backend/templates/passageiro/pedir.html",
+      "line": 242,
+      "cwe": null,
+      "description": "Se cookie csrftoken não existir, token será string vazia.",
+      "patch": "Usar ensure_csrf_cookie decorator ou template tag"
+    },
+    {
+      "id": "M10",
+      "severity": "medium",
+      "category": "code_quality",
+      "title": "PREFIX calculado no import time",
+      "file": "backend/admin_mg/views.py",
+      "line": 17,
+      "cwe": null,
+      "description": "ADMIN_SECRET_PATH pode ficar com valor padrão se .env não carregado.",
+      "patch": "Usar settings ou calcular lazy"
+    },
+    {
+      "id": "M11",
+      "severity": "medium",
+      "category": "security",
+      "title": "CorridaStatusView pública com IDs sequenciais",
+      "file": "backend/corridas/views.py",
+      "line": 350,
+      "cwe": null,
+      "description": "Qualquer pessoa pode enumerar corridas pelo ID.",
+      "patch": "Adicionar rate limiting ou token de acesso"
+    },
+    {
+      "id": "M12",
+      "severity": "medium",
+      "category": "docs",
+      "title": "API sem documentação automática",
+      "file": null,
+      "line": null,
+      "cwe": null,
+      "description": "Não há swagger/openapi configurado.",
+      "patch": "Adicionar drf-spectacular"
+    }
+  ],
+  "tools_used": [
+    {"name": "ruff", "version": "0.15.17", "findings": 25},
+    {"name": "bandit", "version": "1.9.4", "findings": 2},
+    {"name": "vulture", "version": "2.16", "findings": 10}
+  ],
+  "metrics": {
+    "tests": 62,
+    "test_status": "all_passing",
+    "ruff_errors": 25,
+    "ruff_fixable": 23,
+    "bandit_issues": 2,
+    "vulture_issues": 10,
+    "unused_imports": 25,
+    "hardcoded_urls_templates": 20,
+    "endpoints_without_auth": 2,
+    "rate_limiting": "none",
+    "ci_cd": "not_configured"
+  }
+}

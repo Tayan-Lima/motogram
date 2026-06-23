@@ -1,4 +1,4 @@
-# DESIGN_SYSTEM.md — MotoGram
+# DESIGN_SYSTEM.md — Motogram GO
 
 Referência visual oficial do projeto. Todos os templates Django devem seguir estes tokens e padrões.
 

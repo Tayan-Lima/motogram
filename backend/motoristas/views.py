@@ -3,6 +3,10 @@
 import json
 from django.http import JsonResponse
 from django.views import View
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
@@ -31,7 +35,7 @@ class VerificarAssinaturaView(BotAuthMixin, View):
         except (ValueError, Motorista.DoesNotExist):
             return JsonResponse({
                 "active": False,
-                "message": "Motorista não registado.",
+                "message": "Motorista não registrado.",
                 "link": f"{settings.SITE_URL}/motorista/cadastro",
             })
 
@@ -40,7 +44,7 @@ class VerificarAssinaturaView(BotAuthMixin, View):
 
         return JsonResponse({
             "active": False,
-            "message": "Assinatura inactiva.",
+            "message": "Assinatura inativa.",
             "link": f"{settings.SITE_URL}/motorista/conta",
         })
 
@@ -97,6 +101,10 @@ class ActivarTelegramView(BotAuthMixin, View):
     """POST /api/motoristas/activar-telegram/ — activa Telegram com token."""
 
     def post(self, request):
+        from datetime import timedelta
+        from django.db import IntegrityError
+        from django.utils import timezone
+
         auth_erro = self.verificar_bot_secret(request)
         if auth_erro:
             return auth_erro
@@ -117,7 +125,16 @@ class ActivarTelegramView(BotAuthMixin, View):
             return JsonResponse({"erro": "Token inválido ou expirado."}, status=400)
 
         motorista.telegram_id = telegram_id
-        motorista.save()
+        try:
+            motorista.save()
+        except IntegrityError:
+            motorista.telegram_token = token
+            motorista.telegram_token_expiry = timezone.now() + timedelta(hours=24)
+            motorista.telegram_id = None
+            motorista.save()
+            return JsonResponse({
+                "erro": "Este Telegram já está vinculado a outro motorista.",
+            }, status=409)
 
         return JsonResponse({
             "ok": True,
@@ -185,13 +202,19 @@ class CadastroMotoristaView(View):
             consumo_km_l = 35.0
 
         if Utilizador.objects.filter(email=dados["email"]).exists():
-            return render(request, "motorista/cadastro.html", {"erro": "E-mail já registado."})
+            return render(request, "motorista/cadastro.html", {"erro": "E-mail já registrado."})
 
         if Motorista.objects.filter(cpf=dados["cpf"]).exists():
-            return render(request, "motorista/cadastro.html", {"erro": "CPF já registado."})
+            return render(request, "motorista/cadastro.html", {"erro": "CPF já registrado."})
 
         if Motorista.objects.filter(placa=dados["placa"]).exists():
-            return render(request, "motorista/cadastro.html", {"erro": "Placa já registada."})
+            return render(request, "motorista/cadastro.html", {"erro": "Placa já registrada."})
+
+        if Motorista.objects.filter(telefone=dados["telefone"]).exists():
+            return render(request, "motorista/cadastro.html", {"erro": "Telefone já registrado."})
+
+        if Utilizador.objects.filter(telefone=dados["telefone"]).exists():
+            return render(request, "motorista/cadastro.html", {"erro": "Telefone já registrado."})
 
         import secrets as _secrets
         password = request.POST.get("password", "").strip()
@@ -266,22 +289,37 @@ class CadastroMotoristaView(View):
         return redirect("/motorista/dashboard/")
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=False), name='dispatch')
 class LoginMotoristaView(View):
     """GET/POST /motorista/login/ — login do motorista."""
 
     def get(self, request):
+        if request.user.is_authenticated:
+            return redirect("/motorista/dashboard/")
         return render(request, "motorista/login.html")
 
     def post(self, request):
-        username = request.POST.get("username")
-        password = request.POST.get("password")
+        if getattr(request, 'limited', False):
+            return render(request, "motorista/login.html", {
+                "erro": "Muitas tentativas de login. Aguarde 1 minuto e tente novamente.",
+            })
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
 
         user = authenticate(request, username=username, password=password)
-        if user is not None:
+        if user is not None and user.tipo == "motorista":
             login(request, user)
             return redirect("/motorista/dashboard/")
 
-        return render(request, "motorista/login.html", {"erro": "Credenciais inválidas."})
+        if user is None and username:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Falha de login motorista: username=%r", username)
+
+        return render(request, "motorista/login.html", {
+            "erro": "Credenciais inválidas.",
+            "username": username,
+        })
 
 
 class LogoutMotoristaView(View):
@@ -300,7 +338,6 @@ class RecuperarSenhaMotoristaView(View):
 
     def post(self, request):
         import secrets
-        from .services import notificar_motorista_telegram_private
 
         email = request.POST.get("email", "").strip().lower()
 
@@ -389,6 +426,7 @@ class DashboardMotoristaView(LoginRequiredMixin, View):
         return render(request, "motorista/dashboard.html", context)
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class ContaMotoristaView(LoginRequiredMixin, View):
     """GET /motorista/conta/ — conta do motorista."""
 
@@ -403,6 +441,27 @@ class ContaMotoristaView(LoginRequiredMixin, View):
         return render(request, "motorista/conta.html", {"motorista": motorista})
 
 
+class DesconectarTelegramView(LoginRequiredMixin, View):
+    """POST /motorista/desconectar-telegram/ — desvincula Telegram do motorista."""
+
+    login_url = "/motorista/login/"
+
+    def post(self, request):
+        try:
+            motorista = request.user.motorista
+        except Motorista.DoesNotExist:
+            return JsonResponse({"erro": "Motorista não encontrado."}, status=404)
+
+        motorista.telegram_id = None
+        motorista.telegram_token = None
+        motorista.telegram_token_expiry = None
+        motorista.save()
+        motorista.utilizador.telegram_id = None
+        motorista.utilizador.save(update_fields=["telegram_id"])
+
+        return JsonResponse({"ok": True})
+
+
 class GerarLinkTelegramView(LoginRequiredMixin, View):
     """POST /motorista/gerar-link-telegram/ — gera link de activação Telegram."""
 
@@ -413,6 +472,22 @@ class GerarLinkTelegramView(LoginRequiredMixin, View):
             motorista = request.user.motorista
         except Motorista.DoesNotExist:
             return JsonResponse({"erro": "Motorista não encontrado."}, status=404)
+
+        if motorista.status_cadastro != "aprovado":
+            return JsonResponse({
+                "erro": "O teu cadastro ainda não foi aprovado. Aguarda a verificação dos documentos.",
+            }, status=403)
+
+        if not motorista.assinatura_activa:
+            return JsonResponse({
+                "erro": "Precisas de uma assinatura ativa para ativar o Telegram. Pague a assinatura primeiro.",
+                "link": "/motorista/conta/",
+            }, status=403)
+
+        if motorista.telegram_id:
+            return JsonResponse({
+                "erro": "O teu Telegram já está ativado.",
+            }, status=400)
 
         token = gerar_token_telegram(motorista)
         link = f"https://t.me/MotoGram_Go_bot?start={token}"
@@ -472,3 +547,183 @@ class ToggleOnlineView(LoginRequiredMixin, View):
 
         motorista.save()
         return JsonResponse({"activo": motorista.activo})
+
+
+class EditarPerfilMotoristaView(LoginRequiredMixin, View):
+    """GET/POST /motorista/editar-perfil/ — editar informações não sensíveis."""
+
+    login_url = "/motorista/login/"
+
+    CAMPOS_EDITAVEIS = ["telefone", "email", "cidade", "modelo_moto", "ano_moto", "cor_moto"]
+
+    def get(self, request):
+        try:
+            motorista = request.user.motorista
+        except Motorista.DoesNotExist:
+            return redirect("/motorista/cadastro/")
+
+        return render(request, "motorista/editar_perfil.html", {"motorista": motorista})
+
+    def post(self, request):
+        try:
+            motorista = request.user.motorista
+        except Motorista.DoesNotExist:
+            return JsonResponse({"erro": "Motorista não encontrado."}, status=404)
+
+        dados = {k: request.POST.get(k, "").strip() for k in self.CAMPOS_EDITAVEIS}
+
+        erros = []
+
+        novo_email = dados["email"].lower()
+        if novo_email and novo_email != motorista.utilizador.email:
+            if Utilizador.objects.filter(email=novo_email).exists():
+                erros.append("E-mail já registrado por outro usuário.")
+            else:
+                motorista.utilizador.email = novo_email
+                motorista.utilizador.username = novo_email
+
+        novo_telefone = dados["telefone"]
+        if novo_telefone and novo_telefone != motorista.telefone:
+            if Motorista.objects.filter(telefone=novo_telefone).exists():
+                erros.append("Telefone já registrado por outro motorista.")
+            else:
+                motorista.telefone = novo_telefone
+                motorista.utilizador.telefone = novo_telefone
+
+        if dados["cidade"]:
+            motorista.cidade = dados["cidade"]
+        if dados["modelo_moto"]:
+            motorista.modelo_moto = dados["modelo_moto"]
+        if dados["cor_moto"]:
+            motorista.cor_moto = dados["cor_moto"]
+
+        if dados["ano_moto"]:
+            try:
+                motorista.ano_moto = int(dados["ano_moto"])
+            except (ValueError, TypeError):
+                erros.append("Ano da moto inválido.")
+
+        if erros:
+            return render(request, "motorista/editar_perfil.html", {
+                "motorista": motorista,
+                "erro": " ".join(erros),
+            })
+
+        motorista.save()
+        motorista.utilizador.save()
+
+        return render(request, "motorista/editar_perfil.html", {
+            "motorista": motorista,
+            "sucesso": "Perfil actualizado com sucesso.",
+        })
+
+
+class UploadFotoMotoristaView(LoginRequiredMixin, View):
+    """POST /motorista/upload-foto/ — upload da foto de perfil do motorista."""
+
+    login_url = "/motorista/login/"
+
+    def post(self, request):
+        try:
+            motorista = request.user.motorista
+        except Motorista.DoesNotExist:
+            return JsonResponse({"erro": "Motorista não encontrado."}, status=404)
+
+        foto = request.FILES.get("foto")
+        if not foto:
+            return JsonResponse({"erro": "Nenhuma foto enviada."}, status=400)
+
+        if not foto.content_type or not foto.content_type.startswith("image/"):
+            return JsonResponse({"erro": "Formato inválido. Use JPG ou PNG."}, status=400)
+
+        if foto.size > 5 * 1024 * 1024:
+            return JsonResponse({"erro": "Foto muito grande. Máximo 5MB."}, status=400)
+
+        try:
+            from PIL import Image
+            img = Image.open(foto)
+            img.thumbnail((200, 200), Image.LANCZOS)
+            if img.mode == "RGBA":
+                img = img.convert("RGB")
+            import io
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=85)
+            buf.seek(0)
+            from django.core.files.base import ContentFile
+            motorista.utilizador.foto.save(
+                f"{motorista.utilizador.username}_profile.jpg",
+                ContentFile(buf.read()),
+                save=False,
+            )
+        except Exception:
+            return JsonResponse({"erro": "Erro ao processar a imagem."}, status=400)
+
+        motorista.utilizador.save(update_fields=["foto"])
+        return JsonResponse({"ok": True, "foto_url": motorista.utilizador.foto.url})
+
+
+class LimparMensagensView(BotAuthMixin, View):
+    """POST /api/motoristas/limpar-mensagens/ — motorista limpa mensagens antigas do chat."""
+
+    def post(self, request):
+        auth_erro = self.verificar_bot_secret(request)
+        if auth_erro:
+            return auth_erro
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        motorista_telegram_id = data.get("motorista_telegram_id")
+        if not motorista_telegram_id:
+            return JsonResponse({"erro": "motorista_telegram_id obrigatório"}, status=400)
+
+        try:
+            motorista = Motorista.objects.get(telegram_id=motorista_telegram_id)
+        except Motorista.DoesNotExist:
+            return JsonResponse({"erro": "Motorista não encontrado"}, status=404)
+
+        from corridas.models import Corrida
+        from corridas.services import _token
+        import requests
+
+        tg_str = str(motorista_telegram_id)
+        token = _token()
+        if not token:
+            return JsonResponse({"erro": "Configuração Telegram não encontrada"}, status=500)
+
+        corridas = Corrida.objects.filter(notificacao_msg_ids__has_key=tg_str).order_by("-id")
+
+        apagadas = 0
+        for corrida in corridas[3:]:
+            msg_ids = corrida.notificacao_msg_ids.get(tg_str, [])
+            if msg_ids:
+                for i in range(0, len(msg_ids), 100):
+                    batch = msg_ids[i:i + 100]
+                    try:
+                        requests.post(
+                            f"https://api.telegram.org/bot{token}/deleteMessages",
+                            json={"chat_id": motorista_telegram_id, "message_ids": batch},
+                            timeout=10,
+                        )
+                        apagadas += len(batch)
+                    except Exception:
+                        pass
+                corrida.notificacao_msg_ids.pop(tg_str, None)
+                corrida.save(update_fields=["notificacao_msg_ids"])
+
+        # Limpeza agressiva — apagar mensagens com IDs sequenciais (não tracked)
+        all_ids = []
+        for c in corridas[:3]:
+            all_ids.extend(c.notificacao_msg_ids.get(tg_str, []))
+        max_tracked = max(all_ids) if all_ids else 200
+        import threading
+        from corridas.services import _limpeza_agressiva
+        threading.Thread(
+            target=_limpeza_agressiva,
+            args=(motorista_telegram_id, max_tracked - 2),
+            daemon=True,
+        ).start()
+
+        return JsonResponse({"ok": True, "apagadas": apagadas, "limpeza_fundo": True})

@@ -1,4 +1,4 @@
-# ONBOARDING.md — MotoGram
+# ONBOARDING.md — Motogram GO
 
 Cadastro completo de passageiro e motorista — campos, verificações,
 uploads de documentos, fluxo de aprovação e modelos Django.

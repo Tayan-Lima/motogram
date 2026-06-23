@@ -3,13 +3,17 @@
 
 {% block title %}Pedir Corrida{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" />
+{% endblock %}
+
 {% block content %}
 <div class="max-w-md mx-auto min-h-dvh flex flex-col" x-data="rideRequest()">
+    {% csrf_token %}
     <!-- HEADER -->
-    <header class="px-5 py-4 flex items-center justify-between border-b border-border">
-        <a href="/" class="text-lg font-extrabold tracking-tight flex items-center gap-2">
-            <span class="w-2 h-2 rounded bg-accent"></span>
-            MotoGram
+    <header class="px-5 py-4 flex items-center justify-between border-b border-border shrink-0">
+        <a href="/" class="flex items-center gap-2">
+            <img src="{% static 'motogram-go-logo.png' %}" alt="Motogram GO" class="h-11 w-auto max-w-[150px] object-contain">
         </a>
         <span class="flex items-center gap-3">
             {% if user.is_authenticated %}
@@ -21,9 +25,9 @@
     </header>
 
     <!-- MAP AREA -->
-    <div class="flex-1 relative bg-surface">
-        <div id="mapa" class="w-full h-full" style="display: none;"></div>
-        <div x-show="!mapVisible" class="flex flex-col items-center justify-center h-full px-6 text-center">
+    <div class="relative bg-surface h-[55vh] min-h-[280px]">
+        <div id="mapa" class="w-full h-full z-0"></div>
+        <div x-show="!mapVisible" class="flex flex-col items-center justify-center h-full px-6 text-center absolute inset-0 bg-surface z-10">
             <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4">
                 <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -42,74 +46,118 @@
     <div x-show="mapVisible" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" class="bg-surface border-t border-border rounded-t-2xl px-5 py-6">
         <div class="w-10 h-1 bg-border rounded mx-auto mb-4"></div>
 
-        <!-- Status: selecting location -->
-        <div x-show="step === 'location'">
-            <p class="text-sm text-muted mb-2">Localização seleccionada</p>
-            <p class="font-semibold mb-4" x-text="lat ? `${lat.toFixed(4)}, ${lon.toFixed(4)}` : 'A obter...'"></p>
-            <button @click="step = 'destination'" class="w-full bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all">
-                Confirmar localização
-            </button>
-            <button @click="salvarComoFavorito()" class="w-full mt-2 text-sm text-muted hover:text-fg transition-colors py-2.5">
-                💾 Salvar como endereço favorito
-            </button>
-        </div>
+        <!-- Status: selecting location + destination (tela única) -->
+        <div x-show="step === 'form'">
+            <!-- ORIGEM -->
+            <div class="mb-4">
+                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">De onde?</label>
+                <div class="relative">
+                    <input type="text" x-model="origemTexto" @input.debounce.400ms="buscarEnderecos('origem')"
+                           @focus="sugestoesAtivas = 'origem'"
+                           @blur="usarTextoComoOrigem()"
+                           placeholder="Rua, bairro ou use o GPS"
+                           class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                    <button @click="getLocation()" class="absolute right-2 top-1/2 -translate-y-1/2 bg-accent/10 text-accent rounded-lg px-2.5 py-2 text-xs font-semibold hover:bg-accent hover:text-white transition-all" title="Usar GPS">
+                        📍 GPS
+                    </button>
+                </div>
+                <template x-if="sugestoesAtivas === 'origem' && sugestoesOrigem.length > 0">
+                    <div class="mt-1 border border-border rounded-xl overflow-hidden bg-surface shadow-sm">
+                        <template x-for="s in sugestoesOrigem" :key="s.place_id">
+                            <div @click="selecionarEndereco('origem', s)" @mousedown.prevent
+                                 class="px-4 py-2.5 text-sm hover:bg-bg cursor-pointer border-b border-border last:border-0">
+                                <span x-text="s.display_name"></span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <p x-show="lat" class="text-xs text-muted mt-1" x-text="lat ? `📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}` : ''"></p>
+            </div>
 
-        <!-- Status: entering details -->
-        <div x-show="step === 'destination'">
-            <p class="text-sm font-semibold mb-3">Destino (opcional)</p>
-
-            <div x-show="favoritos.length > 0" class="mb-3">
-                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Endereços salvos</label>
-                <template x-for="f in favoritos" :key="f.id">
-                    <div class="flex items-center gap-2 py-2 px-3 bg-bg border border-border rounded-lg mb-1.5 cursor-pointer hover:border-fg transition-colors"
-                         @click="usarFavorito(f)">
-                        <svg class="w-4 h-4 text-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <span class="text-sm font-medium truncate flex-1" x-text="f.nome"></span>
-                        <span class="text-xs text-muted" x-text="f.lat.toFixed(4)"></span>
+            <!-- DESTINO -->
+            <div class="mb-4">
+                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Para onde?</label>
+                <div x-show="favoritos.length > 0" class="mb-2">
+                    <template x-for="f in favoritos" :key="f.id">
+                        <div class="flex items-center gap-2 py-2 px-3 bg-bg border border-border rounded-lg mb-1.5 cursor-pointer hover:border-fg transition-colors"
+                             @click="usarFavorito(f)">
+                            <svg class="w-4 h-4 text-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5v14l7-7 7 7V5z"/>
+                            </svg>
+                            <span class="text-sm font-medium truncate flex-1" x-text="f.nome"></span>
+                        </div>
+                    </template>
+                </div>
+                <div class="relative">
+                    <input type="text" x-model="destinoTexto" @input.debounce.400ms="buscarEnderecos('destino')"
+                           @focus="sugestoesAtivas = 'destino'"
+                           @blur="usarTextoComoDestino()"
+                           placeholder="Rua, bairro ou referência"
+                           class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                </div>
+                <template x-if="sugestoesAtivas === 'destino' && sugestoesDestino.length > 0">
+                    <div class="mt-1 border border-border rounded-xl overflow-hidden bg-surface shadow-sm">
+                        <template x-for="s in sugestoesDestino" :key="s.place_id">
+                            <div @click="selecionarEndereco('destino', s)" @mousedown.prevent
+                                 class="px-4 py-2.5 text-sm hover:bg-bg cursor-pointer border-b border-border last:border-0">
+                                <span x-text="s.display_name"></span>
+                            </div>
+                        </template>
                     </div>
                 </template>
             </div>
 
-            <input type="text" x-model="destino" placeholder="Nome do local ou endereço" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors mb-3">
-
-            <p class="text-sm font-semibold mb-2">Quanto queres pagar?</p>
-            <div class="relative mb-3">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold">R$</span>
-                <input type="number" x-model="valor" step="0.50" min="5" placeholder="12,00" class="w-full border-1.5 border-border rounded-xl pl-10 pr-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+            <!-- PREÇO -->
+            <div class="mb-4">
+                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Quanto queres pagar?</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold">R$</span>
+                    <input type="number" x-model="valor" step="0.50" min="5" placeholder="12,00" class="w-full border-1.5 border-border rounded-xl pl-10 pr-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                </div>
             </div>
 
-            <input type="text" x-model="pontoRef" placeholder="Ponto de referência (opcional)" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors mb-4">
-
-            <div class="flex gap-3">
-                <button @click="submitRide()" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all" x-bind:disabled="!valor">
-                    Pedir corrida
-                </button>
-                <button @click="submitRide()" class="px-4 py-3.5 border border-border rounded-pill text-sm text-muted hover:border-fg transition-all">
-                    Pular
-                </button>
+            <!-- PONTO DE REFERÊNCIA -->
+            <div class="mb-5">
+                <input type="text" x-model="pontoRef" placeholder="Ponto de referência (opcional)" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
             </div>
+
+            <button @click="submitRide()" class="w-full bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed" x-bind:disabled="!valor || !lat || !destinoTexto">
+                <span x-show="!enviando">Pedir corrida</span>
+                <span x-show="enviando">Enviando...</span>
+            </button>
+            <button @click="salvarComoFavorito()" x-show="lat" class="w-full mt-2 text-sm text-muted hover:text-fg transition-colors py-2.5">
+                💾 Salvar localização como favorito
+            </button>
         </div>
 
         <!-- Status: waiting -->
         <div x-show="step === 'waiting'" class="text-center py-4">
-            <div class="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
-                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
+            <div class="relative w-20 h-20 mx-auto mb-5">
+                <div class="absolute inset-0 rounded-full bg-accent/20 animate-ping-slow"></div>
+                <div class="absolute inset-2 rounded-full bg-accent/30 animate-ping-slow" style="animation-delay: 0.4s;"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-3xl">🏍️</span>
+                </div>
             </div>
             <p class="font-semibold mb-1">A procurar mototaxista...</p>
-            <p class="text-sm text-muted" x-text="ofertasCount > 0 ? `${ofertasCount} motorista(s) responderam!` : 'Aguardando respostas...'"></p>
-            <button x-show="ofertasCount > 0" @click="verOfertas()" class="mt-3 bg-accent text-white px-6 py-2.5 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all">
-                Ver respostas
-            </button>
+            <p class="text-sm text-muted mb-4" x-text="ofertasCount > 0 ? `${ofertasCount} motorista(s) responderam!` : 'Aguardando respostas...'"></p>
+            <div class="flex gap-3 justify-center">
+                <button x-show="ofertasCount > 0" @click="verOfertas()" class="bg-accent text-white px-6 py-2.5 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all">
+                    Ver respostas
+                </button>
+                <button @click="cancelarCorrida()" class="border border-border text-muted px-6 py-2.5 rounded-pill font-semibold text-sm hover:border-accent2 hover:text-accent2 transition-all">
+                    Cancelar pedido
+                </button>
+            </div>
         </div>
 
         <!-- Status: viewing offers -->
         <div x-show="step === 'ofertas'">
-            <p class="text-sm font-semibold mb-3">Motoristas que responderam</p>
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-sm font-semibold">Motoristas que responderam</p>
+                <button @click="cancelarCorrida()" class="text-xs text-muted hover:text-accent2 transition-colors">Cancelar</button>
+            </div>
+            <p class="text-xs text-muted mb-3">Clique num motorista para <strong>confirmar</strong> a corrida</p>
             <p class="text-xs text-muted mb-4">Escolha o motorista pela melhor oferta</p>
 
             <template x-for="o in ofertasList" :key="o.id">
@@ -123,6 +171,7 @@
                     <div class="flex-1 min-w-0">
                         <p class="font-semibold text-sm truncate" x-text="o.nome"></p>
                         <p class="text-xs text-muted" x-text="o.moto"></p>
+                        <p class="text-xs text-gold" x-show="o.media_avaliacoes" x-text="'⭐ ' + o.media_avaliacoes + ' · ' + o.total_corridas + ' corridas'"></p>
                     </div>
                     <div class="text-right shrink-0">
                         <p class="font-bold text-sm" x-text="'R$ ' + o.valor.toFixed(2)"></p>
@@ -151,10 +200,27 @@
             <p class="text-muted text-sm">Aguarde um momento</p>
         </div>
     </div>
+
+    <!-- Bottom Nav -->
+    <nav class="mt-auto bg-surface border-t border-border px-5 py-3 flex justify-around shrink-0">
+        <span class="flex flex-col items-center gap-1 text-accent">
+            <span class="text-lg">📍</span>
+            <span class="text-xs font-semibold">Pedir</span>
+        </span>
+        <a href="/passageiro/perfil/" class="flex flex-col items-center gap-1 text-muted hover:text-fg transition-colors">
+            <span class="text-lg">👤</span>
+            <span class="text-xs">Perfil</span>
+        </a>
+    </nav>
 </div>
 
-<!-- LEAFLET CSS (lazy loaded) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" x-show="false">
+<style>
+@keyframes ping-slow {
+    0% { transform: scale(1); opacity: 0.5; }
+    75%, 100% { transform: scale(1.5); opacity: 0; }
+}
+.animate-ping-slow { animation: ping-slow 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
+</style>
 
 {% endblock %}
 
@@ -163,10 +229,13 @@
 function rideRequest() {
     return {
         mapVisible: false,
-        step: 'location',
+        step: 'form',
         lat: null,
         lon: null,
-        destino: '',
+        origemTexto: '',
+        destinoTexto: '',
+        destinoLat: null,
+        destinoLon: null,
         pontoRef: '',
         valor: null,
         corridaId: null,
@@ -176,6 +245,15 @@ function rideRequest() {
         ofertasCount: 0,
         tentativas: 0,
         intervalo: 5000,
+        enviando: false,
+        sugestoesAtivas: null,
+        sugestoesOrigem: [],
+        sugestoesDestino: [],
+        _map: null,
+        _markerOrigem: null,
+        _markerDestino: null,
+        _nominatimCache: {},
+        _ultimaChamada: 0,
 
         init() {
             this.carregarFavoritos();
@@ -195,23 +273,26 @@ function rideRequest() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        this.lat = pos.coords.latitude;
-                        this.lon = pos.coords.longitude;
-                        this.mapVisible = true;
-                        this.initMap();
+                        this.definirOrigem(pos.coords.latitude, pos.coords.longitude, 'Localização actual');
                     },
                     () => {
-                        this.lat = -3.1;
-                        this.lon = -60.0;
-                        this.mapVisible = true;
-                        this.initMap();
+                        this.definirOrigem(-3.1, -60.0, 'Manaus (centro)');
                     }
                 );
             } else {
-                this.lat = -3.1;
-                this.lon = -60.0;
+                this.definirOrigem(-3.1, -60.0, 'Manaus (centro)');
+            }
+        },
+
+        definirOrigem(lat, lon, texto) {
+            this.lat = lat;
+            this.lon = lon;
+            this.origemTexto = texto;
+            if (!this.mapVisible) {
                 this.mapVisible = true;
-                this.initMap();
+                this.$nextTick(() => this.initMap());
+            } else {
+                this.actualizarMapa();
             }
         },
 
@@ -220,34 +301,140 @@ function rideRequest() {
             script.src = 'https://unpkg.com/leaflet@1.9/dist/leaflet.js';
             script.onload = () => {
                 const mapEl = document.getElementById('mapa');
-                mapEl.style.display = 'block';
                 const map = L.map('mapa', {
                     zoomAnimation: false,
                     fadeAnimation: false,
-                }).setView([this.lat, this.lon], 16);
+                    markerZoomAnimation: false,
+                }).setView([this.lat, this.lon], 15);
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap',
                     crossOrigin: true,
                 }).addTo(map);
 
-                L.marker([this.lat, this.lon]).addTo(map);
+                this._map = map;
+                this._markerOrigem = L.marker([this.lat, this.lon], { draggable: true }).addTo(map);
+                this._markerOrigem.on('dragend', (e) => {
+                    const pos = e.target.getLatLng();
+                    this.lat = pos.lat;
+                    this.lon = pos.lng;
+                    this.origemTexto = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
+                });
 
-                setTimeout(() => map.invalidateSize(), 200);
+                setTimeout(() => map.invalidateSize(), 300);
+                setTimeout(() => map.invalidateSize(), 600);
             };
             document.head.appendChild(script);
         },
 
+        actualizarMapa() {
+            if (!this._map || !this._markerOrigem) return;
+            this._markerOrigem.setLatLng([this.lat, this.lon]);
+            this._map.setView([this.lat, this.lon], 15);
+            setTimeout(() => this._map.invalidateSize(), 200);
+            setTimeout(() => this._map.invalidateSize(), 500);
+        },
+
+        actualizarDestinoMapa() {
+            if (!this._map) return;
+            if (this.destinoLat && this.destinoLon) {
+                if (this._markerDestino) {
+                    this._markerDestino.setLatLng([this.destinoLat, this.destinoLon]);
+                } else {
+                    this._markerDestino = L.marker([this.destinoLat, this.destinoLon], { draggable: true }).addTo(this._map);
+                    this._markerDestino.on('dragend', (e) => {
+                        const pos = e.target.getLatLng();
+                        this.destinoLat = pos.lat;
+                        this.destinoLon = pos.lng;
+                    });
+                }
+            } else if (this._markerDestino) {
+                this._map.removeLayer(this._markerDestino);
+                this._markerDestino = null;
+            }
+        },
+
+        async buscarEnderecos(tipo) {
+            const texto = tipo === 'origem' ? this.origemTexto : this.destinoTexto;
+            if (texto.length < 3) {
+                this._limparSugestoes(tipo);
+                return;
+            }
+            if (this._nominatimCache[texto]) {
+                this._atribuirSugestoes(tipo, this._nominatimCache[texto]);
+                return;
+            }
+            const agora = Date.now();
+            if (agora - this._ultimaChamada < 1200) {
+                await new Promise(r => setTimeout(r, 1200 - (agora - this._ultimaChamada)));
+            }
+            try {
+                this._ultimaChamada = Date.now();
+                let resp = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto + ', Brasil')}&limit=4`,
+                    { headers: { 'Accept-Language': 'pt-BR' } }
+                );
+                if (resp.status === 429) {
+                    await new Promise(r => setTimeout(r, 1500));
+                    resp = await fetch(
+                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto + ', Brasil')}&limit=4`,
+                        { headers: { 'Accept-Language': 'pt-BR' } }
+                    );
+                }
+                if (!resp.ok) return;
+                const data = await resp.json();
+                this._nominatimCache[texto] = data;
+                this._atribuirSugestoes(tipo, data);
+            } catch(e) {}
+        },
+
+        _limparSugestoes(tipo) {
+            if (tipo === 'origem') this.sugestoesOrigem = [];
+            else this.sugestoesDestino = [];
+        },
+
+        _atribuirSugestoes(tipo, data) {
+            if (tipo === 'origem') this.sugestoesOrigem = data;
+            else this.sugestoesDestino = data;
+        },
+
+        selecionarEndereco(tipo, s) {
+            const lat = parseFloat(s.lat);
+            const lon = parseFloat(s.lon);
+            const nome = s.display_name.split(',')[0];
+            if (tipo === 'origem') {
+                this.lat = lat;
+                this.lon = lon;
+                this.origemTexto = nome;
+                this.sugestoesOrigem = [];
+                if (this.mapVisible) this.actualizarMapa();
+                else { this.mapVisible = true; this.$nextTick(() => this.initMap()); }
+            } else {
+                this.destinoLat = lat;
+                this.destinoLon = lon;
+                this.destinoTexto = nome;
+                this.sugestoesDestino = [];
+                this.actualizarDestinoMapa();
+            }
+            this.sugestoesAtivas = null;
+        },
+
         async submitRide() {
+            if (!this.valor || !this.lat || !this.destinoTexto.trim()) return;
+            this.enviando = true;
             const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
             try {
                 const body = {
                     origem_lat: this.lat,
                     origem_lon: this.lon,
                 };
+                if (this.origemTexto.trim()) body.origem_texto = this.origemTexto.trim();
                 if (this.valor) body.valor_sugerido = parseFloat(this.valor);
-                if (this.destino) body.destino_lat = this.lat;
-                if (this.destino) body.destino_lon = this.lon;
+                if (this.destinoTexto.trim()) {
+                    body.destino_texto = this.destinoTexto.trim();
+                    if (this.destinoLat) body.destino_lat = this.destinoLat;
+                    if (this.destinoLon) body.destino_lon = this.destinoLon;
+                }
                 if (this.pontoRef) body.ponto_referencia = this.pontoRef;
 
                 const resp = await fetch('/api/corridas/web/', {
@@ -263,6 +450,7 @@ function rideRequest() {
                     if (data.erro === 'Login obrigatório') {
                         window.location.href = '/passageiro/login/?next=/passageiro/';
                     }
+                    this.enviando = false;
                     return;
                 }
                 if (data.id) {
@@ -274,6 +462,28 @@ function rideRequest() {
             } catch (e) {
                 console.error('Erro ao criar corrida:', e);
             }
+            this.enviando = false;
+        },
+
+        async cancelarCorrida() {
+            if (!this.corridaId) {
+                this.step = 'form';
+                return;
+            }
+            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            try {
+                await fetch(`/api/corridas/${this.corridaId}/cancelar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf,
+                    },
+                });
+            } catch(e) {}
+            this.corridaId = null;
+            this.step = 'form';
+            this.ofertasCount = 0;
+            this.ofertasList = [];
         },
 
         salvarComoFavorito() {
@@ -287,7 +497,7 @@ function rideRequest() {
                 },
                 body: JSON.stringify({
                     nome: nome.trim().substring(0, 60),
-                    endereco: '',
+                    endereco: this.origemTexto || '',
                     lat: this.lat,
                     lon: this.lon,
                 }),
@@ -295,15 +505,57 @@ function rideRequest() {
         },
 
         usarFavorito(f) {
-            this.destino = f.nome;
-            this.lat = f.lat;
-            this.lon = f.lon;
-            if (this.mapVisible) {
-                const mapEl = document.getElementById('mapa');
-                if (mapEl && mapEl._leaflet_map) {
-                    mapEl._leaflet_map.setView([f.lat, f.lon], 16);
-                }
+            let texto = f.nome;
+            if (f.rua) {
+                texto = f.rua;
+                if (f.numero) texto += ', ' + f.numero;
+            } else if (f.endereco) {
+                texto = f.endereco;
             }
+            if (f.ponto_referencia) texto += ' (Ref: ' + f.ponto_referencia + ')';
+            this.destinoTexto = texto;
+            if (f.lat != null && f.lon != null) {
+                this.destinoLat = f.lat;
+                this.destinoLon = f.lon;
+                this.actualizarDestinoMapa();
+            } else if (f.rua) {
+                this._geocodarFavorito(f);
+            }
+        },
+
+        async _geocodarFavorito(f) {
+            const query = (f.rua + ' ' + (f.numero || '') + ', Brasil').trim();
+            if (query.length < 5) return;
+            try {
+                const resp = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+                    { headers: { 'Accept-Language': 'pt-BR' } }
+                );
+                const data = await resp.json();
+                if (data && data.length > 0) {
+                    this.destinoLat = parseFloat(data[0].lat);
+                    this.destinoLon = parseFloat(data[0].lon);
+                    this.actualizarDestinoMapa();
+                }
+            } catch(e) {}
+        },
+
+        usarTextoComoOrigem() {
+            setTimeout(() => {
+                this.sugestoesAtivas = null;
+                if (!this.lat && this.origemTexto.trim()) {
+                    this.origemTexto = this.origemTexto.trim();
+                }
+            }, 200);
+        },
+
+        usarTextoComoDestino() {
+            setTimeout(() => {
+                this.sugestoesAtivas = null;
+                if (!this.destinoLat && this.destinoTexto.trim()) {
+                    this.destinoTexto = this.destinoTexto.trim();
+                }
+            }, 200);
         },
 
         async carregarOfertas() {
@@ -335,7 +587,7 @@ function rideRequest() {
                 });
                 const data = await resp.json();
                 if (data.ok) {
-                    window.location.href = `/passageiro/confirmacao/${this.corridaId}/`;
+                    window.location.href = `/passageiro/acompanhar/${this.corridaId}/`;
                 }
             } catch (e) {
                 console.error('Erro ao escolher motorista:', e);
@@ -344,16 +596,18 @@ function rideRequest() {
 
         startPolling() {
             const poll = async () => {
+                if (!this.corridaId || this.step !== 'waiting') return;
                 try {
                     const resp = await fetch(`/api/corridas/${this.corridaId}/status/`);
                     const data = await resp.json();
 
                     if (data.status === 'aceite') {
-                        window.location.href = `/passageiro/confirmacao/${this.corridaId}/`;
+                        window.location.href = `/passageiro/acompanhar/${this.corridaId}/`;
                         return;
                     }
                     if (data.status === 'cancelada' || data.status === 'sem_motoristas') {
-                        this.step = 'location';
+                        this.corridaId = null;
+                        this.step = 'form';
                         return;
                     }
 
@@ -370,7 +624,8 @@ function rideRequest() {
                     }
 
                     if (this.tentativas > 60) {
-                        this.step = 'location';
+                        this.corridaId = null;
+                        this.step = 'form';
                         return;
                     }
 
@@ -387,7 +642,7 @@ function rideRequest() {
 </script>
 
 <!-- Offline banner -->
-<div id="offline-banner" class="hidden fixed top-0 left-0 right-0 bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-center text-sm text-yellow-800 z-50">
+<div id="offline-banner" class="hidden fixed top-0 left-0 right-0 bg-gold/10 border-b border-gold/30 px-4 py-2 text-center text-sm text-gold z-50">
     ⚠️ Sem conexão. Verificando quando voltar...
 </div>
 <script>

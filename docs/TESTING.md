@@ -1,4 +1,4 @@
-# TESTING.md — MotoGram
+# TESTING.md — Motogram GO
 
 ## Filosofia de Testes
 
@@ -35,10 +35,10 @@ backend/
 └── test_e2e.py                 (5 testes — fluxos completos)
 ```
 
-**Total: 62 testes, 0 falhas**
+**Total: 70 testes Django, 0 falhas** (114 total incluindo Playwright + bot)
 
-**Nota (2026-06-17):** Testes de cadastro (`test_cadastro_sucesso`) agora exigem os campos
-`password` e `password_confirm` nos POSTs (mín. 6 caracteres).
+**Nota (2026-06-23):** Testes de cadastro agora exigem os campos
+`password` e `password_confirm` nos POSTs (mín. 6 caracteres). Ciclo de vida completo implementado — ver `docs/CHECKLIST_TESTES_MANUAIS.md` para testes manuais.
 
 ---
 

@@ -1,11 +1,11 @@
 {% extends "base/base.html" %}
+{% load static %}
 
 {% block content %}
 <div class="max-w-md mx-auto min-h-dvh flex flex-col">
     <header class="px-5 py-4 flex items-center justify-between border-b border-border">
-        <a href="/" class="text-lg font-extrabold tracking-tight flex items-center gap-2">
-            <span class="w-2 h-2 rounded bg-accent"></span>
-            MotoGram
+        <a href="{% url 'site_publico:landing' %}" class="flex items-center gap-2">
+            <img src="{% static 'motogram-go-logo.png' %}" alt="Motogram GO" class="h-11 w-auto max-w-[150px] object-contain">
         </a>
         <span class="text-xs text-muted uppercase tracking-wider">Passageiro</span>
     </header>

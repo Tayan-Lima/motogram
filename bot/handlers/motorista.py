@@ -27,6 +27,7 @@ def _menu_principal():
                 KeyboardButton(text="🏍️ Minha Conta"),
                 KeyboardButton(text="❓ Ajuda"),
             ],
+            [KeyboardButton(text="🧹 Limpar Chat")],
         ],
         resize_keyboard=True,
     )
@@ -45,6 +46,7 @@ def _menu_online():
                 KeyboardButton(text="🏍️ Minha Conta"),
                 KeyboardButton(text="❓ Ajuda"),
             ],
+            [KeyboardButton(text="🧹 Limpar Chat")],
         ],
         resize_keyboard=True,
     )
@@ -119,3 +121,16 @@ async def cmd_status(message: Message):
 @router.message(Command("ganhos"))
 async def cmd_ganhos(message: Message):
     await ganhos(message)
+
+
+@router.message(F.text == "🧹 Limpar Chat")
+async def limpar_chat(message: Message):
+    resultado = services.limpar_mensagens(message.from_user.id)
+    if "erro" in resultado:
+        await message.answer(resultado["erro"])
+        return
+    n = resultado.get("apagadas", 0)
+    await message.answer(
+        messages.CHAT_LIMPO.format(n=n),
+        parse_mode="Markdown",
+    )

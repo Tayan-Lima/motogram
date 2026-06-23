@@ -1,4 +1,4 @@
-# LIBRETAXI_INTEGRATION.md — MotoGram
+# LIBRETAXI_INTEGRATION.md — Motogram GO
 
 O MotoGram usa o [LibreTaxi](https://github.com/ro31337/libretaxi) como **referência de soluções** — não como fork.
 O bot é implementado em Python (aiogram 3), mas a lógica de negócio é inspirada no LibreTaxi.

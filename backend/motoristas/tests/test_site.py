@@ -56,7 +56,7 @@ class CadastroMotoristaTest(TestCase):
             "password_confirm": "teste123",
         })
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "E-mail já registado")
+        self.assertContains(response, "E-mail já registrado")
 
 
 class LoginMotoristaTest(TestCase):

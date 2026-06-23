@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — MotoGram
+# ARCHITECTURE.md — Motogram GO
 
 ## Visão Geral
 
@@ -77,9 +77,15 @@ Processo Python separado que corre em paralelo ao Django. Comunica com o backend
         └── assinatura inactiva → envia link de renovação
 
 Nova corrida disponível (backend notifica bot)
-  └── bot envia para motoristas próximos com botões [✅ Aceitar] [❌ Recusar]
-        ├── Aceitar → marca corrida como aceite → notifica passageiro → troca contactos
+  └── bot envia para motoristas próximos com botões [✅ Aceitar R$ X] [💬 Oferecer outro] [❌ Recusar]
+        ├── Aceitar → cria Oferta (tipo=aceite) → passageiro escolhe
+        ├── Oferecer → motorista digita valor → cria Oferta (tipo=contra_oferta)
         └── Recusar → envia para próximo motorista na fila
+
+Passageiro escolhe motorista
+  └── motorista escolhido recebe: localização + botões [🏍️ Iniciar] [❌ Cancelar]
+        ├── Iniciar → status='em_curso' → botão muda para [✅ Concluir corrida]
+        └── Cancelar → status='cancelada' → notifica passageiro
 ```
 
 **Comandos disponíveis**
@@ -123,14 +129,23 @@ class Corrida(Model):
     origem_lon = FloatField()
     destino_lat = FloatField(null=True)
     destino_lon = FloatField(null=True)
-    distancia_km = FloatField(null=True)
-    valor = DecimalField(null=True)                 # negociado entre as partes
+    distancia_km = FloatField(null=True)           # calculado via Haversine ao concluir
+    valor = DecimalField(null=True)                 # negociado via InDrive (Oferta)
     status = CharField(choices=[
         'aguardando', 'aceite', 'em_curso', 'concluida', 'cancelada', 'sem_motoristas'
     ])
     criada_em = DateTimeField(auto_now_add=True)
     aceite_em = DateTimeField(null=True)
     concluida_em = DateTimeField(null=True)
+
+# Oferta (negociação InDrive)
+class Oferta(Model):
+    corrida = ForeignKey(Corrida, related_name='ofertas')
+    motorista = ForeignKey(Motorista)
+    valor = DecimalField()
+    tipo = CharField(choices=['aceite', 'contra_oferta'])
+    status = CharField(choices=['pendente', 'aceita', 'rejeitada'])
+    criada_em = DateTimeField(auto_now_add=True)
 
 # Assinatura
 class Assinatura(Model):
@@ -146,11 +161,18 @@ class Assinatura(Model):
 #### Endpoints principais
 
 ```
-POST /api/corridas/                  → cria pedido de corrida
-GET  /api/corridas/{id}/status/     → estado da corrida (polling passageiro)
-POST /api/corridas/{id}/aceitar/     → motorista aceita (via bot)
-POST /api/corridas/{id}/recusar/     → motorista recusa (via bot)
-POST /api/corridas/{id}/concluir/    → marca corrida como concluída
+POST /api/corridas/                  → cria pedido de corrida (bot)
+POST /api/corridas/web/              → cria pedido de corrida (site, requer login + email)
+GET  /api/corridas/{id}/status/     → estado da corrida (polling passageiro, público)
+POST /api/corridas/{id}/aceitar/     → motorista aceita valor sugerido (bot)
+POST /api/corridas/{id}/ofertar/     → motorista faz contra-oferta (bot)
+POST /api/corridas/{id}/recusar/     → motorista recusa (bot)
+POST /api/corridas/{id}/iniciar/     → motorista inicia corrida (bot)          ← NOVO
+POST /api/corridas/{id}/cancelar-motorista/ → motorista cancela (bot)          ← NOVO
+POST /api/corridas/{id}/concluir/    → marca corrida como concluída (bot)
+POST /api/corridas/{id}/cancelar/    → passageiro cancela (site)
+GET  /api/corridas/{id}/ofertas/     → lista motoristas que responderam (site)
+POST /api/corridas/{id}/escolher/    → passageiro escolhe motorista (site)
 
 GET  /api/motoristas/proximos/       → lista motoristas activos num raio (PostGIS)
 POST /api/motoristas/cadastro/       → registo de novo motorista

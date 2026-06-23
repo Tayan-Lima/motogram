@@ -4,41 +4,56 @@
 {% block title %}Histórico de Corridas{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-5 py-6">
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
     <header class="flex items-center gap-3 mb-8">
-        <a href="/{{ prefix }}/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <a href="{% url 'admin_mg:dashboard' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
         <div>
             <h1 class="text-2xl font-extrabold tracking-tighter">Histórico de Corridas</h1>
-            <p class="text-sm text-muted">{{ corridas|length }} corrida(s)</p>
+            <p class="text-sm text-muted">{{ corridas.paginator.count }} corrida(s)</p>
         </div>
+        <form method="POST" action="{% url 'admin_mg:logout' %}" class="ml-auto">
+            {% csrf_token %}
+            <button type="submit" class="text-sm text-muted hover:text-accent2 transition-colors">Sair</button>
+        </form>
     </header>
+
+    <!-- BUSCA -->
+    <form method="GET" class="mb-6">
+        <div class="relative">
+            <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por motorista, passageiro, destino ou status..."
+                   class="w-full border-1.5 border-border rounded-xl px-4 py-3 text-sm focus:border-fg focus:outline-none transition-colors">
+            {% if busca %}
+            <a href="{% url 'admin_mg:historico_corridas' %}" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-accent2 transition-colors text-sm">✕ limpar</a>
+            {% endif %}
+        </div>
+    </form>
 
     <div class="flex flex-col gap-3">
         {% for corrida in corridas %}
         <div class="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
             <div class="w-10 h-10 rounded-full flex items-center justify-center
                 {% if corrida.status == 'concluida' %}bg-accent/10
-                {% elif corrida.status == 'aceite' %}bg-blue-100
-                {% elif corrida.status == 'cancelada' %}bg-red-100
+                {% elif corrida.status == 'aceite' %}bg-accent/10
+                {% elif corrida.status == 'cancelada' %}bg-accent2/10
                 {% else %}bg-bg{% endif %}">
                 {% if corrida.status == 'concluida' %}<span class="text-accent">✓</span>
-                {% elif corrida.status == 'aceite' %}<span class="text-blue-500">🏍</span>
-                {% elif corrida.status == 'cancelada' %}<span class="text-red-500">✕</span>
+                {% elif corrida.status == 'aceite' %}<span class="text-accent">🏍</span>
+                {% elif corrida.status == 'cancelada' %}<span class="text-accent2">✕</span>
                 {% else %}<span class="text-muted">⏳</span>{% endif %}
             </div>
             <div class="flex-1">
                 <p class="text-sm font-semibold">
                     {% if corrida.motorista %}{{ corrida.motorista.nome_completo }}{% else %}Sem motorista{% endif %}
-                    → {{ corrida.passageiro.username }}
+                    → {{ corrida.passageiro.email|default:corrida.passageiro.username }}
                 </p>
-                <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y H:i" }}</p>
+                <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y" }}{% if corrida.iniciada_em and corrida.concluida_em %} · {{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}{% endif %}</p>
             </div>
             <div class="text-right">
                 <p class="font-bold text-sm">R$ {{ corrida.valor|default:"-" }}</p>
                 <span class="text-xs px-2 py-0.5 rounded-pill font-semibold
                     {% if corrida.status == 'concluida' %}bg-accent/10 text-accent
-                    {% elif corrida.status == 'aceite' %}bg-blue-100 text-blue-700
-                    {% elif corrida.status == 'cancelada' %}bg-red-100 text-red-700
+                    {% elif corrida.status == 'aceite' %}bg-accent/10 text-accent
+                    {% elif corrida.status == 'cancelada' %}bg-accent2/10 text-accent2
                     {% else %}bg-bg text-muted{% endif %}">
                     {{ corrida.get_status_display }}
                 </span>
@@ -46,9 +61,22 @@
         </div>
         {% empty %}
         <div class="text-center py-12">
-            <p class="text-muted">Nenhuma corrida registada</p>
+            <p class="text-muted">Nenhuma corrida encontrada</p>
         </div>
         {% endfor %}
     </div>
+
+    <!-- PAGINAÇÃO -->
+    {% if corridas.has_other_pages %}
+    <div class="flex items-center justify-center gap-3 mt-6">
+        {% if corridas.has_previous %}
+        <a href="?{% if busca %}q={{ busca }}&{% endif %}p={{ corridas.previous_page_number }}" class="px-4 py-2 border border-border rounded-xl text-sm hover:border-fg transition-all">← Anterior</a>
+        {% endif %}
+        <span class="text-sm text-muted">{{ corridas.number }} / {{ corridas.paginator.num_pages }}</span>
+        {% if corridas.has_next %}
+        <a href="?{% if busca %}q={{ busca }}&{% endif %}p={{ corridas.next_page_number }}" class="px-4 py-2 border border-border rounded-xl text-sm hover:border-fg transition-all">Próximo →</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

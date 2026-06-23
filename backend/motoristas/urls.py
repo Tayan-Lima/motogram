@@ -18,7 +18,11 @@ urlpatterns = [
     path("motorista/dashboard/", views.DashboardMotoristaView.as_view(), name="dashboard"),
     path("motorista/historico/", views.HistoricoMotoristaView.as_view(), name="historico"),
     path("motorista/conta/", views.ContaMotoristaView.as_view(), name="conta"),
+    path("motorista/editar-perfil/", views.EditarPerfilMotoristaView.as_view(), name="editar_perfil"),
+    path("motorista/upload-foto/", views.UploadFotoMotoristaView.as_view(), name="upload_foto"),
     path("motorista/assinatura/", views.AssinaturaMotoristaView.as_view(), name="assinatura"),
     path("motorista/gerar-link-telegram/", views.GerarLinkTelegramView.as_view(), name="gerar_link_telegram"),
+    path("motorista/desconectar-telegram/", views.DesconectarTelegramView.as_view(), name="desconectar_telegram"),
     path("api/motoristas/toggle-online/", views.ToggleOnlineView.as_view(), name="toggle_online"),
+    path("api/motoristas/limpar-mensagens/", views.LimparMensagensView.as_view(), name="limpar_mensagens"),
 ]

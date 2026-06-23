@@ -1,9 +1,9 @@
 """Mensagens do bot Telegram — motorista apenas."""
 
 BOAS_VINDAS = (
-    "🏍️ *Bem-vindo ao MotoGram!*\n\n"
+    "🏍️ *Bem-vindo ao Motogram GO!*\n\n"
     "Este bot é exclusivo para motoristas cadastrados.\n\n"
-    "Para começar, envie o *token de activação* que está no seu painel "
+    "Para começar, envie o *token de ativação* que está no seu painel "
     "em {link}"
 )
 
@@ -23,13 +23,13 @@ MENU_PRINCIPAL = (
 )
 
 STATUS_ATIVO = (
-    "✅ *Assinatura activa*\n"
+    "✅ *Assinatura ativa*\n"
     "Válida até {data}\n\n"
     "Usa o botão abaixo para ficar online."
 )
 
 STATUS_INATIVO = (
-    "❌ *Assinatura inactiva*\n\n"
+    "❌ *Assinatura inativa*\n\n"
     "Renove em: {link}"
 )
 
@@ -92,8 +92,20 @@ CORRIDA_EXPIRADA = (
     "⏰ A solicitação expirou. O passageiro não escolheu nenhum motorista a tempo."
 )
 
+CORRIDA_INICIADA = (
+    "🏍️ <b>Corrida iniciada!</b>\n\n"
+    "Dirija-se ao ponto de origem.\n"
+    "Quando chegar, avise o passageiro.\n\n"
+    "Use o botão abaixo para concluir quando terminar."
+)
+
+CORRIDA_CANCELADA_MOTORISTA = (
+    "❌ <b>Corrida cancelada.</b>\n\n"
+    "O passageiro será notificado."
+)
+
 CORRIDA_CONCLUIDA = (
-    "✅ *Corrida concluída!*\n\n"
+    "✅ <b>Corrida concluída!</b>\n\n"
     "💰 Valor: R$ {valor}\n"
     "🛣️ Distância: {distancia} km\n\n"
     "Obrigado! 🏍️"
@@ -109,15 +121,37 @@ VALOR_INVALIDO = (
 )
 
 AJUDA = (
-    "📋 *MotoGram — Motorista*\n\n"
+    "📋 *Motogram GO — Motorista*\n\n"
     "🟢 *Ficar Online* — começa a receber corridas\n"
     "📊 *Status* — vê estado da assinatura\n"
     "📋 *Ganhos* — resumo no site\n"
-    "🏍️ *Conta* — gere seu cadastro\n"
+    "🏍️ *Conta* — gerencie seu cadastro\n"
     "❓ *Ajuda* — esta mensagem\n\n"
     "Dúvidas? motogram.app"
+)
+
+ERRO_INTERNO = (
+    "❌ Erro interno. Tenta novamente mais tarde."
 )
 
 ERRO_GENERICO = (
     "❌ Ocorreu um erro. Tenta novamente mais tarde."
 )
+
+LIMPAR_CHAT = "🧹 Limpar Chat"
+
+CHAT_LIMPO = (
+    "✅ {n} mensagens rastreadas apagadas!\n\n"
+    "A limpeza de mensagens antigas continua em segundo plano.\n"
+    "Em poucos segundos o chat estará limpo. 🧹"
+)
+
+AVALIAR_PASSAGEIRO = (
+    "Como foi o passageiro?"
+)
+
+COMENTARIO_PEDIDO = (
+    "Conta o que aconteceu:\n(ou clica Pular para não comentar)"
+)
+
+AVALIACAO_REGISTRADA = "✅ Avaliação registrada! Obrigado pelo feedback."

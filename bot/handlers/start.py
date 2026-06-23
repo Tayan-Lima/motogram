@@ -65,6 +65,20 @@ async def cmd_start_token(message: Message, command: CommandStart, state: FSMCon
         await state.set_state(MotoristaStates.menu_principal)
         return
 
+    erro = resultado.get("erro", "")
+
+    # Falhas de autenticação (BOT_SECRET mismatch) ou conexão (BACKEND_URL inacessível)
+    # NÃO são token inválido — são erro interno que o utilizador não pode resolver.
+    if "Não autorizado" in erro or "Erro de conexão" in erro:
+        await message.answer(messages.ERRO_INTERNO, parse_mode="Markdown")
+        return
+
+    # Telegram já vinculado a outro motorista (IntegrityError no backend)
+    if "já está vinculado" in erro:
+        await message.answer(messages.TOKEN_JA_VINCULADO, parse_mode="Markdown")
+        return
+
+    # Token genuinamente inválido ou expirado
     await message.answer(
         messages.TOKEN_INVALIDO.format(link=f"{SITE_URL}/motorista/conta/"),
         parse_mode="Markdown",

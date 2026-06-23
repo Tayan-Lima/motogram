@@ -1,0 +1,68 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Passageiros{% endblock %}
+
+{% block content %}
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
+    <header class="flex items-center gap-3 mb-8">
+        <a href="{% url 'admin_mg:dashboard' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tighter">Passageiros</h1>
+            <p class="text-sm text-muted">{{ passageiros.paginator.count }} passageiro(s)</p>
+        </div>
+        <form method="POST" action="{% url 'admin_mg:logout' %}" class="ml-auto">
+            {% csrf_token %}
+            <button type="submit" class="text-sm text-muted hover:text-accent2 transition-colors">Sair</button>
+        </form>
+    </header>
+
+    <!-- BUSCA -->
+    <form method="GET" class="mb-6">
+        <div class="relative">
+            <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por e-mail, nome ou telefone..."
+                   class="w-full border-1.5 border-border rounded-xl px-4 py-3 text-sm focus:border-fg focus:outline-none transition-colors">
+            {% if busca %}
+            <a href="{% url 'admin_mg:passageiros' %}" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-accent2 transition-colors text-sm">✕ limpar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="flex flex-col gap-3">
+        {% for p in passageiros %}
+        <a href="{% url 'admin_mg:passageiro_detalhe' p.id %}" class="bg-surface border border-border rounded-xl p-4 flex items-center gap-4 hover:border-fg transition-all">
+            <div class="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-bold">{{ p.username|slice:":1"|upper }}</div>
+            <div class="flex-1">
+                <p class="font-semibold text-sm">{{ p.email|default:p.username }}</p>
+                <p class="text-xs text-muted">{{ p.telefone|default:"sem telefone" }} • {{ p.date_joined|date:"d/m/Y" }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if not p.is_active %}
+                <span class="text-xs px-2 py-0.5 rounded-pill font-semibold bg-accent2/10 text-accent2">Bloqueado</span>
+                {% endif %}
+                {% if p.telegram_id %}
+                <span class="text-xs text-accent">✅ Telegram</span>
+                {% endif %}
+            </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-12">
+            <p class="text-muted">Nenhum passageiro encontrado</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- PAGINAÇÃO -->
+    {% if passageiros.has_other_pages %}
+    <div class="flex items-center justify-center gap-3 mt-6">
+        {% if passageiros.has_previous %}
+        <a href="?{% if busca %}q={{ busca }}&{% endif %}p={{ passageiros.previous_page_number }}" class="px-4 py-2 border border-border rounded-xl text-sm hover:border-fg transition-all">← Anterior</a>
+        {% endif %}
+        <span class="text-sm text-muted">{{ passageiros.number }} / {{ passageiros.paginator.num_pages }}</span>
+        {% if passageiros.has_next %}
+        <a href="?{% if busca %}q={{ busca }}&{% endif %}p={{ passageiros.next_page_number }}" class="px-4 py-2 border border-border rounded-xl text-sm hover:border-fg transition-all">Próximo →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

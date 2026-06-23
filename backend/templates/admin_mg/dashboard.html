@@ -4,26 +4,32 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-5 py-6">
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
     <header class="flex items-center justify-between mb-8">
         <div>
             <h1 class="text-2xl font-extrabold tracking-tighter">Painel Admin</h1>
-            <p class="text-sm text-muted">Gestão do MotoGram</p>
+            <p class="text-sm text-muted">Gestão do Motogram GO</p>
         </div>
-        <a href="/{{ prefix }}/cadastros/" class="relative bg-fg text-bg px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-accent transition-all">
-            Cadastros
-            {% if motoristas_pendentes > 0 %}
-            <span class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">{{ motoristas_pendentes }}</span>
-            {% endif %}
-        </a>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'admin_mg:cadastros_pendentes' %}" class="relative bg-fg text-bg px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-accent transition-all">
+                Cadastros
+                {% if motoristas_pendentes > 0 %}
+                <span class="absolute -top-2 -right-2 w-5 h-5 bg-accent2 text-white rounded-full text-xs flex items-center justify-center">{{ motoristas_pendentes }}</span>
+                {% endif %}
+            </a>
+            <form method="POST" action="{% url 'admin_mg:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-muted hover:text-accent2 transition-colors">Sair</button>
+            </form>
+        </div>
     </header>
 
     <!-- STATS -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div class="bg-surface border border-border rounded-2xl p-5">
             <p class="text-xs text-muted uppercase tracking-wider mb-1">Motoristas</p>
             <p class="text-2xl font-extrabold">{{ motoristas_total }}</p>
-            <p class="text-xs text-accent">{{ motoristas_activos }} activos</p>
+            <p class="text-xs text-accent">{{ motoristas_activos }} ativos</p>
         </div>
         <div class="bg-surface border border-border rounded-2xl p-5">
             <p class="text-xs text-muted uppercase tracking-wider mb-1">Pendentes</p>
@@ -35,29 +41,80 @@
             <p class="text-2xl font-extrabold">{{ corridas_hoje }}</p>
             <p class="text-xs text-muted">{{ corridas_total }} total</p>
         </div>
-        <div class="bg-surface border border-border rounded-2xl p-5 col-span-2 sm:col-span-1">
+        <div class="bg-surface border border-border rounded-2xl p-5">
             <p class="text-xs text-muted uppercase tracking-wider mb-1">Receita mês</p>
             <p class="text-2xl font-extrabold">R$ {{ receita_mes }}</p>
-            <p class="text-xs text-muted">corridas concluídas</p>
+            <p class="text-xs text-muted">corridas</p>
+        </div>
+    </div>
+
+    <!-- ASSINATURAS -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="bg-accent/5 border border-accent/20 rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">Assinantes ativos</p>
+            <p class="text-2xl font-extrabold text-accent">{{ assinaturas_activas }}</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">MRR (mensal)</p>
+            <p class="text-2xl font-extrabold">R$ {{ mrr|floatformat:2 }}</p>
+        </div>
+        <div class="bg-accent2/5 border border-accent2/20 rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">Vencem em 7 dias</p>
+            <p class="text-2xl font-extrabold text-accent2">{{ assinaturas_vencendo }}</p>
+        </div>
+    </div>
+
+    <!-- GRÁFICO CORRIDAS 7 DIAS -->
+    <div class="bg-surface border border-border rounded-2xl p-5 mb-8">
+        <h3 class="font-bold mb-4">Corridas nos últimos 7 dias</h3>
+        <div class="flex items-end gap-2 h-32" id="grafico-7-dias">
+            {% for dia in corridas_7_dias %}
+            <div class="flex-1 flex flex-col items-center gap-1 justify-end">
+                <span class="text-xs font-bold">{{ dia.count }}</span>
+                <div class="w-full bg-accent rounded-t-lg transition-all" style="height: calc({{ dia.count }} * 100% / {% if max_corridas_dia > 0 %}{{ max_corridas_dia }}{% else %}1{% endif %}); min-height: 4px; max-height: 100px;"></div>
+                <span class="text-xs text-muted">{{ dia.dia }}</span>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
     <!-- QUICK LINKS -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <a href="/{{ prefix }}/cadastros/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
-            <h3 class="font-bold mb-1">📋 Cadastros pendentes</h3>
-            <p class="text-sm text-muted">Analisar novos motoristas</p>
+    <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Secções</h3>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <a href="{% url 'admin_mg:cadastros_pendentes' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">📋 KYC</h4>
+            <p class="text-sm text-muted">Cadastros pendentes</p>
         </a>
-        <a href="/{{ prefix }}/corridas/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
-            <h3 class="font-bold mb-1">🏍️ Histórico de corridas</h3>
-            <p class="text-sm text-muted">Ver todas as corridas</p>
+        <a href="{% url 'admin_mg:motoristas' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">👤 CRM</h4>
+            <p class="text-sm text-muted">Motoristas</p>
         </a>
-        <a href="/{{ prefix }}/motoristas/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
-            <h3 class="font-bold mb-1">👤 Motoristas</h3>
-            <p class="text-sm text-muted">Gerir motoristas</p>
+        <a href="{% url 'admin_mg:passageiros' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">🧑 CRM</h4>
+            <p class="text-sm text-muted">Passageiros</p>
         </a>
-        <a href="/admin/" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
-            <h3 class="font-bold mb-1">⚙️ Django Admin</h3>
+        <a href="{% url 'admin_mg:historico_corridas' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">🏍️ Dashboard</h4>
+            <p class="text-sm text-muted">Histórico de corridas</p>
+        </a>
+        <a href="{% url 'admin_mg:assinaturas' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">💰 Dashboard</h4>
+            <p class="text-sm text-muted">Assinaturas e receita</p>
+        </a>
+        <a href="{% url 'admin_mg:avaliacoes_motoristas' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">⭐ Motoristas</h4>
+            <p class="text-sm text-muted">Ranking de avaliações</p>
+        </a>
+        <a href="{% url 'admin_mg:avaliacoes_passageiros' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">👤 Passageiros</h4>
+            <p class="text-sm text-muted">Ranking de avaliações</p>
+        </a>
+        <a href="{% url 'admin_mg:avaliacoes_comentarios' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">💬 Comentários</h4>
+            <p class="text-sm text-muted">Feedback dos clientes</p>
+        </a>
+        <a href="{% url 'admin:index' %}" class="bg-surface border border-border rounded-2xl p-5 hover:border-accent transition-all">
+            <h4 class="font-bold mb-1">⚙️ Django Admin</h4>
             <p class="text-sm text-muted">Administração avançada</p>
         </a>
     </div>

@@ -1,3 +1,4 @@
+import hashlib
 import os
 import ctypes.util as _ctypes_util
 from pathlib import Path
@@ -73,6 +74,7 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, engine=engine)
     }
+    DATABASES['default']['TEST'] = {'NAME': 'test_motogram'}
 else:
     # Desenvolvimento local — SQLite (sem PostGIS)
     DATABASES = {
@@ -83,6 +85,10 @@ else:
     }
 
 AUTH_USER_MODEL = 'motoristas.Utilizador'
+
+AUTHENTICATION_BACKENDS = [
+    'motoristas.backends.EmailBackend',
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -137,12 +143,26 @@ BOT_SECRET = os.environ.get('BOT_SECRET', '')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN', '')
 TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
 
+_BOT_SECRET_HASH = hashlib.sha256(BOT_SECRET.encode()).hexdigest()[:8]
+print(f"[Motogram] Diagnóstico: BOT_SECRET hash={_BOT_SECRET_HASH} BACKEND_URL={os.environ.get('BACKEND_URL', 'n/a')}")
+
 PRECO_ASSINATURA_MENSAL = int(os.environ.get('PRECO_ASSINATURA_MENSAL', '6900'))
 
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
 
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 MP_WEBHOOK_SECRET = os.environ.get('MP_WEBHOOK_SECRET', '')
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Motogram GO <noreply@motogram.app>')
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
@@ -162,3 +182,29 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+# Logging — essencial para diagnosticar falhas silenciosas nas threads de notificação
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '[{levelname}] {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'corridas': {'level': 'DEBUG', 'propagate': False},
+        'motoristas': {'level': 'DEBUG', 'propagate': False},
+    },
+}

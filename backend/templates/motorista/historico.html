@@ -6,7 +6,7 @@
 {% block content %}
 <div class="max-w-md mx-auto min-h-dvh flex flex-col" x-data="{ filtro: 'todas', modal: null }">
     <header class="px-5 py-4 flex items-center gap-3 border-b border-border">
-        <a href="/motorista/dashboard/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <a href="{% url 'motoristas:dashboard' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
         <h1 class="text-lg font-bold tracking-tight">Histórico</h1>
     </header>
 
@@ -21,25 +21,25 @@
             {% for corrida in corridas %}
             <div class="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-fg transition-all" x-show="filtro === 'todas' || filtro === '{{ corrida.status }}'" @click="modal = {{ corrida.id }}">
                 <div class="flex items-center gap-3 mb-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xs font-bold shrink-0">{{ corrida.passageiro.username|truncatechars:1|upper }}</div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xs font-bold shrink-0">{{ corrida.passageiro.username|slice:":1"|upper }}</div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold truncate">{{ corrida.passageiro.username }}</p>
-                        <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y H:i" }}</p>
+                        <p class="text-xs text-muted">{{ corrida.criada_em|date:"d/m/Y" }}{% if corrida.iniciada_em and corrida.concluida_em %} · {{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}{% endif %}</p>
                     </div>
                     <span class="text-xs px-2 py-0.5 rounded-pill font-semibold shrink-0
                         {% if corrida.status == 'concluida' %}bg-accent/10 text-accent
-                        {% elif corrida.status == 'cancelada' %}bg-red-100 text-red-700
+                        {% elif corrida.status == 'cancelada' %}bg-accent2/10 text-accent2
                         {% else %}bg-bg text-muted{% endif %}">
                         {{ corrida.get_status_display }}
                     </span>
                 </div>
                 <div class="flex items-center gap-2 text-xs text-muted">
                     <span class="w-2 h-2 rounded-full bg-accent2 shrink-0"></span>
-                    <span class="truncate">{{ corrida.origem_lat|floatformat:4 }}, {{ corrida.origem_lon|floatformat:4 }}</span>
+                    <span class="truncate">{{ corrida.endereco_origem }}</span>
                     {% if corrida.destino_lat %}
                     <span class="text-border">→</span>
                     <span class="w-2 h-2 rounded-full bg-accent shrink-0"></span>
-                    <span class="truncate">{{ corrida.destino_lat|floatformat:4 }}, {{ corrida.destino_lon|floatformat:4 }}</span>
+                    <span class="truncate">{{ corrida.endereco_destino }}</span>
                     {% endif %}
                 </div>
                 {% if corrida.valor %}
@@ -55,15 +55,15 @@
     </div>
 
     <nav class="bg-surface border-t border-border px-5 py-3 flex justify-around">
-        <a href="/motorista/dashboard/" class="flex flex-col items-center gap-1 text-muted">
+        <a href="{% url 'motoristas:dashboard' %}" class="flex flex-col items-center gap-1 text-muted">
             <span class="text-lg">📊</span>
             <span class="text-xs">Painel</span>
         </a>
-        <a href="/motorista/historico/" class="flex flex-col items-center gap-1 text-accent">
+        <a href="{% url 'motoristas:historico' %}" class="flex flex-col items-center gap-1 text-accent">
             <span class="text-lg">📋</span>
             <span class="text-xs font-semibold">Histórico</span>
         </a>
-        <a href="/motorista/conta/" class="flex flex-col items-center gap-1 text-muted">
+        <a href="{% url 'motoristas:conta' %}" class="flex flex-col items-center gap-1 text-muted">
             <span class="text-lg">👤</span>
             <span class="text-xs">Conta</span>
         </a>
@@ -78,10 +78,13 @@
             <div x-show="modal === {{ corrida.id }}">
                 <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Estado</span><span class="font-semibold">{{ corrida.get_status_display }}</span></div>
                 <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Passageiro</span><span class="font-semibold">{{ corrida.passageiro.username }}</span></div>
-                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Data</span><span class="font-semibold">{{ corrida.criada_em|date:"d/m/Y H:i" }}</span></div>
-                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Origem</span><span class="font-semibold">{{ corrida.origem_lat|floatformat:4 }}, {{ corrida.origem_lon|floatformat:4 }}</span></div>
+                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Data</span><span class="font-semibold">{{ corrida.criada_em|date:"d/m/Y" }}</span></div>
+                {% if corrida.iniciada_em and corrida.concluida_em %}
+                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Duração</span><span class="font-semibold">{{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}</span></div>
+                {% endif %}
+                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Origem</span><span class="font-semibold">{{ corrida.endereco_origem }}</span></div>
                 {% if corrida.destino_lat %}
-                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Destino</span><span class="font-semibold">{{ corrida.destino_lat|floatformat:4 }}, {{ corrida.destino_lon|floatformat:4 }}</span></div>
+                <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Destino</span><span class="font-semibold">{{ corrida.endereco_destino }}</span></div>
                 {% endif %}
                 {% if corrida.valor %}
                 <div class="flex justify-between py-3 border-b border-border text-sm"><span class="text-muted">Valor</span><span class="font-semibold text-accent">R$ {{ corrida.valor }}</span></div>

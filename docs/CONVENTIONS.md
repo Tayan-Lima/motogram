@@ -1,4 +1,4 @@
-# CONVENTIONS.md — MotoGram
+# CONVENTIONS.md — Motogram GO
 
 Convenções de código, nomenclatura e organização para o projecto MotoGram.
 

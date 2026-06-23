@@ -26,12 +26,30 @@ class Utilizador(AbstractUser):
     telegram_id = models.BigIntegerField(null=True, blank=True, unique=True)
     telegram_token = models.CharField(max_length=50, null=True, blank=True)
     telegram_token_expiry = models.DateTimeField(null=True, blank=True)
+    email_confirmado = models.BooleanField(default=False)
+    email_token = models.CharField(max_length=50, blank=True)
+    email_token_expiry = models.DateTimeField(null=True, blank=True)
+    foto = models.ImageField(upload_to='fotos_perfil/', null=True, blank=True)
     
     class Meta:
         db_table = 'utilizadores'
     
     def __str__(self):
         return f"{self.username} ({self.get_tipo_display()})"
+
+    @property
+    def media_avaliacoes(self):
+        from django.db.models import Avg
+        from corridas.models import Avaliacao
+        avg = Avaliacao.objects.filter(avaliado=self).aggregate(avg=Avg('nota'))['avg']
+        return round(avg, 1) if avg else None
+
+    @property
+    def total_corridas_concluidas(self):
+        from corridas.models import Corrida
+        if self.tipo == 'motorista':
+            return Corrida.objects.filter(motorista__utilizador=self, status='concluida').count()
+        return self.corridas_passageiro.filter(status='concluida').count()
 
 
 class Motorista(models.Model):
@@ -127,8 +145,11 @@ class EnderecoFavorito(models.Model):
     )
     nome = models.CharField(max_length=60)
     endereco = models.CharField(max_length=200, blank=True)
-    lat = models.FloatField()
-    lon = models.FloatField()
+    rua = models.CharField(max_length=120, blank=True)
+    numero = models.CharField(max_length=10, blank=True)
+    ponto_referencia = models.CharField(max_length=200, blank=True)
+    lat = models.FloatField(null=True, blank=True)
+    lon = models.FloatField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -12,7 +12,7 @@ class LandingPageTest(TestCase):
     def test_landing_page_loads(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "MotoGram")
+        self.assertContains(response, "Motogram GO")
 
     def test_landing_page_contains_cta(self):
         response = self.client.get("/")

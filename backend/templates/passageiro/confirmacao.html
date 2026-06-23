@@ -30,8 +30,9 @@
 
         <div class="bg-surface border border-border rounded-2xl p-5 mb-4">
             <div class="flex items-center gap-3 mb-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-sm font-bold">
-                    <span x-text="motorista?.nome?.[0] || 'M'"></span>
+                <div class="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-accent2 to-orange-300 shrink-0">
+                    <img x-show="motorista?.foto_url" :src="motorista.foto_url" class="w-12 h-12 object-cover">
+                    <span x-show="!motorista?.foto_url" class="w-12 h-12 flex items-center justify-center text-white text-sm font-bold" x-text="motorista?.nome?.[0] || 'M'"></span>
                 </div>
                 <div>
                     <p class="font-bold" x-text="motorista?.nome"></p>
@@ -46,9 +47,12 @@
             </a>
         </div>
 
-        <a href="/passageiro/acompanhar/{{ corrida.id }}/" class="w-full flex items-center justify-center gap-2 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
-            Acompanhar corrida
-        </a>
+        <div class="text-center">
+            <p class="text-xs text-muted mb-2" x-show="contagem > 0">Redirecionando em <span x-text="contagem"></span>s...</p>
+            <a href="{% url 'site_publico:acompanhar' corrida.id %}" class="inline-block w-full bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+                Confirmar e acompanhar
+            </a>
+        </div>
     </div>
 
     <!-- Cancelada -->
@@ -60,7 +64,7 @@
         </div>
         <h2 class="text-xl font-extrabold tracking-tighter mb-2">Ninguém aceitou</h2>
         <p class="text-muted text-sm mb-6">Nenhum motorista disponível no momento.</p>
-        <a href="/passageiro/" class="bg-fg text-bg px-7 py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+        <a href="/passageiro/" class="bg-fg text-bg w-full sm:w-auto px-7 py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
             Tentar novamente
         </a>
     </div>
@@ -79,11 +83,25 @@ function confirmacao(corridaId) {
         motorista: null,
         tentativas: 0,
         tempo: 0,
+        contagem: 0,
         timer: null,
 
         init() {
             this.timer = setInterval(() => { this.tempo++; }, 1000);
             this.poll();
+        },
+
+        iniciarCountdown() {
+            this.contagem = 3;
+            const tick = () => {
+                this.contagem--;
+                if (this.contagem <= 0) {
+                    window.location.href = `/passageiro/acompanhar/${corridaId}/`;
+                } else {
+                    setTimeout(tick, 1000);
+                }
+            };
+            setTimeout(tick, 1000);
         },
 
         async poll() {
@@ -95,6 +113,7 @@ function confirmacao(corridaId) {
                 if (data.status === 'aceite') {
                     clearInterval(this.timer);
                     this.motorista = data.motorista;
+                    this.iniciarCountdown();
                     return;
                 } else if (data.status === 'cancelada' || data.status === 'sem_motoristas') {
                     clearInterval(this.timer);

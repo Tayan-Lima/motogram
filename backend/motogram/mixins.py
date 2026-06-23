@@ -2,10 +2,16 @@
 
 from django.http import JsonResponse
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 class BotAuthMixin:
-    """Verifica o X-Bot-Secret header para endpoints internos."""
+    """Verifica o X-Bot-Secret header para endpoints internos. CSRF isento."""
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
     def verificar_bot_secret(self, request):
         bot_secret = request.headers.get("X-Bot-Secret")

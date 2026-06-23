@@ -4,8 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{% block title %}MotoGram{% endblock %} — Moto Táxi na Amazônia</title>
+    <link rel="icon" href="{% static 'motogram-go-logo.png' %}" type="image/png">
+    <title>{% block title %}Motogram GO{% endblock %} — Moto Táxi na Amazônia</title>
     <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            img[alt="Motogram GO"] {
+                height: 124px !important;
+                width: auto !important;
+                max-width: 50vw !important;
+                object-fit: contain !important;
+            }
+            .btn-primary { transition: all 0.15s; }
+            .btn-primary:active { transform: scale(0.98); }
+            .card { box-shadow: 0 1px 2px 0 rgba(0,0,0,0.03); }
+        </style>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/mask@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -28,6 +40,9 @@
                     borderRadius: {
                         'pill': '100px',
                     },
+                    borderWidth: {
+                        '1.5': '1.5px',
+                    },
                 },
             },
         }
@@ -39,7 +54,7 @@
     {% block extra_scripts %}{% endblock %}
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js', { scope: '/' }).catch(() => {});
+            navigator.serviceWorker.register('{% static "sw.js" %}').catch(() => {});
         }
     </script>
 </body>

@@ -113,8 +113,65 @@ async def receber_contra_oferta(message: Message, state: FSMContext):
     await state.set_state(MotoristaStates.aguardando_oferta)
 
 
+@router.callback_query(F.data.startswith("iniciar:"))
+async def iniciar_corrida_callback(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    try:
+        corrida_id = int(parts[1])
+    except (ValueError, IndexError):
+        await callback.answer("Dados inválidos.", show_alert=True)
+        return
+
+    resultado = services.iniciar_corrida(
+        corrida_id=corrida_id,
+        motorista_telegram_id=callback.from_user.id,
+    )
+
+    if "erro" in resultado:
+        await callback.answer(resultado["erro"], show_alert=True)
+        return
+
+    await state.update_data(corrida_id_ativa=corrida_id)
+    await state.set_state(MotoristaStates.em_corrida)
+
+    await callback.message.edit_text(
+        messages.CORRIDA_INICIADA,
+        parse_mode="HTML",
+        reply_markup={"inline_keyboard": [[
+            {"text": "✅ Concluir corrida", "callback_data": f"concluir:{corrida_id}"},
+        ]]},
+    )
+    await callback.answer("Corrida iniciada!")
+
+
+@router.callback_query(F.data.startswith("cancelar_motorista:"))
+async def cancelar_motorista_callback(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    try:
+        corrida_id = int(parts[1])
+    except (ValueError, IndexError):
+        await callback.answer("Dados inválidos.", show_alert=True)
+        return
+
+    resultado = services.cancelar_corrida_motorista(
+        corrida_id=corrida_id,
+        motorista_telegram_id=callback.from_user.id,
+    )
+
+    if "erro" in resultado:
+        await callback.answer(resultado["erro"], show_alert=True)
+        return
+
+    await state.set_state(MotoristaStates.disponivel)
+    await callback.message.edit_text(
+        messages.CORRIDA_CANCELADA_MOTORISTA,
+        parse_mode="HTML",
+    )
+    await callback.answer("Corrida cancelada.")
+
+
 @router.callback_query(F.data.startswith("concluir:"))
-async def concluir_corrida_callback(callback: CallbackQuery):
+async def concluir_corrida_callback(callback: CallbackQuery, state: FSMContext):
     parts = callback.data.split(":")
     try:
         corrida_id = int(parts[1])
@@ -133,11 +190,90 @@ async def concluir_corrida_callback(callback: CallbackQuery):
 
     valor = resultado.get("valor", "0.00")
     distancia = resultado.get("distancia_km", "0")
+    await state.set_state(MotoristaStates.disponivel)
     await callback.message.edit_text(
         messages.CORRIDA_CONCLUIDA.format(valor=valor, distancia=distancia),
-        parse_mode="Markdown",
+        parse_mode="HTML",
+    )
+
+    await callback.message.answer(
+        messages.AVALIAR_PASSAGEIRO,
+        parse_mode="HTML",
+        reply_markup={
+            "inline_keyboard": [[
+                {"text": "1⭐", "callback_data": f"avaliar_p:1:{corrida_id}"},
+                {"text": "2⭐", "callback_data": f"avaliar_p:2:{corrida_id}"},
+                {"text": "3⭐", "callback_data": f"avaliar_p:3:{corrida_id}"},
+                {"text": "4⭐", "callback_data": f"avaliar_p:4:{corrida_id}"},
+                {"text": "5⭐", "callback_data": f"avaliar_p:5:{corrida_id}"},
+            ]]
+        },
     )
     await callback.answer("Concluída!")
+
+
+@router.callback_query(F.data.startswith("avaliar_p:"))
+async def avaliar_passageiro_callback(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    try:
+        nota = int(parts[1])
+        corrida_id = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("Dados inválidos.", show_alert=True)
+        return
+
+    resultado = services.avaliar_passageiro(
+        corrida_id=corrida_id,
+        motorista_telegram_id=callback.from_user.id,
+        nota=nota,
+    )
+
+    if "erro" in resultado:
+        await callback.answer(resultado["erro"], show_alert=True)
+        return
+
+    if nota <= 2:
+        await state.update_data(avaliacao_corrida_id=corrida_id)
+        await state.set_state(MotoristaStates.aguardando_comentario_avaliacao)
+        await callback.message.edit_text(
+            messages.COMENTARIO_PEDIDO,
+            reply_markup={
+                "inline_keyboard": [[
+                    {"text": "⏭️ Pular", "callback_data": f"pular_comentario:{corrida_id}"},
+                ]]
+            },
+        )
+    else:
+        await callback.message.edit_text(messages.AVALIACAO_REGISTRADA)
+
+    await callback.answer()
+
+
+@router.message(MotoristaStates.aguardando_comentario_avaliacao)
+async def receber_comentario_avaliacao(message: Message, state: FSMContext):
+    data = await state.get_data()
+    corrida_id = data.get("avaliacao_corrida_id")
+    if not corrida_id:
+        await state.set_state(MotoristaStates.disponivel)
+        await message.answer("Erro ao guardar comentário.")
+        return
+
+    resultado = services.avaliar_passageiro(
+        corrida_id=corrida_id,
+        motorista_telegram_id=message.from_user.id,
+        nota=0,
+        comentario=message.text[:500],
+    )
+
+    await state.set_state(MotoristaStates.disponivel)
+    await message.answer(messages.AVALIACAO_REGISTRADA)
+
+
+@router.callback_query(F.data.startswith("pular_comentario:"))
+async def pular_comentario(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(MotoristaStates.disponivel)
+    await callback.message.edit_text(messages.AVALIACAO_REGISTRADA)
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("nao_escolhido:"))
@@ -163,7 +299,7 @@ async def concluir_por_botao(message: Message, state: FSMContext):
     data = await state.get_data()
     corrida_id = data.get("corrida_id_ativa")
     if not corrida_id:
-        await message.answer("Nenhuma corrida activa encontrada.")
+        await message.answer("Nenhuma corrida ativa encontrada.")
         return
 
     resultado = services.concluir_corrida(
@@ -179,6 +315,6 @@ async def concluir_por_botao(message: Message, state: FSMContext):
     distancia = resultado.get("distancia_km", "0")
     await message.answer(
         messages.CORRIDA_CONCLUIDA.format(valor=valor, distancia=distancia),
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
     await state.set_state(MotoristaStates.disponivel)

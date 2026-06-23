@@ -18,6 +18,7 @@ class Assinatura(models.Model):
     )
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     pix_txid = models.CharField(max_length=100)
+    mp_payment_id = models.CharField(max_length=100, blank=True, default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
     paga_em = models.DateTimeField(null=True, blank=True)
     valida_ate = models.DateField(null=True, blank=True)

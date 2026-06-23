@@ -1,0 +1,133 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ motorista.nome_completo }} — Motorista{% endblock %}
+
+{% block content %}
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
+    <header class="flex items-center gap-3 mb-8">
+        <a href="{% url 'admin_mg:motoristas' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tighter">{{ motorista.nome_completo }}</h1>
+            <p class="text-sm text-muted">{{ motorista.modelo_moto }} • {{ motorista.placa }}</p>
+        </div>
+    </header>
+
+    <!-- ESTADO E ACÇÕES -->
+    <div class="bg-surface border border-border rounded-2xl p-5 mb-6">
+        <div class="flex items-center gap-4 mb-4">
+            <span class="text-xs px-2 py-0.5 rounded-pill font-semibold
+                {% if motorista.status_cadastro == 'aprovado' %}bg-accent/10 text-accent
+                {% elif motorista.status_cadastro == 'pendente' %}bg-gold/10 text-gold
+                {% elif motorista.status_cadastro == 'reprovado' %}bg-accent2/10 text-accent2
+                {% else %}bg-bg text-muted{% endif %}">
+                {{ motorista.get_status_cadastro_display }}
+            </span>
+            {% if motorista.activo %}
+            <span class="text-xs text-accent font-semibold">● Ativo</span>
+            {% else %}
+            <span class="text-xs text-muted">○ Inativo</span>
+            {% endif %}
+            {% if motorista.assinatura_activa %}
+            <span class="text-xs text-accent font-semibold">Assinatura até {{ motorista.assinatura_ate|date:"d/m/Y" }}</span>
+            {% else %}
+            <span class="text-xs text-accent2 font-semibold">Sem assinatura ativa</span>
+            {% endif %}
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            {% if motorista.activo and motorista.status_cadastro != 'suspenso' %}
+            <form method="POST" action="{% url 'admin_mg:analisar_cadastro' motorista.id %}" class="inline" onsubmit="return confirm('Tem certeza que deseja bloquear este motorista?')">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="bloquear">
+                <button type="submit" class="text-sm border border-border rounded-pill px-4 py-2 hover:border-accent2 hover:text-accent2 transition-all">Bloquear</button>
+            </form>
+            {% else %}
+            <form method="POST" action="{% url 'admin_mg:analisar_cadastro' motorista.id %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="reactivar">
+                <button type="submit" class="text-sm bg-accent text-white rounded-pill px-4 py-2 hover:bg-accent/90 transition-all">Reativar</button>
+            </form>
+            <form method="POST" action="{% url 'admin_mg:analisar_cadastro' motorista.id %}" class="inline" onsubmit="return confirm('Tem certeza que deseja excluir permanentemente este motorista? Esta ação não pode ser desfeita.')">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="excluir">
+                <button type="submit" class="text-sm border border-border rounded-pill px-4 py-2 hover:border-accent2 hover:text-accent2 transition-all">Excluir</button>
+            </form>
+            {% endif %}
+            {% if not motorista.activo and motorista.status_cadastro != 'suspenso' %}
+            <form method="POST" action="{% url 'admin_mg:analisar_cadastro' motorista.id %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="activar_manual">
+                <button type="submit" class="text-sm bg-accent text-white rounded-pill px-4 py-2 hover:bg-accent/90 transition-all">Ativar manualmente (+30 dias)</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- DADOS PESSOAIS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Dados pessoais</h3>
+            <dl class="text-sm space-y-2">
+                <div class="flex justify-between"><dt class="text-muted">CPF</dt><dd class="font-semibold">{{ motorista.cpf }} {% if cpf_valido == True %}<span class="text-accent text-xs">✓ válido</span>{% elif cpf_valido == False %}<span class="text-accent2 text-xs">✗ inválido</span>{% endif %}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Nascimento</dt><dd>{{ motorista.data_nascimento|date:"d/m/Y" }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Telefone</dt><dd>{{ motorista.telefone }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">E-mail</dt><dd>{{ motorista.utilizador.email }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Cidade</dt><dd>{{ motorista.cidade }}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Veículo</h3>
+            <dl class="text-sm space-y-2">
+                <div class="flex justify-between"><dt class="text-muted">Modelo</dt><dd>{{ motorista.modelo_moto }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Ano</dt><dd>{{ motorista.ano_moto }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Cor</dt><dd>{{ motorista.cor_moto }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Placa</dt><dd class="font-semibold">{{ motorista.placa }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Telegram</dt><dd>{% if motorista.telegram_id %}✅ Conectado{% else %}❌ Não{% endif %}</dd></div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- ASSINATURAS -->
+    {% if assinaturas %}
+    <div class="bg-surface border border-border rounded-2xl p-5 mb-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Assinaturas</h3>
+        <div class="flex flex-col gap-2">
+            {% for ass in assinaturas %}
+            <div class="flex items-center justify-between border-b border-border last:border-0 pb-2 last:pb-0">
+                <div>
+                    <span class="text-sm font-semibold">R$ {{ ass.valor|floatformat:2 }}</span>
+                    <span class="text-xs text-muted ml-2">{{ ass.criada_em|date:"d/m/Y" }}</span>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-pill font-semibold
+                    {% if ass.status == 'paga' %}bg-accent/10 text-accent
+                    {% else %}bg-gold/10 text-gold{% endif %}">{{ ass.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- CORRIDAS RECENTES -->
+    <div class="bg-surface border border-border rounded-2xl p-5">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Corridas recentes ({{ corridas|length }})</h3>
+        {% if corridas %}
+        <div class="flex flex-col gap-2">
+            {% for corrida in corridas %}
+            <div class="flex items-center justify-between border-b border-border last:border-0 pb-2 last:pb-0 text-sm">
+                <div>
+                    <span class="font-semibold">#{{ corrida.id }}</span>
+                    <span class="text-muted ml-2">{{ corrida.criada_em|date:"d/m/Y" }}{% if corrida.iniciada_em and corrida.concluida_em %} · {{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}{% endif %}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-muted">{{ corrida.get_status_display }}</span>
+                    <span class="font-semibold">R$ {{ corrida.valor|default:"-" }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-sm text-center py-4">Nenhuma corrida</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

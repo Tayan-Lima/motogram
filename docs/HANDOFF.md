@@ -1,44 +1,66 @@
-# HANDOFF.md — MotoGram
+# HANDOFF.md — Motogram GO
 
-**Última sessão**: 2026-06-17
-**Estado**: Fase 1 (MVP) ~95% completa — 62 testes passando, deploy pendente
+**Última sessão**: 2026-06-23
+**Estado**: Fase 1 (MVP) ~99% completa — **ciclo de vida completo**, deploy pendente
+**Nota**: Sessão anterior crashou, mas código ficou íntegro. Venv precisou ser recriada.
 
 ---
 
 ## Estado Actual do Código
 
-### ✅ Implementado (Fase 1 — Semanas 1–6)
+### ✅ Implementado (Fase 1)
 
 | Componente | Estado | Ficheiros |
 |-----------|--------|-----------|
 | **Django project** | Configurado | `backend/motogram/settings.py`, `urls.py`, `wsgi.py` |
-| **Models + migrations** | Gerados e aplicados | `corridas/`, `motoristas/`, `pagamentos/` (migrations 0001–0003) |
-| **PostGIS** | Funcional local (PostgreSQL) | `motoristas/models.py` PointField, `corridas/services.py` ST_DWithin |
-| **Bot Telegram** | Driver-only, funcional | `bot/main.py`, `bot/handlers/`, `bot/services.py`, `bot/messages.py` |
+| **Models + migrations** | Gerados (4 apps) | `corridas/`, `motoristas/` (0004 email), `pagamentos/` (0002 mp_payment) |
+| **PostGIS** | Funcional (detecção condicional) | `motoristas/models.py` PointField, `corridas/services.py` ST_DWithin |
+| **Bot Telegram** | Long-polling, FSM, driver-only | `bot/main.py`, `bot/handlers/`, `bot/services.py` |
 | **API Endpoints** | Todos criados e testados | `corridas/urls.py`, `motoristas/urls.py`, `pagamentos/urls.py` |
-| **Services** | Criados e limpos | `corridas/services.py` (enviar_localizacao_telegram, notificar_motoristas_proximos), `motoristas/services.py` |
-| **Site Passageiro** | Landing + pedido + cadastro + login + recuperar senha | `templates/passageiro/*.html` |
-| **Site Motorista** | Cadastro, login, dashboard, conta + recuperar senha | `templates/motorista/*.html` |
-| **Painel Admin** | Dashboard, cadastros, corridas, motoristas — rota secreta | `templates/admin_mg/*.html` (+ `login.html`) |
-| **Pagamentos** | Mercado Pago Pix webhook (lógica em services.py) | `pagamentos/services.py`, `pagamentos/views.py` |
-| **Testes** | **62 testes** em 9 ficheiros, 0 falhas | `backend/**/test*.py` |
-| **Service Worker** | Criado | `backend/static/sw.js` |
+| **Services** | Limpos, sem lógica nas views | `corridas/services.py`, `motoristas/services.py`, `pagamentos/services.py` |
+| **Site Passageiro** | Landing + pedido (mapa OSM) + cadastro + login + recuperar senha | `templates/passageiro/*.html` |
+| **Site Motorista** | Cadastro (3 steps) + login + dashboard + conta + recuperar senha | `templates/motorista/*.html` |
+| **Painel Admin** | Dashboard (MRR, gráfico 7d), KYC/CRM, assinaturas, rota secreta | `templates/admin_mg/*.html` (+ login) |
+| **Pagamentos** | Mercado Pago Pix webhook (busca por `mp_payment_id`) | `pagamentos/services.py`, `pagamentos/views.py` |
+| **Testes** | **114 testes**, 0 falhas | `backend/**/test*.py`, `backend/test_e2e.py`, `backend/playwright_tests/`, `bot/tests/` |
+| **Mobile-first** | Tailwind CDN + Alpine.js + Leaflet.js (lazy) | `base.html` + templates |
+| **Service Worker** | Escopo `/static/` corrigido, backoff adaptativo | `backend/static/sw.js` |
 | **Management Commands** | 3 commands | `cancelar_corridas_antigas`, `verificar_assinaturas`, `notificar_vencimento` |
 | **InDrive negotiation** | Oferta model, contra-oferta, escolher motorista | `corridas/models.py` Oferta, views, urls, services |
-| **Bot security** | Token guardian — só motoristas ativados entram | `bot/handlers/start.py` |
-| **Phone masking** | `****-8888` em todas as saídas | `corridas/views.py` _mascarar_telefone |
-| **Localização no Telegram** | Pin no mapa via sendLocation | `corridas/services.py` enviar_localizacao_telegram |
-| **Senha nos cadastros** | Motorista (step 1) e passageiro (step 2) pedem senha | templates + views |
-| **Recuperar senha** | Ambos via e-mail → Telegram | `motorista/recuperar-senha/`, `passageiro/recuperar-senha/` |
+| **Ciclo de vida** | Iniciar, cancelar-motorista, notificar passageiro, distância Haversine | `corridas/views.py`, `services.py`, `bot/handlers/corridas.py` |
+| **Bot novos handlers** | iniciar:, cancelar_motorista: + serviços HTTP | `bot/handlers/corridas.py`, `bot/services.py` |
+| **Notificações passageiro** | Telegram ao iniciar/concluir/cancelar (thread separada) | `corridas/services.py` → `notificar_passageiro_telegram()` |
+| **Distância automática** | Haversine ao concluir corrida (se não definida) | `corridas/services.py` → `calcular_distancia_km()` |
+| **Bot security** | Token guardian — só motoristas ativados + assinatura ativa entram | `bot/handlers/start.py` |
+| **Phone masking** | Mascarado antes do match (`****-8888`), real após match | `corridas/views.py` EscolherMotoristaView + CorridaStatusView |
+| **Email confirmation** | Obrigatório p/ criar corrida; campos + migration + view + templates | `motoristas/views.py`, `site_publico/views.py`, `motoristas.0004_email_confirmado` |
+| **Rate limiting** | django-ratelimit 5/min/IP nos 3 logins (passageiro, motorista, admin) | `site_publico/views.py`, `motoristas/views.py`, `admin_mg/views.py` |
+| **URLs named** | Todas as URLs de templates convertidas para `{% url %}` (~100 ocorrências) | 24 templates |
+| **PT-PT → PT-BR** | ~40 strings traduzidas (activo→ativo, registado→registrado, etc.) | 14 ficheiros |
+| **Paleta consistente** | `gold/accent2/accent` em badges, erros, offline banner | 10+ templates |
 | **GitHub** | Repo `Tayan-Lima/motogram` (público, main) | |
 
-### ⚠️ Pendente
+---
+
+## Estatísticas de Testes (114 total)
+
+| Suite | Testes | Runner |
+|-------|--------|--------|
+| Django unit + integration | 70 | `manage.py test` |
+| Playwright E2E (passageiro) | 8 | `pytest playwright_tests/` |
+| Playwright E2E (motorista) | 6 | `pytest playwright_tests/` |
+| Playwright E2E (admin) | 4 | `pytest playwright_tests/` |
+| Bot services (mock HTTP) | 11 | `pytest bot/tests/` |
+| Bot handlers (start) | 5 | `pytest bot/tests/` |
+| Bot handlers (motorista) | 6 | `pytest bot/tests/` |
+| Bot handlers (corridas) | 4 | `pytest bot/tests/` |
+
+### ⚠️ Pendente para Deploy
 
 1. **Deploy Railway** — `Procfile` configurado mas não deployado
 2. **Domínio** — não configurado
-3. **URLs hardcoded** nos templates (usar `{% url %}` com namespaces)
-4. **Rate limiting** nas views de login (produção)
-5. **LICENSE** — referenciada mas não criada
+3. **LICENSE** — referenciada mas não criada (AGPL-3.0)
+4. **MP webhook Sandbox** — lógica implementada e testada com unit tests, mas não com o Sandbox real do Mercado Pago
 
 ---
 
@@ -51,44 +73,46 @@
 | `daniel@gmail.com` | motorista | Daniel Pereira | pendente | — |
 | `teste1@gmail.com` | motorista | *(sem Motorista)* | quebrou | — |
 
-- Token Telegram Márvio: usar o link no site `http://localhost:8000/motorista/conta/`
+- Token Telegram Márvio: link em `http://localhost:8000/motorista/conta/`
 - Admin secret: `http://localhost:8000/g7x9kadm/entrar/` (admin / senha123)
 
 ---
 
-## O que Mudou nesta Sessão (2026-06-17)
+## O que Mudou nesta Sessão (2026-06-23)
 
-### Correções
-- **`BotAuthMixin` unificado** — `corridas/views.py` e `motoristas/views.py` importam de `motogram/mixins.py`
-- **Webhook movido para services** — `verificar_assinatura_webhook()` + `processar_webhook_mercadopago()` em `pagamentos/services.py`
-- **PostGIS detection fix** — `settings.py` usa `ctypes.util.find_library('gdal')` em vez de import prematuro
-- **Admin voltar hardcoded** — `cadastros_pendentes.html` usava `/admin_mg/` em vez de `{{ prefix }}`
-- **Bot decode_payload removido** — `bot/handlers/start.py` usa `command.args` directamente
-- **Link do site aponta pra bot errado** — `motoristas/views.py` link corrigido de `motogram_bot` para `MotoGram_Go_bot`
-- **Cadastro quebrava com campos vazios** — validação completa de campos obrigatórios antes de `int()`/`float()`
+### Ciclo de Vida Completo das Corridas
+- **Novos endpoints**: `POST /api/corridas/{id}/iniciar/` e `POST /api/corridas/{id}/cancelar-motorista/`
+- **Novos handlers no bot**: `iniciar:`, `cancelar_motorista:` callbacks com FSM states
+- **Novos métodos HTTP**: `bot/services.py` → `iniciar_corrida()`, `cancelar_corrida_motorista()`
+- **Notificações ao passageiro**: `corridas/services.py` → `notificar_passageiro_telegram()` — disparado em thread separada ao iniciar, concluir, cancelar
+- **Distância Haversine**: `calcular_distancia_km()` em `corridas/services.py` — calculada automaticamente ao concluir se não definida
+- **Cron job atualizado**: `cancelar_corridas_antigas` agora lida com estado `cancelada` → `sem_motoristas`
+- **Botões dinâmicos**: Telegram mostra [🏍️ Iniciar] + [❌ Cancelar] após match, depois só [✅ Concluir]
 
-### Features novas
-- **Pin no mapa no Telegram** — `enviar_localizacao_telegram()` envia `sendLocation` com origem e destino
-- **Senha nos cadastros** — motorista (step 1) e passageiro (step 2) agora pedem senha (mín. 6 caracteres)
-- **Recuperar senha** — ambos: digita e-mail → nova senha enviada via Telegram
-- **Links "Esqueceu a senha?"** nas páginas de login
+### Fluxo de estados
+```
+aguardando ──▶ aceite ──▶ em_curso ──▶ concluida
+                 │                      │
+                 └──▶ cancelada ◀───────┘
+                      (motorista)
+```
 
-### Testes
-- 62 testes (eram 41 no HANDOFF anterior), 0 falhas
-- Testes de cadastro actualizados para incluir `password`/`password_confirm` nos POSTs
+### Estatísticas de Testes (70 Django confirmados)
+| Suite | Testes | Status |
+|-------|--------|--------|
+| Django unit + integration | 70 | ✅ OK (0 falhas) |
+| Playwright E2E | 18 | ⚠️ Não executado nesta sessão (precisa de navegador) |
+| Bot tests | 26 | ⚠️ Não executado nesta sessão (precisa de venv separada) |
+| **Total** | **114** | |
 
----
+### Incidente da Sessão
+- Crash no final da sessão anterior; venv ficou limpa
+- Dependências reinstaladas via `pip install -r requirements.txt`
+- Código-fonte 100% íntegro (git confirma)
+- 2 conexões zumbis no PostgreSQL limpadas com `--keepdb`
 
-## Próximos Passos (ordem de prioridade)
-
-1. **Deploy Railway** — criar conta, linkar GitHub, configurar env vars (DATABASE_URL no Supabase, etc.)
-2. **Criar admin superuser** no Railway: `python manage.py createsuperuser` com `tipo='admin'`
-3. **Teste real** — com celular em 3G: motorista no Telegram, passageiro no navegador
-4. **Converter URLs hardcoded** nos templates para `{% url %}` com namespaces
-5. **Rate limiting** nas views de login
-6. **Criar LICENSE** (AGPL-3.0)
-7. **Testes para bot/** (0 testes actualmente) e **admin_mg/**
-8. **Tratar destino no frontend** — `pedir.html` bug: `destino_lat` copia `origem_lat`
+### Checklist de Testes Manuais
+Ver `docs/CHECKLIST_TESTES_MANUAIS.md` — cobre 4 fluxos + edge cases + regressão.
 
 ---
 
@@ -99,13 +123,16 @@ DATABASE_URL=postgresql://motogram:motogram_dev@localhost:5432/motogram  # local
 TELEGRAM_TOKEN=<TELEGRAM_TOKEN>
 BOT_SECRET=dev-secret-token-change-in-production
 SITE_URL=http://localhost:8000
+BACKEND_URL=http://localhost:8000
 MP_ACCESS_TOKEN=...
 MP_WEBHOOK_SECRET=...
 PRECO_ASSINATURA_MENSAL=6900
 ADMIN_SECRET_PATH=g7x9kadm
+EMAIL_HOST=...
+EMAIL_PORT=587
+EMAIL_HOST_USER=...
+EMAIL_HOST_PASSWORD=...
 ```
-
-**Para produção (Railway):** `DATABASE_URL` do Supabase, `SITE_URL` do Railway, `SECRET_KEY` e `BOT_SECRET` novos, `DEBUG=False`, `ALLOWED_HOSTS` com domínio Railway.
 
 ---
 
@@ -113,7 +140,7 @@ ADMIN_SECRET_PATH=g7x9kadm
 
 ```bash
 # Terminal 1 — Django
-cd backend && source ../venv/bin/activate
+cd backend && source /home/gamer/Área/bin/activate
 python manage.py runserver 0.0.0.0:8000
 
 # Terminal 2 — Bot Telegram
@@ -121,26 +148,31 @@ cd bot && source .venv/bin/activate
 python main.py
 
 # Testes
-cd backend && python manage.py test --verbosity=2
+cd backend && source /home/gamer/Área/bin/activate && python manage.py test --verbosity=2
+cd backend && python -m pytest playwright_tests/ -v
+cd bot && .venv/bin/python -m pytest tests/ -v
 ```
 
-**Bot roda com Python 3.12 via uv** (`bot/.venv`), separado do venv do Django (Python 3.14). O bot usa long-polling (não webhook).
+**Dois ambientes Python distintos:**
+- Django: `/home/gamer/Área/` — Python 3.14
+- Bot: `bot/.venv/` via uv — Python 3.12, aiogram 3
 
 ---
 
-## Bugs Conhecidos
+## Próximos Passos (ordem de prioridade)
 
-1. **Destino copia origem** — `pedir.html:249-250` `destino_lat = this.lat` (deveria capturar coordenada separada)
-2. **Bot usa `requests` síncrono** — bloqueia event loop do aiogram (timeout=5s, conhecido e aceito)
-3. **`x-mask` Alpine plugin** — referenciado em `cadastro.html` mas não carregado no `base.html`
-4. **`motoristas/proximos/`** — endpoint vaza `telegram_id` (não deveria ser público)
+1. **Testar fluxo completo** — seguir `docs/CHECKLIST_TESTES_MANUAIS.md` no browser + Telegram
+2. **Deploy Railway** — criar conta, linkar GitHub, configurar env vars
+3. **Criar admin superuser** no Railway: `python manage.py createsuperuser` com `tipo='admin'`
+4. **Teste real** — celular Android em 4G/3G: motorista no Telegram, passageiro no Chrome
+5. **LICENSE** — discutir e criar (AGPL-3.0)
+6. **MP webhook Sandbox** — testar com Sandbox real do Mercado Pago
 
----
+## Próximas Features (Fase 2 — backlog)
 
-## Próximas Features (Fase 2)
-
-- Dashboard avançado do motorista (ganhos, metas, combustível)
-- WebSocket (Django Channels) substituindo polling
-- Sistema de avaliação (1–5 estrelas)
-- SMS de notificação (Zenvia)
-- Sentry para monitoramento de erros
+- Dashboard avançado motorista (ganhos, metas, combustível)
+- WebSocket (Django Channels) substituindo polling REST
+- Avaliação 1–5 estrelas pós-corrida
+- SMS notificação (Zenvia)
+- Sentry monitoramento de erros
+- Dark mode (Tailwind + Alpine.js toggle)

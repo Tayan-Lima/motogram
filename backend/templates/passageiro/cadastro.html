@@ -5,14 +5,14 @@
 {% block passageiro_content %}
 <div class="flex-1 flex flex-col" x-data="cadastroPassageiro()">
     <div class="flex items-center gap-3 px-5 py-3">
-        <a href="/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center text-sm hover:bg-fg hover:text-bg hover:border-fg transition-all">&larr;</a>
+        <a href="{% url 'site_publico:landing' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center text-sm hover:bg-fg hover:text-bg hover:border-fg transition-all">&larr;</a>
         <h1 class="text-lg font-bold">Criar conta</h1>
     </div>
 
     <!-- Barra de progresso -->
     <div class="flex gap-1.5 px-5 pb-4">
         <div class="flex-1 h-1 rounded transition-colors duration-300" :class="passo >= 1 ? 'bg-accent' : 'bg-border'"></div>
-        <div class="flex-1 h-1 rounded transition-colors duration-300" :class="passo >= 2 ? 'bg-fg' : 'bg-border'"></div>
+        <div class="flex-1 h-1 rounded transition-colors duration-300" :class="passo >= 2 ? 'bg-accent' : 'bg-border'"></div>
         <div class="flex-1 h-1 rounded transition-colors duration-300" :class="passo >= 3 ? 'bg-accent' : 'bg-border'"></div>
     </div>
 
@@ -33,13 +33,12 @@
             <div class="text-center pt-8">
                 <div class="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4 text-3xl">📱</div>
                 <h2 class="text-2xl font-extrabold tracking-tighter mb-1">Seu telefone</h2>
-                <p class="text-muted text-sm">Vamos enviar um código de confirmação por SMS.</p>
+                <p class="text-muted text-sm">Usamos o teu telefone para contato com o motorista.</p>
             </div>
             <div class="flex gap-2">
                 <input type="text" value="+55" readonly class="w-20 px-3 py-3.5 border-1.5 border-border rounded-xl text-sm text-muted bg-bg">
                 <input type="tel" x-model="telefone" x-mask="(99) 9 9999-9999" placeholder="(92) 9 9999-8888" class="flex-1 px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" inputmode="numeric">
             </div>
-            <p class="text-xs text-muted">Você receberá um código de 4 dígitos.</p>
         </div>
 
         <!-- Passo 2: Nome -->
@@ -54,8 +53,9 @@
                 <input type="text" x-model="nome" placeholder="Seu nome" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="name">
             </div>
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail (opcional)</label>
-                <input type="email" x-model="email" placeholder="seu@email.com" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="email">
+                <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail</label>
+                <input type="email" x-model="email" placeholder="seu@email.com" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="email" required>
+                <p class="text-xs text-muted">Enviaremos um link de confirmação para este e-mail.</p>
             </div>
             <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-semibold text-muted uppercase tracking-wider">Senha</label>
@@ -90,7 +90,7 @@
             </div>
             <label class="flex items-start gap-2.5 cursor-pointer">
                 <input type="checkbox" x-model="termos" class="mt-0.5 accent-accent">
-                <span class="text-xs text-muted leading-relaxed">Aceito os Termos de Uso e a Política de Privacidade do MotoGram.</span>
+                <span class="text-xs text-muted leading-relaxed">Aceito os Termos de Uso e a Política de Privacidade do Motogram GO.</span>
             </label>
         </div>
     </div>
@@ -139,6 +139,10 @@ function cadastroPassageiro() {
             if (this.passo === 2) {
                 if (!this.nome.trim()) {
                     this.erro = 'Digite seu nome.';
+                    return;
+                }
+                if (!this.email.trim() || !this.email.includes('@')) {
+                    this.erro = 'Digite um e-mail válido.';
                     return;
                 }
                 if (!this.senha || this.senha.length < 6) {

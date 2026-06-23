@@ -1,4 +1,4 @@
-# MotoGram 🏍️
+# Motogram GO 🏍️
 
 Plataforma de mototáxi e entregas para cidades pequenas no Brasil.
 
@@ -10,14 +10,17 @@ Combina um **bot Telegram** para operação em tempo real com um **site mobile-f
 
 **Para o passageiro**
 1. Acede a `motogram.app/passageiro` no browser (sem instalar nada)
-2. Envia a localização no mapa
-3. Aguarda confirmação — vê o nome e contacto do motorista
+2. Envia a localização no mapa com destino e valor sugerido
+3. Vê ofertas dos motoristas em tempo real (InDrive-style)
+4. Escolhe o motorista → vê nome, telefone e dados da moto
+5. Acompanha o estado: aguardando → aceite → em_curso → concluída
 
 **Para o motorista**
 1. Cadastra-se em `motogram.app/motorista/cadastro`
 2. Paga a assinatura mensal via Pix
 3. Recebe link para activar o Telegram
 4. A partir daí, recebe corridas directamente no Telegram
+5. Aceita ou faz contra-oferta → se escolhido, inicia e conclui a corrida
 
 ---
 
@@ -41,10 +44,12 @@ Combina um **bot Telegram** para operação em tempo real com um **site mobile-f
 |----------|-----------|
 | [PRD.md](docs/PRD.md) | Requisitos do produto, métricas, riscos |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura técnica, modelos, endpoints, mapas, internet fraca |
-| [AGENTS.md](docs/AGENTS.md) | Instruções para agentes de IA (OpenCode) |
+| [AGENTS.md](AGENTS.md) | Instruções para agentes de IA (Claude Code) |
 | [ROADMAP.md](docs/ROADMAP.md) | Fases de desenvolvimento e backlog |
 | [CONVENTIONS.md](docs/CONVENTIONS.md) | Convenções de código e nomenclatura |
-| [TESTING.md](docs/TESTING.md) | Estratégia de testes e checklist de deploy |
+| [TESTING.md](docs/TESTING.md) | Estratégia de testes e estrutura |
+| [CHECKLIST_TESTES_MANUAIS.md](docs/CHECKLIST_TESTES_MANUAIS.md) | Checklist de testes manuais — fluxo completo |
+| [HANDOFF.md](docs/HANDOFF.md) | Estado actual da sessão, bugs, prioridades |
 | [PASSENGER_APP.md](docs/PASSENGER_APP.md) | Interface do passageiro — stack, mapas OSM, polling, service worker |
 | [LIBRETAXI_INTEGRATION.md](docs/LIBRETAXI_INTEGRATION.md) | Referência do LibreTaxi — padrões de lógica adaptados para aiogram 3 |
 | [ONBOARDING.md](docs/ONBOARDING.md) | Cadastros completos — passageiro (SMS+email) e motorista (documentos, aprovação) |

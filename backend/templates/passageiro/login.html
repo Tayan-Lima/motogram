@@ -30,17 +30,17 @@
     </form>
 
     <p class="text-center text-sm text-muted mt-3 mb-3">
-        <a href="/passageiro/recuperar-senha/" class="text-accent hover:underline">Esqueceu a senha?</a>
+        <a href="{% url 'site_publico:recuperar_senha' %}" class="text-accent hover:underline">Esqueceu a senha?</a>
     </p>
 
     <p class="text-center text-sm text-muted mt-6">
         Não tem conta?
-        <a href="/passageiro/cadastro/" class="text-fg font-semibold hover:text-accent transition-colors">Criar conta</a>
+        <a href="{% url 'site_publico:cadastro' %}" class="text-fg font-semibold hover:text-accent transition-colors">Criar conta</a>
     </p>
 
     <div class="mt-auto py-6 text-center">
         <p class="text-xs text-muted">É motorista?
-            <a href="/motorista/login/" class="text-fg font-semibold hover:text-accent transition-colors">Entrar como motorista</a>
+            <a href="{% url 'motoristas:login' %}" class="text-fg font-semibold hover:text-accent transition-colors">Entrar como motorista</a>
         </p>
     </div>
 </div>

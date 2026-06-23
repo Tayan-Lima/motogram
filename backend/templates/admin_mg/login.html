@@ -8,11 +8,11 @@
         <div class="w-full max-w-sm">
             <div class="text-center mb-8">
                 <span class="w-3 h-3 rounded bg-fg inline-block"></span>
-                <h1 class="text-lg font-extrabold tracking-tight mt-2">Painel Admin</h1>
+                <h1 class="text-2xl font-extrabold tracking-tighter mt-2">Painel Admin</h1>
             </div>
 
             {% if erro %}
-            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
+            <div class="bg-accent2/10 border border-accent2/20 text-accent2 px-4 py-3 rounded-xl text-sm mb-6">
                 {{ erro }}
             </div>
             {% endif %}
@@ -25,9 +25,12 @@
                 </div>
                 <div>
                     <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Senha</label>
-                    <input type="password" name="password" required class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                    <div class="relative">
+                        <input type="password" name="password" id="senha" required class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors pr-12">
+                        <button type="button" onclick="const s = document.getElementById('senha'); s.type = s.type === 'password' ? 'text' : 'password'; this.textContent = s.type === 'password' ? '👁' : '🙈';" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-fg transition-colors text-lg">👁</button>
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-fg text-bg py-3.5 rounded-xl font-semibold hover:bg-accent transition-all">
+                <button type="submit" class="w-full bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all">
                     Entrar
                 </button>
             </form>

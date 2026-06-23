@@ -1,4 +1,4 @@
-# COMMUNICATION_FLOWS.md — MotoGram
+# COMMUNICATION_FLOWS.md — Motogram GO
 
 Mapeamento completo de todas as comunicações entre as interfaces do MotoGram.
 Responde a: quem envia, quem recebe, por que canal, com que dados, e o que acontece depois.

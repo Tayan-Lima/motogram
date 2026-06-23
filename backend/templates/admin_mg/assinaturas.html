@@ -1,0 +1,88 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Assinaturas — Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
+    <header class="flex items-center gap-3 mb-8">
+        <a href="{% url 'admin_mg:dashboard' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tighter">Assinaturas</h1>
+            <p class="text-sm text-muted">Gestão de assinaturas e receita</p>
+        </div>
+    </header>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div class="bg-accent/5 border border-accent/20 rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">Ativas</p>
+            <p class="text-2xl font-extrabold text-accent">{{ assinaturas_activas }}</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">Pendentes</p>
+            <p class="text-2xl font-extrabold">{{ assinaturas_pendentes }}</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">MRR</p>
+            <p class="text-2xl font-extrabold">R$ {{ mrr|floatformat:2 }}</p>
+            <p class="text-xs text-muted">/mês</p>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <p class="text-xs text-muted uppercase tracking-wider mb-1">Receita total</p>
+            <p class="text-2xl font-extrabold">R$ {{ receita_total|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <!-- VENCENDO EM 7 DIAS -->
+    {% if vencendo_7 %}
+    <div class="bg-accent2/5 border border-accent2/20 rounded-2xl p-5 mb-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-accent2 mb-3">⚠️ Vencem em 7 dias ({{ vencendo_7|length }})</h3>
+        <div class="flex flex-col gap-2">
+            {% for m in vencendo_7 %}
+            <a href="{% url 'admin_mg:motorista_detalhe' m.id %}" class="flex items-center justify-between text-sm hover:bg-bg rounded-lg px-2 py-1.5 transition-colors">
+                <span class="font-semibold">{{ m.nome_completo }}</span>
+                <span class="text-accent2">{{ m.assinatura_ate|date:"d/m/Y" }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- VENCENDO EM 15 DIAS -->
+    {% if vencendo_15 %}
+    <div class="bg-gold/5 border border-gold/20 rounded-2xl p-5 mb-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-gold mb-3">Vencem em 8-15 dias ({{ vencendo_15|length }})</h3>
+        <div class="flex flex-col gap-2">
+            {% for m in vencendo_15 %}
+            <a href="{% url 'admin_mg:motorista_detalhe' m.id %}" class="flex items-center justify-between text-sm hover:bg-bg rounded-lg px-2 py-1.5 transition-colors">
+                <span class="font-semibold">{{ m.nome_completo }}</span>
+                <span class="text-gold">{{ m.assinatura_ate|date:"d/m/Y" }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- EXPIRADAS -->
+    {% if expiradas %}
+    <div class="bg-accent2/5 border border-accent2/20 rounded-2xl p-5 mb-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-accent2 mb-3">❌ Expiradas ({{ expiradas|length }})</h3>
+        <div class="flex flex-col gap-2">
+            {% for m in expiradas %}
+            <a href="{% url 'admin_mg:motorista_detalhe' m.id %}" class="flex items-center justify-between text-sm hover:bg-bg rounded-lg px-2 py-1.5 transition-colors">
+                <span class="font-semibold">{{ m.nome_completo }}</span>
+                <span class="text-accent2">expirou em {{ m.assinatura_ate|date:"d/m/Y" }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not vencendo_7 and not vencendo_15 and not expiradas %}
+    <div class="text-center py-12">
+        <p class="text-muted">Nenhuma assinatura a vencer ou expirada.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

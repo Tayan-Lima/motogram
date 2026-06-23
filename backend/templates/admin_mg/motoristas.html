@@ -4,41 +4,90 @@
 {% block title %}Motoristas{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-5 py-6">
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
     <header class="flex items-center gap-3 mb-8">
-        <a href="/{{ prefix }}/" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <a href="{% url 'admin_mg:dashboard' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
         <div>
             <h1 class="text-2xl font-extrabold tracking-tighter">Motoristas</h1>
-            <p class="text-sm text-muted">{{ motoristas|length }} motorista(s)</p>
+            <p class="text-sm text-muted">{{ motoristas.paginator.count }} motorista(s)</p>
         </div>
+        <form method="POST" action="{% url 'admin_mg:logout' %}" class="ml-auto">
+            {% csrf_token %}
+            <button type="submit" class="text-sm text-muted hover:text-accent2 transition-colors">Sair</button>
+        </form>
     </header>
+
+    <!-- BUSCA -->
+    <form method="GET" class="mb-6">
+        <div class="relative">
+            <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por nome, CPF, telefone, cidade, placa ou e-mail..."
+                   class="w-full border-1.5 border-border rounded-xl px-4 py-3 text-sm focus:border-fg focus:outline-none transition-colors">
+            {% if busca %}
+            <a href="{% url 'admin_mg:motoristas' %}" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-accent2 transition-colors text-sm">✕ limpar</a>
+            {% endif %}
+        </div>
+    </form>
 
     <div class="flex flex-col gap-3">
         {% for motorista in motoristas %}
-        <div class="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
-            <div class="w-10 h-10 rounded-full bg-accent2"></div>
-            <div class="flex-1">
-                <p class="font-semibold text-sm">{{ motorista.nome_completo }}</p>
-                <p class="text-xs text-muted">{{ motorista.modelo_moto }} • {{ motorista.cidade }}</p>
+        <div class="bg-surface border border-border rounded-xl p-4 hover:border-fg transition-all">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-accent2 flex items-center justify-center text-white text-xs font-bold">{{ motorista.nome_completo|slice:":1"|upper }}</div>
+                <div class="flex-1">
+                    <p class="font-semibold text-sm">{{ motorista.nome_completo }}</p>
+                    <p class="text-xs text-muted">{{ motorista.modelo_moto }} • {{ motorista.cidade }} • {{ motorista.placa }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs px-2 py-0.5 rounded-pill font-semibold
+                        {% if motorista.status_cadastro == 'aprovado' %}bg-accent/10 text-accent
+                        {% elif motorista.status_cadastro == 'pendente' %}bg-gold/10 text-gold
+                        {% elif motorista.status_cadastro == 'reprovado' %}bg-accent2/10 text-accent2
+                        {% elif motorista.status_cadastro == 'suspenso' %}bg-accent2/10 text-accent2
+                        {% else %}bg-bg text-muted{% endif %}">
+                        {{ motorista.get_status_cadastro_display }}
+                    </span>
+                    {% if motorista.activo %}
+                    <span class="w-2 h-2 rounded-full bg-accent" title="Ativo"></span>
+                    {% else %}
+                    <span class="w-2 h-2 rounded-full bg-border" title="Inativo"></span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="text-xs px-2 py-0.5 rounded-pill font-semibold
-                    {% if motorista.status_cadastro == 'aprovado' %}bg-accent/10 text-accent
-                    {% elif motorista.status_cadastro == 'pendente' %}bg-yellow-100 text-yellow-700
-                    {% elif motorista.status_cadastro == 'reprovado' %}bg-red-100 text-red-700
-                    {% else %}bg-bg text-muted{% endif %}">
-                    {{ motorista.get_status_cadastro_display }}
-                </span>
-                {% if motorista.activo %}
-                <span class="w-2 h-2 rounded-full bg-accent"></span>
+            <div class="flex gap-2 mt-3 pt-3 border-t border-border">
+                <a href="{% url 'admin_mg:motorista_detalhe' motorista.id %}" class="text-xs font-semibold text-accent hover:underline">Ver perfil →</a>
+                {% if motorista.activo and motorista.status_cadastro != 'suspenso' %}
+                <form method="POST" action="{% url 'admin_mg:analisar_cadastro' motorista.id %}" class="inline" onsubmit="return confirm('Bloquear este motorista?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="accao" value="bloquear">
+                    <button type="submit" class="text-xs text-muted hover:text-accent2 transition-colors">Bloquear</button>
+                </form>
+                {% elif not motorista.activo or motorista.status_cadastro == 'suspenso' %}
+                <form method="POST" action="{% url 'admin_mg:analisar_cadastro' motorista.id %}" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="accao" value="reactivar">
+                    <button type="submit" class="text-xs font-semibold text-accent hover:underline">Reativar</button>
+                </form>
                 {% endif %}
             </div>
         </div>
         {% empty %}
         <div class="text-center py-12">
-            <p class="text-muted">Nenhum motorista registado</p>
+            <p class="text-muted">Nenhum motorista encontrado</p>
         </div>
         {% endfor %}
     </div>
+
+    <!-- PAGINAÇÃO -->
+    {% if motoristas.has_other_pages %}
+    <div class="flex items-center justify-center gap-3 mt-6">
+        {% if motoristas.has_previous %}
+        <a href="?{% if busca %}q={{ busca }}&{% endif %}p={{ motoristas.previous_page_number }}" class="px-4 py-2 border border-border rounded-xl text-sm hover:border-fg transition-all">← Anterior</a>
+        {% endif %}
+        <span class="text-sm text-muted">{{ motoristas.number }} / {{ motoristas.paginator.num_pages }}</span>
+        {% if motoristas.has_next %}
+        <a href="?{% if busca %}q={{ busca }}&{% endif %}p={{ motoristas.next_page_number }}" class="px-4 py-2 border border-border rounded-xl text-sm hover:border-fg transition-all">Próximo →</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

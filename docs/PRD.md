@@ -1,4 +1,4 @@
-# PRD — MotoGram
+# PRD — Motogram GO
 
 **Versão:** 1.0  
 **Data:** Junho 2026  

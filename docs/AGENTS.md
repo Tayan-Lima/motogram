@@ -1,329 +1,180 @@
-# AGENTS.md — MotoGram
+# AGENTS.md — Motogram GO
 
-Instruções para agentes de IA (OpenCode, Claude Code, Cursor) que trabalham neste repositório.
+Plataforma de mototáxi para cidades pequenas no Brasil (interior do Amazonas).
+Django 5 backend + aiogram 3 Telegram bot + Django Templates mobile-first site.
 
----
+**Target users**: low-end Android, 3G com 500–2000ms latency, sinal intermitente.
 
-## O Projecto
-
-MotoGram é uma plataforma de mototáxi para cidades pequenas no Brasil. Combina:
-- **Bot Telegram** (aiogram 3) — interface operacional para motoristas e passageiros
-- **Site mobile-first** (Django Templates + Alpine.js) — dashboard do motorista, pedidos do passageiro, painel admin
-- **Backend Django** (Django 5 + DRF) — API REST, lógica de negócio, webhooks
-- **PostgreSQL + PostGIS** (Supabase) — dados e buscas geoespaciais
-- **Redis** (Upstash) — cache de sessões e estados do bot (FSM)
-
-Lê o `ARCHITECTURE.md` antes de qualquer tarefa que envolva criar novos ficheiros ou modificar a estrutura do projecto.
+> **Fonte canónica.** Este ficheiro é a fonte de verdade. `docs/AGENTS.md` é espelho — se divergir, confia neste (root).
 
 ---
 
-## Stack e Versões
+## Repo Structure
 
 ```
-Python         3.12
-Django         5.x
-djangorestframework  3.15.x
-aiogram        3.x
-psycopg2       2.9.x
-redis          5.x
-Pillow         10.x
-requests       2.31.x
-python-dotenv  1.x
-gunicorn       21.x
-```
-
-Frontend (via CDN, sem build step):
-```
-Tailwind CSS   3.x  (CDN)
-Alpine.js      3.x  (CDN)
-Leaflet.js     1.9  (CDN)
+backend/          Django project (manage.py lives here)
+  motogram/       Settings, urls, wsgi, mixins.py (BotAuthMixin)
+  corridas/       Corridas app (models, views, services) — Oferta model p/ negociação InDrive
+                  Ciclo de vida completo: iniciar, cancelar-motorista, concluir com Haversine
+  motoristas/     Motoristas + assinaturas (also owns AUTH_USER_MODEL Utilizador)
+  pagamentos/     Mercado Pago Pix (webhook + services)
+  site_publico/   Site público (passageiro, landing)
+  admin_mg/       Painel admin custom (NOT Django.contrib.admin) — rota secreta via ADMIN_SECRET_PATH
+  templates/      Django templates (passageiro/, motorista/, admin_mg/)
+  test_e2e.py     Fluxos completos (passageiro + motorista)
+  playwright_tests/  Testes E2E (Playwright): 18 testes (site passageiro + motorista + admin)
+bot/              Processo aiogram 3 standalone (separado do Django)
+  main.py         Entry point (long-polling, MemoryStorage FSM)
+  handlers/       FSM handlers (start, motorista, corridas) — inclui iniciar:, cancelar_motorista:
+  services.py     HTTP calls → Django API (requests síncrono, nunca aiohttp)
+                  Métodos: iniciar_corrida(), cancelar_corrida_motorista()
+  states.py       aiogram StatesGroup classes
+  messages.py     Todas as strings do bot (constantes PT-BR)
+  tests/          Bot unit tests (pytest): 26 testes (services + handlers)
+docs/             ARCHITECTURE.md, CONVENTIONS.md, HANDOFF.md, CHECKLIST_TESTES_MANUAIS.md, etc.
 ```
 
 ---
 
-## Estrutura do Repositório
+## Commands
 
-```
-motogram/
-├── backend/                  # Projecto Django
-│   ├── motogram/             # Settings, urls, wsgi
-│   │   ├── settings.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
-│   ├── corridas/             # App de corridas
-│   │   ├── models.py
-│   │   ├── views.py
-│   │   ├── services.py
-│   │   └── urls.py
-│   ├── motoristas/           # App de motoristas e assinaturas
-│   │   ├── models.py
-│   │   ├── views.py
-│   │   ├── services.py
-│   │   └── urls.py
-│   ├── pagamentos/           # Integração Mercado Pago
-│   │   ├── views.py          # Webhook handler
-│   │   └── services.py       # Lógica de criação de Pix
-│   ├── site_publico/         # Views do site mobile-first
-│   │   ├── views.py
-│   │   └── urls.py
-│   ├── templates/            # HTML templates
-│   │   ├── base.html
-│   │   ├── passageiro/
-│   │   ├── motorista/
-│   │   └── admin_mg/
-│   └── manage.py
-├── bot/                      # Processo do bot Telegram (separado)
-│   ├── main.py               # Entry point do bot
-│   ├── handlers/
-│   │   ├── passageiro.py     # Handlers do fluxo do passageiro
-│   │   ├── motorista.py      # Handlers do fluxo do motorista
-│   │   └── corridas.py       # Handlers de aceitar/recusar corridas
-│   ├── services.py           # Chamadas à API do backend
-│   └── states.py             # Definição de estados FSM (aiogram)
-├── docs/
-│   ├── PRD.md
-│   ├── ARCHITECTURE.md
-│   ├── AGENTS.md             # Este ficheiro
-│   ├── ROADMAP.md
-│   ├── CONVENTIONS.md
-│   └── TESTING.md
-├── .env.example
-├── requirements.txt
-├── Procfile                  # Railway: web + bot como processos separados
-└── README.md
-```
-
----
-
-## Regras para o Agente
-
-### SEMPRE
-
-1. **Ler o ARCHITECTURE.md antes de criar novos modelos ou endpoints.** Os modelos principais já estão definidos — não duplicar.
-
-2. **Usar variáveis de ambiente para todas as credenciais.** Nunca hardcodar tokens, senhas ou chaves no código.
-```python
-# ✅ Correcto
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-
-# ❌ Errado
-TELEGRAM_TOKEN = "1234567890:ABCdef..."
-```
-
-3. **Verificar assinatura activa antes de qualquer acção do motorista.**
-```python
-# Em qualquer view ou handler que envolva o motorista
-if not motorista.activo or motorista.assinatura_ate < date.today():
-    return Response({'erro': 'Assinatura inactiva'}, status=403)
-```
-
-4. **Usar PostGIS para buscas geográficas.** Nunca calcular distâncias em Python com loops.
-```python
-# ✅ Correcto — PostGIS
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
-
-ponto = Point(longitude, latitude, srid=4326)
-motoristas = Motorista.objects.filter(
-    activo=True,
-    localizacao__dwithin=(ponto, 0.05)  # ~5km
-).annotate(distancia=Distance('localizacao', ponto)).order_by('distancia')
-
-# ❌ Errado — calcular em Python
-for m in Motorista.objects.all():
-    if calcular_distancia(m.lat, m.lon, lat, lon) < 5:
-        ...
-```
-
-5. **Bot e backend comunicam via HTTP interno.** O bot nunca acede directamente à base de dados.
-```python
-# ✅ Correcto — bot chama API Django
-response = requests.post(
-    f"{BACKEND_URL}/api/corridas/{corrida_id}/aceitar/",
-    headers={"X-Bot-Secret": BOT_SECRET},
-    json={"motorista_telegram_id": message.from_user.id}
-)
-
-# ❌ Errado — bot importa modelos Django
-from corridas.models import Corrida
-```
-
-6. **Validar webhook do Mercado Pago.** Verificar sempre a assinatura do webhook antes de processar.
-
-7. **Tokens de activação Telegram têm validade de 24 horas** e são de uso único — apagar após validação.
-
----
-
-### NUNCA
-
-- Nunca usar `Django.contrib.admin` como painel de administração para utilizadores finais — usar as views em `/admin_mg/`
-- Nunca retornar dados sensíveis (telegram_id, tokens) em endpoints públicos
-- Nunca fazer chamadas ao Telegram API directamente nas views Django — usar o serviço `corridas/services.py`
-- Nunca usar `FloatField` para coordenadas GPS nos modelos — usar `PointField` do PostGIS
-- Nunca usar `requirements.txt` com versões fixas sem testar (`==` é obrigatório em produção)
-- Nunca usar Google Maps API — usar sempre Leaflet.js + OpenStreetMap (gratuito, sem API key)
-- Nunca carregar Leaflet.js no load inicial da página — carregar lazy só quando o mapa for pedido
-- Nunca retornar dados desnecessários nos endpoints de polling — resposta mínima (< 200 bytes)
-- Nunca usar React, Vue ou qualquer framework com build step no site do passageiro — Alpine.js via CDN apenas
-- Nunca bloquear o request do passageiro esperando resposta do Telegram — chamar Telegram API em background (timeout=5s)
-
-### REGRAS DE PERFORMANCE (internet fraca)
-
-8. **Página inicial do passageiro deve ter < 15KB de HTML.** Server-side rendering obrigatório — Django renderiza tudo antes de enviar.
-
-9. **Leaflet.js é carregado lazy.** Nunca incluir no `<head>` — só carregar quando `abrirMapa()` for chamado.
-
-10. **Polling com backoff adaptativo.** Começar em 5s, aumentar para 15s após 30s sem resposta, 30s após 5 minutos. Ver implementação em `PASSENGER_APP.md`.
-
-11. **Service Worker obrigatório no site do passageiro.** Ficheiro `/static/sw.js` deve ser registado na landing page para cache offline.
-
-12. **Notificações Telegram enviadas em paralelo.** Usar `threading.Thread` ou `asyncio.gather` para notificar múltiplos motoristas simultaneamente — nunca em loop sequencial.
-
----
-
-## Padrões de Código
-
-### Views Django (API)
-```python
-# Padrão para views com verificação de assinatura
-class CorridaAceitarView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, corrida_id):
-        motorista = get_object_or_404(Motorista, utilizador=request.user)
-
-        if not motorista.assinatura_activa:
-            return Response(
-                {'erro': 'Renova a tua assinatura para aceitar corridas.',
-                 'link': 'https://motogram.app/motorista/conta'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        corrida = get_object_or_404(Corrida, id=corrida_id, status='aguardando')
-        corrida.motorista = motorista
-        corrida.status = 'aceite'
-        corrida.aceite_em = timezone.now()
-        corrida.save()
-
-        return Response(CorridaSerializer(corrida).data)
-```
-
-### Handlers do Bot (aiogram 3)
-```python
-# Padrão para handlers com verificação de estado
-@router.callback_query(F.data.startswith("aceitar_corrida:"))
-async def aceitar_corrida(callback: CallbackQuery):
-    corrida_id = callback.data.split(":")[1]
-
-    response = await backend_service.aceitar_corrida(
-        corrida_id=corrida_id,
-        telegram_id=callback.from_user.id
-    )
-
-    if response.get('erro'):
-        await callback.answer(response['erro'], show_alert=True)
-        return
-
-    await callback.message.edit_text(
-        f"✅ Corrida aceite!\n"
-        f"📍 Passageiro aguarda em {response['origem']}\n"
-        f"📞 Contacto: {response['passageiro_telefone']}"
-    )
-```
-
-### Templates HTML (mobile-first)
-```html
-<!-- Padrão base para páginas mobile-first -->
-<!-- Sempre mobile-first, nunca desktop-first -->
-<!-- Usar classes Tailwind com prefixo sm: para desktop -->
-<div class="max-w-md mx-auto min-h-dvh flex flex-col">
-  <!-- conteúdo -->
-</div>
-```
-
----
-
-## Variáveis de Ambiente Necessárias
+**Dois ambientes Python distintos** — usar o intérprete certo:
 
 ```bash
-# Django
-SECRET_KEY=
-DEBUG=False
-ALLOWED_HOSTS=.railway.app,motogram.app
-DATABASE_URL=postgresql://...
-
-# Supabase
-SUPABASE_URL=
-SUPABASE_KEY=
-
-# Redis
-REDIS_URL=redis://...
-
-# Telegram
-TELEGRAM_TOKEN=
-TELEGRAM_WEBHOOK_URL=https://motogram.app/api/bot/update/
-BOT_SECRET=  # token interno para comunicação bot→backend
-
-# Mercado Pago
-MP_ACCESS_TOKEN=
-MP_WEBHOOK_SECRET=
-
-# App
-BACKEND_URL=https://motogram.app
-PRECO_ASSINATURA_MENSAL=6900  # em centavos = R$ 69,00
-```
-
----
-
-## Fluxo de Desenvolvimento
-
-Ao receber uma tarefa, o agente deve:
-
-1. Identificar qual componente é afectado (`backend/`, `bot/`, `templates/`)
-2. Verificar se há modelos existentes que cobrem o caso (ver `ARCHITECTURE.md`)
-3. Implementar começando pelos modelos → serializers → views → urls → templates
-4. Adicionar testes unitários básicos para lógica de negócio crítica
-5. Actualizar o `ROADMAP.md` se a tarefa corresponder a um item da roadmap
-
----
-
-## Como Correr Localmente
-
-```bash
-# 1. Clonar e instalar dependências
-git clone https://github.com/teu-user/motogram
-cd motogram
-pip install -r requirements.txt
-
-# 2. Configurar variáveis de ambiente
-cp .env.example .env
-# editar .env com as tuas credenciais
-
-# 3. Migrations
-cd backend
+# Django backend (venv: /home/gamer/Área/ ou repo venv/ — ambos Python 3.14)
+source /home/gamer/Área/bin/activate && cd backend       # ou: source venv/bin/activate
 python manage.py migrate
-
-# 4. Correr Django
 python manage.py runserver
+python manage.py test .                        # tudo: apps + test_e2e (~70 testes)
+python manage.py test motoristas               # app única
+python manage.py test motoristas.tests.test_services.TokenTelegramTest  # classe única
+python manage.py test test_e2e                 # só fluxo completo E2E
+python manage.py test --verbosity=2
 
-# 5. Correr bot (terminal separado)
-cd ../bot
-python main.py
+# Testes E2E (Playwright — site passageiro, motorista, admin)
+cd backend && python -m pytest playwright_tests/ -v       # 18 testes
 
-# 6. Expor para Telegram (desenvolvimento)
-# Instalar ngrok: https://ngrok.com
-ngrok http 8000
-# Actualizar TELEGRAM_WEBHOOK_URL no .env com o URL do ngrok
+# Bot Telegram (env separado, Python 3.12 via uv)
+cd bot && .venv/bin/python main.py           # NÃO usar `python` do sistema
+
+# Testes do bot
+cd bot && .venv/bin/python -m pytest tests/ -v            # 26 testes (services + handlers)
+
+# Recriar env do bot: cd bot && uv venv && uv pip install aiogram python-dotenv requests requests-mock
+
+# Instalar dependências (se venv estiver limpa)
+source /home/gamer/Área/bin/activate && pip install -r requirements.txt
+```
+
+O `requirements.txt` na raiz cobre todas as dependências Django + aiogram. O env separado do bot é opcional mas recomendado para desenvolvimento paralelo.
+
+Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_cache/` existe — ruff foi usado pontualmente mas não está integrado.
+
+---
+
+## Rules
+
+### Comunicação Bot ↔ Backend
+- **Bot nunca toca na DB.** Toda comunicação via HTTP (`bot/services.py` → Django API). Nunca `import` modelos Django no bot.
+- **Auth**: header `X-Bot-Secret` (`motogram/mixins.py:BotAuthMixin`), nunca `Authorization: Bearer`.
+- **Bot usa `requests` síncrono**, não `aiohttp`. Bloqueia o event loop — tradeoff aceite, `timeout=5`.
+- **Django envia notificações Telegram** via `requests.post` a `api.telegram.org` (chamadas de `corridas/services.py` disparadas em `threading.Thread(daemon=True)` nas views), nunca bloqueando a resposta HTTP.
+- **Não chamar Telegram API directamente em views** — sempre via `corridas/services.py`.
+- **Serviços disponíveis**: `notificar_motoristas_proximos()`, `notificar_motorista_telegram()`, `notificar_passageiro_telegram()`, `enviar_localizacao_telegram()`, `calcular_distancia_km()` (Haversine).
+
+### Processos & Deploy
+- **Dois processos**: `Procfile` → `web` (gunicorn, 2 workers) e `bot` (`python main.py`). Railway.
+- **Bot roda apenas em long-polling.** O endpoint `/api/bot/update/` é stub no-op. Não configurar webhook sem substituir o entrypoint.
+
+### User Model & Auth
+- **`AUTH_USER_MODEL = 'motoristas.Utilizador'`**. Sempre `get_user_model()` ou import de `motoristas.models`.
+- **Custom auth backend**: `motoristas.backends.EmailBackend` (login por email, não username).
+- **DRF sem `DEFAULT_PERMISSION_CLASSES`**. Views gerem auth individualmente.
+- **`CorridaStatusView` é pública (sem auth)** — polling do passageiro. Não adicionar auth.
+- **`IniciarCorridaView`** e **`CancelarCorridaMotoristaView`** usam `BotAuthMixin` e verificam ownership (`corrida.motorista == motorista`).
+
+### Subscription Gate
+- `AceitarCorridaView` verifica `motorista.pode_receber_corridas` antes de aceitar. Retorna 403 `{'erro': '...'}`.
+- `motorista.pode_receber_corridas` requer: `status_cadastro == 'aprovado'` + `assinatura_activa` + `telegram_id`.
+- Outros endpoints (concluir, recusar) verificam apenas ownership, não assinatura.
+
+### Geo / PostGIS
+- **PostGIS detection é condicional.** `settings.py` faz probe do GDAL. Sem GDAL: `Motorista.localizacao` fallback para `CharField`, DB fallback para PostgreSQL plain ou SQLite.
+- Motorista usa `PointField(srid=4326)`. Usar `ST_DWithin`, `Distance`, `D(km=...)`.
+- **Corrida usa `FloatField` para lat/lon** (legacy intencional). Models novos: `PointField`.
+
+### Frontend
+- **Sem build step.** Tailwind CSS, Alpine.js, Leaflet.js via CDN. Nunca React, Vue, ou build pipeline.
+- **Leaflet.js carrega lazy** — nunca em `<head>`, só quando `abrirMapa()` é chamada. HTML < 15KB.
+- **Não usar Google Maps** — sempre Leaflet.js + OpenStreetMap.
+- Polling com **backoff adaptativo** (5s → 15s → 30s), nunca intervalo fixo.
+
+### Admin
+- **Painel operacional = `admin_mg/`** (custom), rota secreta via `ADMIN_SECRET_PATH`; login em `<PREFIX>/entrar/`. Em produção usar prefixo opaco.
+- **`django.contrib.admin` também está montado em `/admin/`** (`settings.py:18`, `motogram/urls.py:8`). Não estender nem adicionar features ao admin do Django — o painel do produto é `admin_mg/`.
+
+---
+
+## Conventions
+
+- **Linguagem**: comentários, strings, commits em PT-BR.
+- **Models**: singular PascalCase (`Corrida`, não `Corridas`).
+- **URLs**: kebab-case, plural para listas, singular para acções (`/api/corridas/{id}/aceitar/`).
+- **Erros**: sempre `{'erro': 'mensagem legível'}` com HTTP status adequado. Nunca expor internals em 500s.
+- **Lógica de negócio**: em `services.py`. Views só orquestram (validar → service → resposta).
+- **Mensagens do bot**: constantes em `bot/messages.py`, nunca strings inline.
+- **Estados FSM**: sempre `StatesGroup`, nunca strings soltas.
+- **Templates**: mobile-first Tailwind CDN. Wrap em `<div class="max-w-md mx-auto min-h-dvh flex flex-col">` com `px-5`. Prefixo `sm:` para desktop.
+- **Nunca retornar `telegram_id` ou tokens em respostas públicas.**
+
+---
+
+## Env Variables
+
+Copiar `.env.example` para `.env`. Nuances:
+
+- `BOT_SECRET` — token interno bot→backend. Gerar: `python -c "import secrets; print(secrets.token_hex(32))"`
+- `PRECO_ASSINATURA_MENSAL=6900` — preço em centavos (R$ 69,00)
+- `ADMIN_SECRET_PATH` — prefixo opaco da rota admin (default `admin_mg`)
+- `DATABASE_URL` — Supabase PostgreSQL (com ou sem PostGIS conforme GDAL)
+- `REDIS_URL` — Upstash Redis (opcional; sem ele usa LocMemCache + DB sessions)
+- `BACKEND_URL` — usado pelo bot para chamar a API Django
+- `SITE_URL` — URL pública do site
+- `TWILIO_*` (opcional) — SMS para link de activação
+
+Nunca commitar `.env`.
+
+---
+
+## Management Commands
+
+```bash
+python manage.py cancelar_corridas_antigas   # cancela corridas aguardando >10 min
+python manage.py verificar_assinaturas        # desactiva motoristas com assinatura expirada
+python manage.py notificar_vencimento         # alerta Telegram p/ assinaturas vencendo em 3 dias
 ```
 
 ---
 
-## Deploy (Railway)
+## Design System
 
-O `Procfile` define dois processos:
-```
-web: cd backend && gunicorn motogram.wsgi:application --bind 0.0.0.0:$PORT --workers 2
-bot: cd bot && python main.py
-```
+Paleta: primária `#1B7A3D` (verde), secundária `#C75B39` (terracotta), fundo `#FAF7F2`.
+Tokens e padrões completos: `docs/DESIGN_SYSTEM.md`.
+Protótipos: `docs/Identidade_Visual/` (HTML/CSS puro — traduzir para Tailwind CDN + Alpine.js).
 
-Railway corre ambos automaticamente. Variáveis de ambiente são configuradas no dashboard do Railway.
+---
+
+## Docs Reference
+
+| Doc | Quando ler |
+|-----|-----------|
+| `docs/ARCHITECTURE.md` | Modelos, endpoints, estrutura |
+| `docs/HANDOFF.md` | Estado actual da sessão, bugs, prioridades |
+| `docs/CONVENTIONS.md` | Naming, ordem de imports |
+| `docs/TESTING.md` | Estratégia de testes, estrutura |
+| `docs/CHECKLIST_TESTES_MANUAIS.md` | Checklist de testes manuais — fluxo completo do ciclo de vida |
+| `docs/ROADMAP.md` | Backlog e fases |
+| `docs/PASSENGER_APP.md` | Polling backoff, service worker |
+| `docs/ONBOARDING.md` | Fluxos de registo |
+| `docs/COMMUNICATION_FLOWS.md` | Fluxos site↔Telegram↔backend |
+| `docs/DESIGN_SYSTEM.md` | Tokens, paleta, componentes |

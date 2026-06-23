@@ -1,0 +1,105 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ passageiro.email }} — Passageiro{% endblock %}
+
+{% block content %}
+<div class="max-w-md sm:max-w-4xl mx-auto min-h-dvh flex flex-col px-5 py-6">
+    <header class="flex items-center gap-3 mb-8">
+        <a href="{% url 'admin_mg:passageiros' %}" class="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-all">←</a>
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tighter">{{ passageiro.email|default:passageiro.username }}</h1>
+            <p class="text-sm text-muted">Passageiro desde {{ passageiro.date_joined|date:"d/m/Y" }}</p>
+        </div>
+        <form method="POST" action="{% url 'admin_mg:logout' %}" class="ml-auto">
+            {% csrf_token %}
+            <button type="submit" class="text-sm text-muted hover:text-accent2 transition-colors">Sair</button>
+        </form>
+    </header>
+
+    <!-- ESTADO E ACÇÕES -->
+    <div class="bg-surface border border-border rounded-2xl p-5 mb-6">
+        <div class="flex items-center gap-4 mb-4">
+            {% if passageiro.is_active %}
+            <span class="text-xs text-accent font-semibold">● Ativo</span>
+            {% else %}
+            <span class="text-xs text-accent2 font-semibold">○ Bloqueado</span>
+            {% endif %}
+            {% if passageiro.email_confirmado %}
+            <span class="text-xs text-accent font-semibold">✓ Email confirmado</span>
+            {% else %}
+            <span class="text-xs text-gold font-semibold">⚠ Email não confirmado</span>
+            {% endif %}
+            {% if passageiro.telegram_id %}
+            <span class="text-xs text-accent font-semibold">Telegram ✅</span>
+            {% else %}
+            <span class="text-xs text-muted">Telegram ❌</span>
+            {% endif %}
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            {% if passageiro.is_active %}
+            <form method="POST" onsubmit="return confirm('Tem certeza que deseja bloquear este passageiro?')">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="suspender">
+                <button type="submit" class="text-sm border border-border rounded-pill px-4 py-2 hover:border-accent2 hover:text-accent2 transition-all">Bloquear</button>
+            </form>
+            {% else %}
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="reativar">
+                <button type="submit" class="text-sm bg-accent text-white rounded-pill px-4 py-2 hover:bg-accent/90 transition-all">Reativar</button>
+            </form>
+            {% endif %}
+            {% if not passageiro.is_active %}
+            <form method="POST" onsubmit="return confirm('Tem certeza que deseja excluir permanentemente este passageiro? Esta ação não pode ser desfeita.')">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="excluir">
+                <button type="submit" class="text-sm border border-border rounded-pill px-4 py-2 hover:border-accent2 hover:text-accent2 transition-all">Excluir</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Dados</h3>
+            <dl class="text-sm space-y-2">
+                <div class="flex justify-between"><dt class="text-muted">Username</dt><dd>{{ passageiro.username }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">E-mail</dt><dd>{{ passageiro.email|default:"—" }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Telefone</dt><dd>{{ passageiro.telefone|default:"—" }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Telegram</dt><dd>{% if passageiro.telegram_id %}✅ Conectado{% else %}❌ Não{% endif %}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Resumo</h3>
+            <dl class="text-sm space-y-2">
+                <div class="flex justify-between"><dt class="text-muted">Corridas totais</dt><dd class="font-bold">{{ corridas|length }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Total gasto</dt><dd class="font-bold text-accent">R$ {{ total_gasto|floatformat:2 }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted">Última corrida</dt><dd>{% if corridas %}{{ corridas.0.criada_em|date:"d/m/Y" }}{% else %}—{% endif %}</dd></div>
+            </dl>
+        </div>
+    </div>
+
+    <div class="bg-surface border border-border rounded-2xl p-5">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-muted mb-3">Corridas recentes</h3>
+        {% if corridas %}
+        <div class="flex flex-col gap-2">
+            {% for corrida in corridas %}
+            <div class="flex items-center justify-between border-b border-border last:border-0 pb-2 last:pb-0 text-sm">
+                <div>
+                    <span class="font-semibold">#{{ corrida.id }}</span>
+                    <span class="text-muted ml-2">{{ corrida.criada_em|date:"d/m/Y" }}{% if corrida.iniciada_em and corrida.concluida_em %} · {{ corrida.iniciada_em|date:"H:i" }} - {{ corrida.concluida_em|date:"H:i" }}{% endif %}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-muted">{{ corrida.get_status_display }}</span>
+                    <span class="font-semibold">R$ {{ corrida.valor|default:"-" }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-sm text-center py-4">Nenhuma corrida</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

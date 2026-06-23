@@ -8,11 +8,17 @@
     {% if enviado %}
     <div class="text-center mb-8">
         <div class="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4 text-3xl">✅</div>
+        {% if por_email %}
+        <h2 class="text-2xl font-extrabold tracking-tighter mb-2">Verifica o teu e-mail</h2>
+        <p class="text-muted text-sm">Se encontramos uma conta com esse e-mail, enviamos a nova senha para o teu e-mail cadastrado.</p>
+        <p class="text-muted text-sm mt-2">Caso não receba, verifica a pasta de spam ou contacta o suporte.</p>
+        {% else %}
         <h2 class="text-2xl font-extrabold tracking-tighter mb-2">Verifica o Telegram</h2>
         <p class="text-muted text-sm">Se encontramos uma conta com esse e-mail, enviamos a nova senha via Telegram.</p>
-        <p class="text-muted text-sm mt-2">Caso não receba em 1 minuto, abra o @MotoGram_Go_bot e envie /ajuda.</p>
+        <p class="text-muted text-sm mt-2">Caso não receba em 1 minuto, abre o @MotoGram_Go_bot e envia /ajuda.</p>
+        {% endif %}
     </div>
-    <a href="/passageiro/login/" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold text-center hover:bg-accent transition-all">Ir para o login</a>
+    <a href="{% url 'site_publico:login' %}" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold text-center hover:bg-accent transition-all">Ir para o login</a>
     {% else %}
     <div class="text-center mb-8">
         <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4 text-2xl">🔑</div>
@@ -37,7 +43,7 @@
 
     <p class="text-center text-sm text-muted mt-6">
         Lembrou?
-        <a href="/passageiro/login/" class="text-fg font-semibold hover:text-accent transition-colors">Fazer login</a>
+        <a href="{% url 'site_publico:login' %}" class="text-fg font-semibold hover:text-accent transition-colors">Fazer login</a>
     </p>
     {% endif %}
 </div>

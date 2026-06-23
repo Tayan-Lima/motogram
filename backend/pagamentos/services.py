@@ -26,7 +26,7 @@ def criar_pix_mercadopago(motorista, valor, pix_txid):
             "https://api.mercadopago.com/v1/payments",
             json={
                 "transaction_amount": valor / 100.0,
-                "description": f"Assinatura MotoGram — {motorista.nome_completo}",
+                "description": f"Assinatura Motogram GO — {motorista.nome_completo}",
                 "payment_method_id": "pix",
                 "payer": {
                     "email": motorista.utilizador.email,
@@ -81,8 +81,11 @@ def processar_webhook_mercadopago(data):
         return
 
     try:
-        assinatura = Assinatura.objects.get(pix_txid=payment_id, status="pendente")
+        assinatura = Assinatura.objects.get(mp_payment_id=str(payment_id), status="pendente")
     except Assinatura.DoesNotExist:
-        return
+        try:
+            assinatura = Assinatura.objects.get(pix_txid=str(payment_id), status="pendente")
+        except Assinatura.DoesNotExist:
+            return
 
     activar_motorista_apos_pagamento(assinatura)

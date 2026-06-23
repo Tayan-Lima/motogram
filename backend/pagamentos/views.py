@@ -27,7 +27,7 @@ class CriarAssinaturaView(LoginRequiredMixin, View):
 
         if motorista.assinatura_activa:
             return JsonResponse({
-                "erro": "Já tens uma assinatura activa.",
+                "erro": "Já tem uma assinatura ativa.",
                 "valida_ate": motorista.assinatura_ate.isoformat(),
             }, status=400)
 

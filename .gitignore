@@ -9,6 +9,7 @@ venv/
 .venv/
 bot-env/
 bot/.venv/
+de/
 
 # Environment
 .env
