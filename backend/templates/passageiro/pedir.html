@@ -371,8 +371,10 @@ function rideRequest() {
             try {
                 this._ultimaChamada = Date.now();
                 const params = new URLSearchParams({ q: texto });
-                if (this.lat) params.set('lat', this.lat);
-                if (this.lon) params.set('lng', this.lon);
+                const bLat = tipo === 'destino' ? this.destinoLat : this.lat;
+                const bLon = tipo === 'destino' ? this.destinoLon : this.lon;
+                if (bLat) params.set('lat', bLat);
+                if (bLon) params.set('lng', bLon);
                 const resp = await fetch(`/api/map/autocomplete/?${params}`);
                 if (!resp.ok) return;
                 const data = await resp.json();
@@ -426,7 +428,6 @@ function rideRequest() {
             if (!q) return;
             try {
                 const params = new URLSearchParams({ q });
-                if (this.lat && this.lon) { params.set('lat', this.lat); params.set('lng', this.lon); }
                 const resp = await fetch(`/api/map/geocode/?${params}`);
                 if (!resp.ok) return;
                 const data = await resp.json();
@@ -558,8 +559,10 @@ function rideRequest() {
             if (query.length < 5) return;
             try {
                 const params = new URLSearchParams({ q: query });
-                if (this.lat) params.set('lat', this.lat);
-                if (this.lon) params.set('lng', this.lon);
+                if (this.destinoLat) params.set('lat', this.destinoLat);
+                else if (this.lat) params.set('lat', this.lat);
+                if (this.destinoLon) params.set('lng', this.destinoLon);
+                else if (this.lon) params.set('lng', this.lon);
                 const resp = await fetch(`/api/map/geocode/?${params}`);
                 if (!resp.ok) return;
                 const data = await resp.json();
@@ -574,18 +577,12 @@ function rideRequest() {
         usarTextoComoOrigem() {
             setTimeout(() => {
                 this.sugestoesAtivas = null;
-                if (!this.lat && this.origemTexto.trim()) {
-                    this.origemTexto = this.origemTexto.trim();
-                }
             }, 200);
         },
 
         usarTextoComoDestino() {
             setTimeout(() => {
                 this.sugestoesAtivas = null;
-                if (!this.destinoLat && this.destinoTexto.trim()) {
-                    this.destinoTexto = this.destinoTexto.trim();
-                }
             }, 200);
         },
 
