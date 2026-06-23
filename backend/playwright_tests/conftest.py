@@ -18,7 +18,7 @@ Utilizador = get_user_model()
 def _use_test_settings(settings):
     settings.BOT_SECRET = "test-bot-secret-playwright"
     settings.DEBUG = True
-    settings.ADMIN_SECRET_PATH = "g7x9kadm"
+    settings.ADMIN_SECRET_PATH = "test-admin-path"
 
 
 @pytest.fixture

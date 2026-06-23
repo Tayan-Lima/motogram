@@ -9,7 +9,7 @@ Utilizador = get_user_model()
 
 @pytest.mark.django_db
 def test_login_page_loads(pagina):
-    pagina.goto("/g7x9kadm/entrar/")
+    pagina.goto("/test-admin-path/entrar/")
     pagina.wait_for_selector('input[name="username"]', timeout=5000)
     assert pagina.locator('input[name="username"]').count() > 0
 
@@ -22,12 +22,12 @@ def test_admin_login(pagina):
         is_staff=True, is_superuser=True,
     )
 
-    pagina.goto("/g7x9kadm/entrar/")
+    pagina.goto("/test-admin-path/entrar/")
     pagina.wait_for_selector('input[name="username"]', timeout=5000)
     pagina.fill('input[name="username"]', "admin_test")
     pagina.fill('input[name="password"]', "admin123")
     pagina.locator('button[type="submit"]').click()
-    pagina.wait_for_url("**/g7x9kadm/", timeout=10000)
+    pagina.wait_for_url("**/test-admin-path/", timeout=10000)
 
     assert "Total de Motoristas" in pagina.text_content("body") or "Dashboard" in pagina.text_content("body")
 
@@ -40,19 +40,19 @@ def test_admin_cadastros_loads(pagina):
         is_staff=True, is_superuser=True,
     )
 
-    pagina.goto("/g7x9kadm/entrar/")
+    pagina.goto("/test-admin-path/entrar/")
     pagina.wait_for_selector('input[name="username"]', timeout=5000)
     pagina.fill('input[name="username"]', "admin_test2")
     pagina.fill('input[name="password"]', "admin123")
     pagina.locator('button[type="submit"]').click()
-    pagina.wait_for_url("**/g7x9kadm/", timeout=10000)
+    pagina.wait_for_url("**/test-admin-path/", timeout=10000)
 
-    pagina.goto("/g7x9kadm/cadastros/")
+    pagina.goto("/test-admin-path/cadastros/")
     pagina.wait_for_timeout(1000)
     assert pagina.text_content("body") is not None
 
 
 @pytest.mark.django_db
 def test_admin_sem_auth_redireciona(pagina):
-    pagina.goto("/g7x9kadm/")
+    pagina.goto("/test-admin-path/")
     pagina.wait_for_url("**/entrar/**", timeout=5000)
