@@ -19,7 +19,7 @@ backend/          Django project (manage.py lives here)
   motoristas/     Motoristas + assinaturas (also owns AUTH_USER_MODEL Utilizador)
                   backends.py: EmailBackend (login por email, não username)
   pagamentos/     Mercado Pago Pix (webhook + services)
-  site_publico/   Site público (passageiro, landing)
+  site_publico/   Site público (passageiro, landing) + services.py (geocoding HERE Maps)
   admin_mg/       Painel admin custom (NOT Django.contrib.admin) — rota secreta via ADMIN_SECRET_PATH
   templates/      Django templates (passageiro/, motorista/, admin_mg/)
   test_e2e.py     Fluxos completos (passageiro + motorista)
@@ -107,7 +107,8 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 ### Frontend
 - **Sem build step.** Tailwind CSS, Alpine.js, Leaflet.js via CDN. Nunca React, Vue, ou build pipeline.
 - **Leaflet.js carrega lazy** — nunca em `<head>`, só quando `abrirMapa()` é chamada. HTML < 15KB.
-- **Não usar Google Maps** — sempre Leaflet.js + OpenStreetMap.
+- **Tiles: OpenStreetMap** (`tile.openstreetmap.org`). **Geocoding: HERE Maps API** (backend, chave nunca no frontend).
+- **Não usar Google Maps.** Não usar Nominatim directamente no frontend (viola política de uso). Geocoding/autocomplete sempre via `/api/map/*` endpoints do Django.
 - Polling com **backoff adaptativo** (5s → 15s → 30s), nunca intervalo fixo.
 
 ### Admin
@@ -141,6 +142,7 @@ Copiar `.env.example` para `.env`. Nuances:
 - `REDIS_URL` — Upstash Redis (opcional; sem ele usa LocMemCache + DB sessions)
 - `BACKEND_URL` — usado pelo bot para chamar a API Django
 - `SITE_URL` — URL pública do site
+- `HERE_API_KEY` — chave HERE Maps para geocoding (backend only, 250k transações/mês grátis)
 - `TWILIO_*` (opcional) — SMS para link de activação
 
 Nunca commitar `.env`.

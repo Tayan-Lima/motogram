@@ -1,8 +1,8 @@
 # HANDOFF.md — Motogram GO
 
 **Última sessão**: 2026-06-23
-**Estado**: Fase 1 (MVP) ~99% completa — **ciclo de vida completo + avaliação + admin KYC/CRM**, deploy pendente
-**Nota**: Duas sessões sofreram crash (venvs perdidas), mas código-fonte 100% íntegro (git). Commit `3ebfd5e` "Antes da experiencia" preserva o estado actual.
+**Estado**: Fase 1 (MVP) ~99% completa — **ciclo de vida + avaliação + admin KYC/CRM + geocoding HERE Maps**, deploy pendente
+**Nota**: Duas sessões sofreram crash (venvs perdidas), mas código-fonte 100% íntegro (git). Commit `3ebfd5e` "Antes da experiencia" preserva o estado pré-HERE Maps.
 
 ---
 
@@ -22,7 +22,7 @@
 | **Site Motorista** | Cadastro (3 steps) + login + dashboard + conta + recuperar senha | `templates/motorista/*.html` |
 | **Painel Admin** | Dashboard (MRR, gráfico 7d), KYC/CRM, assinaturas, rota secreta | `templates/admin_mg/*.html` (+ login) |
 | **Pagamentos** | Mercado Pago Pix webhook (busca por `mp_payment_id`) | `pagamentos/services.py`, `pagamentos/views.py` |
-| **Testes** | **114 testes**, 0 falhas | `backend/**/test*.py`, `backend/test_e2e.py`, `backend/playwright_tests/`, `bot/tests/` |
+| **Testes** | **126 testes**, 0 falhas | `backend/**/test*.py`, `backend/test_e2e.py`, `backend/playwright_tests/`, `bot/tests/`, `site_publico/tests/test_map.py` |
 | **Mobile-first** | Tailwind CDN + Alpine.js + Leaflet.js (lazy) | `base.html` + templates |
 | **Service Worker** | Escopo `/static/` corrigido, backoff adaptativo | `backend/static/sw.js` |
 | **Management Commands** | 3 commands | `cancelar_corridas_antigas`, `verificar_assinaturas`, `notificar_vencimento` |
@@ -44,6 +44,7 @@
 | **Utilizador.foto** | Upload de foto no perfil + exibição nos templates | `motoristas/models.py`, `templates/passageiro/perfil.html` |
 | **EmailBackend** | Login por email (não username) | `motoristas/backends.py`, `settings.py` |
 | **Bot limpeza** | `limpar_mensagens()` + `_limpeza_agressiva()` — apaga mensagens antigas | `bot/services.py`, `corridas/services.py` |
+| **Geocoding HERE Maps** | Substitui Nominatim no frontend; autocomplete + geocode + reverse via backend | `site_publico/services.py`, `views.py`, `urls.py` |
 | **GitHub** | Repo `Tayan-Lima/motogram` (público, main) | |
 
 ---
@@ -53,6 +54,7 @@
 | Suite | Testes | Runner |
 |-------|--------|--------|
 | Django unit + integration | 70 | `manage.py test` |
+| Django map (HERE mock) | 12 | `manage.py test site_publico.tests.test_map` |
 | Playwright E2E (passageiro) | 8 | `pytest playwright_tests/` |
 | Playwright E2E (motorista) | 6 | `pytest playwright_tests/` |
 | Playwright E2E (admin) | 4 | `pytest playwright_tests/` |
@@ -61,7 +63,7 @@
 | Bot handlers (motorista) | 6 | `pytest bot/tests/` |
 | Bot handlers (corridas) | 4 | `pytest bot/tests/` |
 
-**Todas as suites executadas e confirmadas (114/114 ✅, 0 falhas).**
+**Todas as suites executadas e confirmadas (126/126 ✅, 0 falhas).**
 
 ### ⚠️ Pendente para Deploy
 
@@ -116,6 +118,17 @@
 - **Botão "Ir ao Perfil"**: adicionado após avaliação no `acompanhar.html`
 - **Email confirmation**: obrigatório para pedir corrida (gate no `CriarCorridaWebView`)
 - **Migrations novas**: `0004_add_destino_texto`, `0005_corrida_origem_texto`, `0006_notificacao_msg_ids`, `0007_avaliacao`, `0008_iniciada_em`, `motoristas.0004_email_confirmado`, `motoristas.0005_favorito_rua_numero`, `motoristas.0006_foto_utilizador`, `pagamentos.0002_add_mp_payment_id`
+
+### Sessão 3 — Geocoding HERE Maps (substitui Nominatim no frontend)
+- **Problema**: Nominatim directo no frontend (1) viola política de uso do OSM, (2) rate limit agressivo (429s), (3) não tem cobertura de endereços no interior do Amazonas (sem números de rua)
+- **Solução**: HERE Maps Geocoding & Search API (250k transações/mês grátis, dados comerciais próprios, cobertura confirmada em Maués-AM com score 1.0)
+- **Novo ficheiro**: `site_publico/services.py` — `autocomplete()`, `geocode()`, `reverse_geocode()` via HERE + fallback Nominatim + cache LocMem (TTL 24h, chaves hashed MD5)
+- **3 novos endpoints** (todos requerem login): `GET /api/map/autocomplete/`, `GET /api/map/geocode/`, `GET /api/map/reverse/`
+- **Frontend migrado**: `passageiro/pedir.html` — `buscarEnderecos()` e `_geocodarFavorito()` agora chamam backend Django em vez de Nominatim directo
+- **Backend migrado**: `_geocodar_endereco()` agora usa HERE Maps via `services.py` (em vez de Nominatim directo)
+- **Tiles OSM mantidos** — só o geocoding mudou, o mapa visual continua com `tile.openstreetmap.org`
+- **Testes**: 12 novos testes em `site_publico/tests/test_map.py` (mock HERE + fallback + cache + auth)
+- **Env**: `HERE_API_KEY` adicionada ao `.env` e `.env.example`
 
 ### Fluxo de estados
 ```

@@ -370,21 +370,14 @@ function rideRequest() {
             }
             try {
                 this._ultimaChamada = Date.now();
-                let resp = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto + ', Brasil')}&limit=4`,
-                    { headers: { 'Accept-Language': 'pt-BR' } }
-                );
-                if (resp.status === 429) {
-                    await new Promise(r => setTimeout(r, 1500));
-                    resp = await fetch(
-                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto + ', Brasil')}&limit=4`,
-                        { headers: { 'Accept-Language': 'pt-BR' } }
-                    );
-                }
+                const params = new URLSearchParams({ q: texto });
+                if (this.lat) params.set('lat', this.lat);
+                if (this.lon) params.set('lng', this.lon);
+                const resp = await fetch(`/api/map/autocomplete/?${params}`);
                 if (!resp.ok) return;
                 const data = await resp.json();
-                this._nominatimCache[texto] = data;
-                this._atribuirSugestoes(tipo, data);
+                this._nominatimCache[texto] = data.sugestoes || [];
+                this._atribuirSugestoes(tipo, data.sugestoes || []);
             } catch(e) {}
         },
 
@@ -400,8 +393,8 @@ function rideRequest() {
 
         selecionarEndereco(tipo, s) {
             const lat = parseFloat(s.lat);
-            const lon = parseFloat(s.lon);
-            const nome = s.display_name.split(',')[0];
+            const lon = parseFloat(s.lng);
+            const nome = (s.label || '').split(',')[0];
             if (tipo === 'origem') {
                 this.lat = lat;
                 this.lon = lon;
@@ -527,14 +520,15 @@ function rideRequest() {
             const query = (f.rua + ' ' + (f.numero || '') + ', Brasil').trim();
             if (query.length < 5) return;
             try {
-                const resp = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
-                    { headers: { 'Accept-Language': 'pt-BR' } }
-                );
+                const params = new URLSearchParams({ q: query });
+                if (this.lat) params.set('lat', this.lat);
+                if (this.lon) params.set('lng', this.lon);
+                const resp = await fetch(`/api/map/geocode/?${params}`);
+                if (!resp.ok) return;
                 const data = await resp.json();
-                if (data && data.length > 0) {
-                    this.destinoLat = parseFloat(data[0].lat);
-                    this.destinoLon = parseFloat(data[0].lon);
+                if (data.lat && data.lng) {
+                    this.destinoLat = parseFloat(data.lat);
+                    this.destinoLon = parseFloat(data.lng);
                     this.actualizarDestinoMapa();
                 }
             } catch(e) {}

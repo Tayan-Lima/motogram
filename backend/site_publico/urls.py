@@ -18,4 +18,9 @@ urlpatterns = [
     path("api/passageiros/favoritos/", views.ListarFavoritosView.as_view(), name="listar_favoritos"),
     path("api/passageiros/favoritos/criar/", views.CriarFavoritoView.as_view(), name="criar_favorito"),
     path("api/passageiros/favoritos/<int:favorito_id>/remover/", views.RemoverFavoritoView.as_view(), name="remover_favorito"),
+
+    # Map — geocoding via HERE Maps (chave no backend, nunca no frontend)
+    path("api/map/autocomplete/", views.map_autocomplete, name="map_autocomplete"),
+    path("api/map/geocode/", views.map_geocode, name="map_geocode"),
+    path("api/map/reverse/", views.map_reverse, name="map_reverse"),
 ]

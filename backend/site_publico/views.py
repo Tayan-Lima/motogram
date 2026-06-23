@@ -397,21 +397,15 @@ def _enviar_email_confirmacao(utilizador):
 
 
 def _geocodar_endereco(rua, numero=""):
-    """Tenta obter coordenadas via Nominatim. Retorna (lat, lon) ou (None, None)."""
-    try:
-        query = f"{rua} {numero}, Brasil".strip()
-        resp = requests.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={"format": "json", "q": query, "limit": 1, "countrycodes": "br"},
-            headers={"Accept-Language": "pt-BR", "User-Agent": "Motogram/1.0"},
-            timeout=3,
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            if data:
-                return float(data[0]["lat"]), float(data[0]["lon"])
-    except Exception:
-        pass
+    """Tenta obter coordenadas via HERE Maps (fallback Nominatim).
+
+    Retorna (lat, lon) ou (None, None).
+    """
+    from .services import geocode
+    query = f"{rua} {numero}, Brasil".strip()
+    result = geocode(query)
+    if result:
+        return result["lat"], result["lng"]
     return None, None
 
 
@@ -469,3 +463,64 @@ class UploadFotoPassageiroView(View):
 
         request.user.save(update_fields=["foto"])
         return JsonResponse({"ok": True, "foto_url": request.user.foto.url})
+
+
+@login_required
+def map_autocomplete(request):
+    """GET /api/map/autocomplete/?q=texto — sugestões de endereço (HERE Maps)."""
+    from .services import autocomplete
+
+    q = request.GET.get("q", "").strip()
+    if len(q) < 3:
+        return JsonResponse({"sugestoes": []})
+
+    lat = request.GET.get("lat")
+    lng = request.GET.get("lng")
+    try:
+        lat = float(lat) if lat else None
+        lng = float(lng) if lng else None
+    except ValueError:
+        lat, lng = None, None
+
+    sugestoes = autocomplete(q, lat=lat, lng=lng, limit=5)
+    return JsonResponse({"sugestoes": sugestoes})
+
+
+@login_required
+def map_geocode(request):
+    """GET /api/map/geocode/?q=endereco — converte endereço em coordenadas."""
+    from .services import geocode
+
+    q = request.GET.get("q", "").strip()
+    if len(q) < 3:
+        return JsonResponse({"erro": "Parâmetro 'q' obrigatório (mín. 3 caracteres)"}, status=400)
+
+    lat = request.GET.get("lat")
+    lng = request.GET.get("lng")
+    try:
+        lat = float(lat) if lat else None
+        lng = float(lng) if lng else None
+    except ValueError:
+        lat, lng = None, None
+
+    result = geocode(q, lat=lat, lng=lng)
+    if not result:
+        return JsonResponse({"erro": "Endereço não encontrado"}, status=404)
+    return JsonResponse(result)
+
+
+@login_required
+def map_reverse(request):
+    """GET /api/map/reverse/?lat=...&lng=... — converte coordenadas em endereço."""
+    from .services import reverse_geocode
+
+    try:
+        lat = float(request.GET["lat"])
+        lng = float(request.GET["lng"])
+    except (KeyError, ValueError):
+        return JsonResponse({"erro": "Parâmetros 'lat' e 'lng' obrigatórios"}, status=400)
+
+    label = reverse_geocode(lat, lng)
+    if not label:
+        return JsonResponse({"erro": "Localização não encontrada"}, status=404)
+    return JsonResponse({"label": label})

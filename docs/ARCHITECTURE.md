@@ -222,6 +222,10 @@ POST /api/webhook/mercadopago/       → webhook de confirmação de pagamento
 POST /api/motoristas/activar-telegram/ → valida token e vincula telegram_id
 GET  /api/motoristas/verificar-assinatura/ → verifica assinatura (chamado pelo bot)
 
+GET  /api/map/autocomplete/           → sugestões de endereço (HERE Maps, requer login)  ← NOVO
+GET  /api/map/geocode/                → endereço → coordenadas (HERE Maps, requer login) ← NOVO
+GET  /api/map/reverse/                → coordenadas → endereço (HERE Maps, requer login) ← NOVO
+
 POST /api/bot/update/                → recebe updates do Telegram (webhook mode, actualmente stub)
 ```
 

@@ -153,6 +153,8 @@ SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 MP_WEBHOOK_SECRET = os.environ.get('MP_WEBHOOK_SECRET', '')
 
+HERE_API_KEY = os.environ.get('HERE_API_KEY', '')
+
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
