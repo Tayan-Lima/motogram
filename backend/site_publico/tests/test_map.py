@@ -55,8 +55,8 @@ class MapAutocompleteTest(TestCase):
         mock_get.return_value = _FakeResponse({
             "items": [
                 {
+                    "title": "Rua Quintino Bocaiúva, Maués - AM, Brasil",
                     "address": {"label": "Rua Quintino Bocaiúva, Maués - AM, Brasil"},
-                    "position": {"lat": -3.395, "lng": -57.718},
                     "id": "here:af:street:abc",
                 }
             ]
@@ -66,7 +66,8 @@ class MapAutocompleteTest(TestCase):
         sugestoes = resp.json()["sugestoes"]
         self.assertEqual(len(sugestoes), 1)
         self.assertEqual(sugestoes[0]["label"], "Rua Quintino Bocaiúva, Maués - AM, Brasil")
-        self.assertAlmostEqual(sugestoes[0]["lat"], -3.395)
+        self.assertIsNone(sugestoes[0]["lat"])
+        self.assertIsNone(sugestoes[0]["lng"])
 
     @patch("site_publico.services.requests.get")
     def test_autocomplete_aqui_fala_nominatim_fallback(self, mock_get):
@@ -82,8 +83,8 @@ class MapAutocompleteTest(TestCase):
         mock_get.return_value = _FakeResponse({
             "items": [
                 {
+                    "title": "Rua Teste",
                     "address": {"label": "Rua Teste"},
-                    "position": {"lat": 1.0, "lng": 2.0},
                     "id": "x",
                 }
             ]

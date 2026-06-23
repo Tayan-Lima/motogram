@@ -392,24 +392,61 @@ function rideRequest() {
         },
 
         selecionarEndereco(tipo, s) {
-            const lat = parseFloat(s.lat);
-            const lon = parseFloat(s.lng);
             const nome = (s.label || '').split(',')[0];
+            const lat = (s.lat != null && !isNaN(s.lat)) ? parseFloat(s.lat) : null;
+            const lon = (s.lng != null && !isNaN(s.lng)) ? parseFloat(s.lng) : null;
+
             if (tipo === 'origem') {
-                this.lat = lat;
-                this.lon = lon;
                 this.origemTexto = nome;
                 this.sugestoesOrigem = [];
-                if (this.mapVisible) this.actualizarMapa();
-                else { this.mapVisible = true; this.$nextTick(() => this.initMap()); }
+                if (lat != null && lon != null) {
+                    this.lat = lat;
+                    this.lon = lon;
+                    if (this.mapVisible) this.actualizarMapa();
+                    else { this.mapVisible = true; this.$nextTick(() => this.initMap()); }
+                } else {
+                    this._geocodarSelecao('origem', nome, s.label);
+                }
             } else {
-                this.destinoLat = lat;
-                this.destinoLon = lon;
                 this.destinoTexto = nome;
                 this.sugestoesDestino = [];
-                this.actualizarDestinoMapa();
+                if (lat != null && lon != null) {
+                    this.destinoLat = lat;
+                    this.destinoLon = lon;
+                    this.actualizarDestinoMapa();
+                } else {
+                    this._geocodarSelecao('destino', nome, s.label);
+                }
             }
             this.sugestoesAtivas = null;
+        },
+
+        async _geocodarSelecao(tipo, nome, label) {
+            const q = label || nome;
+            if (!q) return;
+            try {
+                const params = new URLSearchParams({ q });
+                if (this.lat && this.lon) { params.set('lat', this.lat); params.set('lng', this.lon); }
+                const resp = await fetch(`/api/map/geocode/?${params}`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (data.lat && data.lng) {
+                    const lat = parseFloat(data.lat);
+                    const lng = parseFloat(data.lng);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        if (tipo === 'origem') {
+                            this.lat = lat;
+                            this.lon = lng;
+                            if (this.mapVisible) this.actualizarMapa();
+                            else { this.mapVisible = true; this.$nextTick(() => this.initMap()); }
+                        } else {
+                            this.destinoLat = lat;
+                            this.destinoLon = lng;
+                            this.actualizarDestinoMapa();
+                        }
+                    }
+                }
+            } catch(e) {}
         },
 
         async submitRide() {

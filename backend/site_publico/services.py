@@ -143,12 +143,11 @@ def _here_autocomplete(query, lat, lng, limit):
         return [
             {
                 "label": item.get("address", {}).get("label", item.get("title", "")),
-                "lat": item.get("position", {}).get("lat"),
-                "lng": item.get("position", {}).get("lng"),
+                "lat": None,
+                "lng": None,
                 "id": item.get("id", ""),
             }
             for item in items
-            if item.get("position")
         ]
     except requests.RequestException as e:
         logger.warning("autocomplete: HERE falhou (%s), tentando Nominatim", e)
