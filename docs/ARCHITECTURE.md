@@ -42,15 +42,26 @@ O MotoGram é composto por três sistemas que comunicam entre si via API REST e 
 - `/motorista/cadastro` — Registo de novo motorista
 - `/motorista/login` — Acesso à conta
 
+**Páginas autenticadas (passageiro)**
+- `/passageiro/perfil` — Perfil, foto, endereços favoritos, histórico de corridas
+
 **Páginas autenticadas (motorista)**
 - `/motorista/dashboard` — Ganhos, metas, métricas
 - `/motorista/historico` — Lista de corridas
 - `/motorista/conta` — Assinatura, renovação, link Telegram
 
 **Páginas admin**
-- `/admin_mg/` — Dashboard admin
-- `/admin_mg/motoristas` — Listagem e gestão
-- `/admin_mg/corridas` — Histórico geral
+- `/{PREFIX}/` — Dashboard admin (MRR, gráfico 7d, métricas)
+- `/{PREFIX}/cadastros/` — KYC — aprovar/reprovar/suspender motoristas
+- `/{PREFIX}/motoristas/` — CRM — lista de motoristas com busca
+- `/{PREFIX}/motoristas/{id}/` — Detalhe do motorista (dados + histórico)
+- `/{PREFIX}/passageiros/` — CRM — lista de passageiros
+- `/{PREFIX}/passageiros/{id}/` — Detalhe do passageiro (dados + histórico)
+- `/{PREFIX}/corridas/` — Histórico geral com busca e paginação
+- `/{PREFIX}/assinaturas/` — Dashboard de assinaturas (activas, MRR, vencendo)
+- `/{PREFIX}/avaliacoes/motoristas/` — Avaliações recebidas pelos motoristas
+- `/{PREFIX}/avaliacoes/passageiros/` — Avaliações recebidas pelos passageiros
+- `/{PREFIX}/avaliacoes/comentarios/` — Comentários de avaliações (moderação)
 
 **Stack frontend**
 - Django Templates (server-side rendering — mais simples, menos JS)
@@ -86,6 +97,11 @@ Passageiro escolhe motorista
   └── motorista escolhido recebe: localização + botões [🏍️ Iniciar] [❌ Cancelar]
         ├── Iniciar → status='em_curso' → botão muda para [✅ Concluir corrida]
         └── Cancelar → status='cancelada' → notifica passageiro
+
+Motorista conclui corrida
+  └── bot envia avaliação pós-corrida: 1-5⭐
+        ├── 3-5★ → avaliação registada
+        └── 1-2★ → pede comentário (obrigatório) → avaliação registada
 ```
 
 **Comandos disponíveis**
@@ -95,6 +111,7 @@ Passageiro escolhe motorista
 - `/ganhos` — resumo de ganhos do dia (motorista)
 - `/renovar` — link para renovar assinatura (motorista)
 - `/ajuda` — lista de comandos
+- Botão "🧹 Limpar Chat" — apaga mensagens antigas do chat
 
 ---
 
@@ -110,6 +127,10 @@ class Utilizador(AbstractUser):
     telegram_id = BigIntegerField(null=True, unique=True)
     telegram_token = CharField(null=True)           # token temporário de activação
     telegram_token_expiry = DateTimeField(null=True)
+    email_confirmado = BooleanField(default=False)
+    email_token = CharField(blank=True)              # token confirmação email
+    email_token_expiry = DateTimeField(null=True)
+    foto = ImageField(null=True)                     # foto de perfil
 
 # Motorista — extensão do utilizador
 class Motorista(Model):
@@ -127,16 +148,20 @@ class Corrida(Model):
     motorista = ForeignKey(Motorista, null=True)
     origem_lat = FloatField()
     origem_lon = FloatField()
+    origem_texto = CharField(blank=True)             # endereço legível (ex: "Rua X, 123")
     destino_lat = FloatField(null=True)
     destino_lon = FloatField(null=True)
-    distancia_km = FloatField(null=True)           # calculado via Haversine ao concluir
-    valor = DecimalField(null=True)                 # negociado via InDrive (Oferta)
+    destino_texto = CharField(blank=True)            # endereço legível do destino
+    distancia_km = FloatField(null=True)             # calculado via Haversine ao concluir
+    valor = DecimalField(null=True)                   # negociado via InDrive (Oferta)
     status = CharField(choices=[
         'aguardando', 'aceite', 'em_curso', 'concluida', 'cancelada', 'sem_motoristas'
     ])
     criada_em = DateTimeField(auto_now_add=True)
     aceite_em = DateTimeField(null=True)
+    iniciada_em = DateTimeField(null=True)            # momento em que motorista iniciou
     concluida_em = DateTimeField(null=True)
+    notificacao_msg_ids = JSONField(default=dict)     # message_id das notificações Telegram
 
 # Oferta (negociação InDrive)
 class Oferta(Model):
@@ -146,6 +171,17 @@ class Oferta(Model):
     tipo = CharField(choices=['aceite', 'contra_oferta'])
     status = CharField(choices=['pendente', 'aceita', 'rejeitada'])
     criada_em = DateTimeField(auto_now_add=True)
+
+# Avaliação (1-5★ pós-corrida)
+class Avaliacao(Model):
+    corrida = ForeignKey(Corrida, related_name='avaliacoes')
+    avaliador = ForeignKey(Utilizador, related_name='avaliacoes_feitas')
+    avaliado = ForeignKey(Utilizador, related_name='avaliacoes_recebidas')
+    tipo = CharField(choices=['pm', 'mp'])           # passageiro→motorista, motorista→passageiro
+    nota = PositiveSmallIntegerField()
+    comentario = TextField(blank=True)
+    criada_em = DateTimeField(auto_now_add=True)
+    # UniqueConstraint(corrida, tipo) — uma avaliação por tipo por corrida
 
 # Assinatura
 class Assinatura(Model):
@@ -171,9 +207,12 @@ POST /api/corridas/{id}/iniciar/     → motorista inicia corrida (bot)         
 POST /api/corridas/{id}/cancelar-motorista/ → motorista cancela (bot)          ← NOVO
 POST /api/corridas/{id}/concluir/    → marca corrida como concluída (bot)
 POST /api/corridas/{id}/cancelar/    → passageiro cancela (site)
+POST /api/corridas/{id}/avaliar/     → passageiro avalia motorista (site)        ← NOVO
+POST /api/corridas/{id}/avaliar-passageiro/ → motorista avalia passageiro (bot) ← NOVO
 GET  /api/corridas/{id}/ofertas/     → lista motoristas que responderam (site)
 POST /api/corridas/{id}/escolher/    → passageiro escolhe motorista (site)
 
+POST /api/motoristas/limpar-mensagens/ → apaga mensagens do chat do motorista (bot) ← NOVO
 GET  /api/motoristas/proximos/       → lista motoristas activos num raio (PostGIS)
 POST /api/motoristas/cadastro/       → registo de novo motorista
 GET  /api/motoristas/dashboard/      → dados para o dashboard (ganhos, metas, km)

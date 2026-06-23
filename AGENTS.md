@@ -14,9 +14,10 @@ Django 5 backend + aiogram 3 Telegram bot + Django Templates mobile-first site.
 ```
 backend/          Django project (manage.py lives here)
   motogram/       Settings, urls, wsgi, mixins.py (BotAuthMixin)
-  corridas/       Corridas app (models, views, services) — Oferta model p/ negociação InDrive
+  corridas/       Corridas app (models, views, services) — Oferta model p/ negociação InDrive; Avaliacao model (1-5★)
                   Ciclo de vida completo: iniciar, cancelar-motorista, concluir com Haversine
   motoristas/     Motoristas + assinaturas (also owns AUTH_USER_MODEL Utilizador)
+                  backends.py: EmailBackend (login por email, não username)
   pagamentos/     Mercado Pago Pix (webhook + services)
   site_publico/   Site público (passageiro, landing)
   admin_mg/       Painel admin custom (NOT Django.contrib.admin) — rota secreta via ADMIN_SECRET_PATH
@@ -25,10 +26,10 @@ backend/          Django project (manage.py lives here)
   playwright_tests/  Testes E2E (Playwright): 18 testes (site passageiro + motorista + admin)
 bot/              Processo aiogram 3 standalone (separado do Django)
   main.py         Entry point (long-polling, MemoryStorage FSM)
-  handlers/       FSM handlers (start, motorista, corridas) — inclui iniciar:, cancelar_motorista:
+  handlers/       FSM handlers (start, motorista, corridas) — inclui iniciar:, cancelar_motorista:, avaliar_p:, pular_comentario:
   services.py     HTTP calls → Django API (requests síncrono, nunca aiohttp)
-                  Métodos: iniciar_corrida(), cancelar_corrida_motorista()
-  states.py       aiogram StatesGroup classes
+                  Métodos: iniciar_corrida(), cancelar_corrida_motorista(), avaliar_passageiro(), limpar_mensagens()
+  states.py       aiogram StatesGroup classes — inclui aguardando_comentario_avaliacao
   messages.py     Todas as strings do bot (constantes PT-BR)
   tests/          Bot unit tests (pytest): 26 testes (services + handlers)
 docs/             ARCHITECTURE.md, CONVENTIONS.md, HANDOFF.md, CHECKLIST_TESTES_MANUAIS.md, etc.
@@ -80,7 +81,7 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 - **Bot usa `requests` síncrono**, não `aiohttp`. Bloqueia o event loop — tradeoff aceite, `timeout=5`.
 - **Django envia notificações Telegram** via `requests.post` a `api.telegram.org` (chamadas de `corridas/services.py` disparadas em `threading.Thread(daemon=True)` nas views), nunca bloqueando a resposta HTTP.
 - **Não chamar Telegram API directamente em views** — sempre via `corridas/services.py`.
-- **Serviços disponíveis**: `notificar_motoristas_proximos()`, `notificar_motorista_telegram()`, `notificar_passageiro_telegram()`, `enviar_localizacao_telegram()`, `calcular_distancia_km()` (Haversine).
+- **Serviços disponíveis**: `notificar_motoristas_proximos()`, `notificar_motorista_telegram()`, `notificar_passageiro_telegram()`, `enviar_localizacao_telegram()`, `calcular_distancia_km()` (Haversine), `_limpar_mensagens_antigas()`, `_limpeza_agressiva()`.
 
 ### Processos & Deploy
 - **Dois processos**: `Procfile` → `web` (gunicorn, 2 workers) e `bot` (`python main.py`). Railway.

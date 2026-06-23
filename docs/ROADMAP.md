@@ -129,9 +129,9 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 ### Qualidade e Segurança
 
-- [ ] Sistema de avaliação de passageiros (1–5 estrelas, pelo motorista)
+- [x] Sistema de avaliação de passageiros (1–5 estrelas, pelo motorista)
 - [ ] Motoristas podem bloquear passageiros problemáticos
-- [ ] Histórico de avaliações no painel admin
+- [x] Histórico de avaliações no painel admin
 - [ ] Verificação de CNH (upload obrigatório no cadastro)
 
 ### Performance

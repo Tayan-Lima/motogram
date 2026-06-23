@@ -1,8 +1,8 @@
 # HANDOFF.md — Motogram GO
 
 **Última sessão**: 2026-06-23
-**Estado**: Fase 1 (MVP) ~99% completa — **ciclo de vida completo**, deploy pendente
-**Nota**: Sessão anterior crashou, mas código ficou íntegro. Venv precisou ser recriada.
+**Estado**: Fase 1 (MVP) ~99% completa — **ciclo de vida completo + avaliação + admin KYC/CRM**, deploy pendente
+**Nota**: Duas sessões sofreram crash (venvs perdidas), mas código-fonte 100% íntegro (git). Commit `3ebfd5e` "Antes da experiencia" preserva o estado actual.
 
 ---
 
@@ -38,6 +38,12 @@
 | **URLs named** | Todas as URLs de templates convertidas para `{% url %}` (~100 ocorrências) | 24 templates |
 | **PT-PT → PT-BR** | ~40 strings traduzidas (activo→ativo, registado→registrado, etc.) | 14 ficheiros |
 | **Paleta consistente** | `gold/accent2/accent` em badges, erros, offline banner | 10+ templates |
+| **Sistema de Avaliação** | Model `Avaliacao`, views (passageiro web + motorista bot), FSM completo | `corridas/models.py`, `views.py`, `urls.py`, `bot/handlers/corridas.py` |
+| **Admin KYC/CRM** | Detalhe motorista/passageiro, listagem passageiros, painéis avaliação, assinaturas dashboard | `admin_mg/views.py`, `urls.py`, 6 novos templates |
+| **Intervalo de tempo** | Formato `17:05 - 17:25` em 6 templates (admin, motorista, passageiro) | `templates/*/historico*.html`, `perfil.html`, `dashboard.html` |
+| **Utilizador.foto** | Upload de foto no perfil + exibição nos templates | `motoristas/models.py`, `templates/passageiro/perfil.html` |
+| **EmailBackend** | Login por email (não username) | `motoristas/backends.py`, `settings.py` |
+| **Bot limpeza** | `limpar_mensagens()` + `_limpeza_agressiva()` — apaga mensagens antigas | `bot/services.py`, `corridas/services.py` |
 | **GitHub** | Repo `Tayan-Lima/motogram` (público, main) | |
 
 ---
@@ -55,12 +61,15 @@
 | Bot handlers (motorista) | 6 | `pytest bot/tests/` |
 | Bot handlers (corridas) | 4 | `pytest bot/tests/` |
 
+**Todas as suites executadas e confirmadas (114/114 ✅, 0 falhas).**
+
 ### ⚠️ Pendente para Deploy
 
 1. **Deploy Railway** — `Procfile` configurado mas não deployado
 2. **Domínio** — não configurado
 3. **LICENSE** — referenciada mas não criada (AGPL-3.0)
 4. **MP webhook Sandbox** — lógica implementada e testada com unit tests, mas não com o Sandbox real do Mercado Pago
+5. **Corrigir issues críticas do audit** — `AUDIT_REPORT.md` lista 4 critical + 8 high ainda não resolvidos (C1-C4, H1-H8)
 
 ---
 
@@ -80,7 +89,7 @@
 
 ## O que Mudou nesta Sessão (2026-06-23)
 
-### Ciclo de Vida Completo das Corridas
+### Sessão 1 — Ciclo de Vida Completo das Corridas
 - **Novos endpoints**: `POST /api/corridas/{id}/iniciar/` e `POST /api/corridas/{id}/cancelar-motorista/`
 - **Novos handlers no bot**: `iniciar:`, `cancelar_motorista:` callbacks com FSM states
 - **Novos métodos HTTP**: `bot/services.py` → `iniciar_corrida()`, `cancelar_corrida_motorista()`
@@ -88,6 +97,25 @@
 - **Distância Haversine**: `calcular_distancia_km()` em `corridas/services.py` — calculada automaticamente ao concluir se não definida
 - **Cron job atualizado**: `cancelar_corridas_antigas` agora lida com estado `cancelada` → `sem_motoristas`
 - **Botões dinâmicos**: Telegram mostra [🏍️ Iniciar] + [❌ Cancelar] após match, depois só [✅ Concluir]
+
+### Sessão 2 — Avaliação + Admin KYC/CRM + Polimento
+- **Sistema de Avaliação**: model `Avaliacao` (nota 1-5 + comentário, UniqueConstraint por corrida+tipo)
+  - `AvaliarMotoristaView` (passageiro via web, POST `/api/corridas/{id}/avaliar/`)
+  - `AvaliarPassageiroView` (motorista via bot, POST `/api/corridas/{id}/avaliar-passageiro/`)
+  - Bot FSM: callback `avaliar_p:` → estrelas → comentário (se ≤2★) → `pular_comentario:` → `aguardando_comentario_avaliacao`
+- **Admin KYC/CRM**: `MotoristaDetailView`, `PassageiroDetailView`, `PassageirosListView`, `AvaliacoesMotoristasView`, `AvaliacoesPassageirosView`, `AvaliacoesComentariosView`, `AssinaturasDashboardView`
+  - Busca e paginação nos cadastros pendentes e histórico
+  - Acções KYC: aprovar, reprovar, bloquear, reactivar, activar manual, excluir
+- **Intervalo de tempo** (`17:05 - 17:25`): aplicado em 6 templates — `admin_mg/historico_corridas`, `motorista/historico` (card + modal), `motorista/dashboard`, `passageiro/perfil`, `admin_mg/passageiro_detalhe`, `admin_mg/motorista_detalhe`
+- **Novos campos**: `Corrida.origem_texto`, `Corrida.destino_texto`, `Corrida.iniciada_em`, `Corrida.notificacao_msg_ids`, `Utilizador.foto`, `Utilizador.email_confirmado`, `Utilizador.email_token`
+- **EnderecoFavorito**: trocou lat/lon obrigatórios por rua/número/ponto_referência
+- **EmailBackend custom**: login por email (não username) — `AUTHENTICATION_BACKENDS` em settings
+- **Bot**: `limpar_mensagens()`, `avaliar_passageiro()`, `_limpeza_agressiva()`, logging
+- **Rate limiting**: django-ratelimit 5/min/IP nos logins (passageiro, motorista, admin)
+- **Logging**: configurado em `settings.py` (corridas, motoristas DEBUG)
+- **Botão "Ir ao Perfil"**: adicionado após avaliação no `acompanhar.html`
+- **Email confirmation**: obrigatório para pedir corrida (gate no `CriarCorridaWebView`)
+- **Migrations novas**: `0004_add_destino_texto`, `0005_corrida_origem_texto`, `0006_notificacao_msg_ids`, `0007_avaliacao`, `0008_iniciada_em`, `motoristas.0004_email_confirmado`, `motoristas.0005_favorito_rua_numero`, `motoristas.0006_foto_utilizador`, `pagamentos.0002_add_mp_payment_id`
 
 ### Fluxo de estados
 ```
@@ -97,19 +125,18 @@ aguardando ──▶ aceite ──▶ em_curso ──▶ concluida
                       (motorista)
 ```
 
-### Estatísticas de Testes (70 Django confirmados)
+### Estatísticas de Testes (114 confirmed — todas executadas)
 | Suite | Testes | Status |
 |-------|--------|--------|
 | Django unit + integration | 70 | ✅ OK (0 falhas) |
-| Playwright E2E | 18 | ⚠️ Não executado nesta sessão (precisa de navegador) |
-| Bot tests | 26 | ⚠️ Não executado nesta sessão (precisa de venv separada) |
-| **Total** | **114** | |
+| Playwright E2E | 18 | ✅ OK (0 falhas) |
+| Bot tests | 26 | ✅ OK (0 falhas) |
+| **Total** | **114** | ✅ |
 
-### Incidente da Sessão
-- Crash no final da sessão anterior; venv ficou limpa
-- Dependências reinstaladas via `pip install -r requirements.txt`
-- Código-fonte 100% íntegro (git confirma)
-- 2 conexões zumbis no PostgreSQL limpadas com `--keepdb`
+### Incidentes das Sessões
+- **1º crash** (manhã): venv Django ficou limpa; dependências reinstaladas; código 100% íntegro
+- **2º crash** (~18:50): ao gravar template `historico_corridas.html`; venv sobreviveu; DB de teste zumbi (`test_motogram`) limpo com `dropdb`
+- Ambos os crashes sem perda de código-fonte (confirmado via git)
 
 ### Checklist de Testes Manuais
 Ver `docs/CHECKLIST_TESTES_MANUAIS.md` — cobre 4 fluxos + edge cases + regressão.
@@ -172,7 +199,6 @@ cd bot && .venv/bin/python -m pytest tests/ -v
 
 - Dashboard avançado motorista (ganhos, metas, combustível)
 - WebSocket (Django Channels) substituindo polling REST
-- Avaliação 1–5 estrelas pós-corrida
 - SMS notificação (Zenvia)
 - Sentry monitoramento de erros
 - Dark mode (Tailwind + Alpine.js toggle)
