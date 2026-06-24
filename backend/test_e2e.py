@@ -2,6 +2,8 @@
 
 import json
 import re
+import hmac
+import hashlib
 from unittest.mock import patch
 from django.test import TestCase, Client, override_settings
 from django.utils import timezone
@@ -102,6 +104,7 @@ class FluxoCompletoTest(TestCase):
         oferta = Oferta.objects.get(corrida=corrida, motorista=motorista)
         self.assertEqual(oferta.tipo, "aceite")
 
+        self.client.force_login(passageiro)
         response = self.client.post(
             f"/api/corridas/{corrida.id}/escolher/",
             data=json.dumps({"oferta_id": oferta.id}),
@@ -253,7 +256,8 @@ class FluxoCompletoTest(TestCase):
 
     @patch("corridas.views._notificar_resultado_ofertas")
     @patch("corridas.views.notificar_motoristas_proximos")
-    def test_fluxo_motorista_completo(self, mock_notificar, mock_resultado):
+    @patch("pagamentos.services.requests.get")
+    def test_fluxo_motorista_completo(self, mock_mp_get, mock_notificar, mock_resultado):
         """Motorista: cadastro → assinatura → pagamento → Telegram → corrida → conclusão."""
         response = self.client.post("/motorista/cadastro/", {
             "nome_completo": "João Silva",
@@ -283,14 +287,27 @@ class FluxoCompletoTest(TestCase):
         assinatura = Assinatura.objects.get(motorista=motorista)
         self.assertEqual(assinatura.status, "pendente")
 
-        with self.settings(MP_WEBHOOK_SECRET=""):
+        # Mock Mercado Pago API — pagamento aprovado
+        mock_mp_get.return_value.status_code = 200
+        mock_mp_get.return_value.json.return_value = {"status": "approved"}
+
+        webhook_body = json.dumps({
+            "data": {"id": assinatura.pix_txid},
+            "type": "payment",
+        })
+        webhook_sig = hmac.new(
+            b"test-webhook-secret",
+            f"req-123{webhook_body}".encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
+        with self.settings(MP_WEBHOOK_SECRET="test-webhook-secret", MP_ACCESS_TOKEN="test-access-token"):
             response = self.client.post(
                 "/api/webhook/mercadopago/",
-                data=json.dumps({
-                    "data": {"id": assinatura.pix_txid},
-                    "type": "payment",
-                }),
+                data=webhook_body,
                 content_type="application/json",
+                HTTP_X_SIGNATURE=webhook_sig,
+                HTTP_X_REQUEST_ID="req-123",
             )
         self.assertEqual(response.status_code, 200)
         motorista.refresh_from_db()
@@ -345,6 +362,7 @@ class FluxoCompletoTest(TestCase):
         self.assertEqual(response.status_code, 200)
         oferta = Oferta.objects.get(corrida=corrida, motorista=motorista)
 
+        self.client.force_login(passageiro)
         response = self.client.post(
             f"/api/corridas/{corrida.id}/escolher/",
             data=json.dumps({"oferta_id": oferta.id}),
@@ -486,6 +504,7 @@ class FluxoCompletoTest(TestCase):
         self.assertEqual(oferta.tipo, "contra_oferta")
         self.assertEqual(float(oferta.valor), 15.00)
 
+        self.client.force_login(passageiro)
         response = self.client.post(
             f"/api/corridas/{corrida.id}/escolher/",
             data=json.dumps({"oferta_id": oferta.id}),

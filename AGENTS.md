@@ -27,6 +27,7 @@ backend/          Django project (manage.py lives here)
 bot/              Processo aiogram 3 standalone (separado do Django)
   main.py         Entry point (long-polling, MemoryStorage FSM)
   handlers/       FSM handlers (start, motorista, corridas) — inclui iniciar:, cancelar_motorista:, avaliar_p:, pular_comentario:
+                   safe_tg.py: wrappers seguros p/ edit_text/answer (try/except contra crash em rede 3G)
   services.py     HTTP calls → Django API (requests síncrono, nunca aiohttp)
                   Métodos: iniciar_corrida(), cancelar_corrida_motorista(), avaliar_passageiro(), limpar_mensagens()
   states.py       aiogram StatesGroup classes — inclui aguardando_comentario_avaliacao
@@ -90,9 +91,9 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 ### User Model & Auth
 - **`AUTH_USER_MODEL = 'motoristas.Utilizador'`**. Sempre `get_user_model()` ou import de `motoristas.models`.
 - **Custom auth backend**: `motoristas.backends.EmailBackend` (login por email, não username).
-- **DRF sem `DEFAULT_PERMISSION_CLASSES`**. Views gerem auth individualmente.
-- **`CorridaStatusView` é pública (sem auth)** — polling do passageiro. Não adicionar auth.
-- **`IniciarCorridaView`** e **`CancelarCorridaMotoristaView`** usam `BotAuthMixin` e verificam ownership (`corrida.motorista == motorista`).
+- **DRF sem `DEFAULT_PERMISSION_CLASSES`**. Views gerem auth individualmente. Views que expõem dados sensíveis usam `@login_required` e verificam ownership.
+- **`CorridaStatusView` é pública (sem auth)** — polling do passageiro, mas deve-se considerar token não-enumerável no futuro.
+- **`ListarOfertasView`**, **`EscolherMotoristaView`**, **`CancelarCorridaView`** exigem `@login_required` + ownership check.
 
 ### Subscription Gate
 - `AceitarCorridaView` verifica `motorista.pode_receber_corridas` antes de aceitar. Retorna 403 `{'erro': '...'}`.
@@ -117,7 +118,46 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 
 ---
 
-## Conventions
+## Code Quality — Regras Automáticas
+
+### Python / Django
+- Remover imports não utilizados antes de finalizar qualquer tarefa.
+- Todo model DEVE ter `__str__`.
+- Nunca usar `null=True` em CharField ou TextField — usar `blank=True, default=''`.
+- Sempre adicionar `select_related`/`prefetch_related` em querysets com FK/M2M que serão acedidos.
+- Variáveis de ambiente sem fallback hardcoded — falhar no startup se ausentes.
+- `except Exception: pass` proibido — sempre logar com `logger.warning()` ou `logger.debug()`.
+- Lógica de negócio em `services.py`. Views só orquestram (validar → service → resposta).
+- Não chamar Telegram API directamente em views — sempre via `corridas/services.py`.
+- Endpoints que acedem dados de um utilizador específico devem verificar ownership (ex: `corrida.passageiro_id == request.user.id`).
+
+### aiogram
+- Todo handler de mensagem com estado FSM deve ter filtro `F.text` explícito (previne crash com fotos/stickers).
+- `router.message.filter(F.chat.type == "private")` em todos os routers — bot não responde em grupos.
+- Chamadas à API Telegram via `safe_tg.safe_edit_text()` / `safe_tg.safe_answer()` (em `bot/handlers/safe_tg.py`).
+- Nunca logar dados pessoais (CPF, telefone, coordenadas).
+- `BOT_SECRET` obrigatório — falhar no startup se ausente.
+
+### JavaScript (Alpine.js + Leaflet)
+- Nunca usar `var` — usar `const` ou `let`.
+- `x-data` em Alpine sempre como função: `x-data="nome()"` — nunca objecto inline com métodos.
+- Leaflet: sempre guardar `this._map` e chamar `this._map.remove()` em `destroy()`.
+- Service Worker: sempre incluir `activate` handler com `self.skipWaiting()` + `self.clients.claim()`.
+
+### Segurança
+- Webhook do Mercado Pago sempre com validação de assinatura HMAC e verificação de status via API MP.
+- `MP_WEBHOOK_SECRET` vazio = rejeitar webhook (não aceitar).
+- Nunca calcular valor de pagamento no frontend — sempre `settings.PRECO_ASSINATURA_MENSAL` no backend.
+- `user_id` nunca exposto em URLs públicas — IDs sequenciais devem ser protegidos com auth.
+
+### Testes
+- Novo endpoint = novo teste de autenticação + happy path + erro 400.
+- Novo handler de bot = teste com Update simulado + estado FSM inválido.
+
+### Performance (crítico para 3G)
+- Sempre adicionar `select_related`/`prefetch_related` em views que acedem FK.
+- `GZipMiddleware` deve estar presente em `MIDDLEWARE`.
+- Campos filtrados frequentemente devem ter `db_index=True`.
 
 - **Linguagem**: comentários, strings, commits em PT-BR.
 - **Models**: singular PascalCase (`Corrida`, não `Corridas`).

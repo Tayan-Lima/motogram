@@ -39,6 +39,7 @@ if _USE_POSTGIS:
     INSTALLED_APPS.insert(6, 'django.contrib.gis')
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

@@ -67,7 +67,8 @@ def autocomplete(query, lat=None, lng=None, limit=5):
         if results is None:
             results = []
 
-    _cache_set(cache_key, results)
+    if results:
+        _cache_set(cache_key, results)
     return results
 
 
@@ -133,22 +134,29 @@ def _here_autocomplete(query, lat, lng, limit):
         params["at"] = f"{lat},{lng}"
 
     try:
-        resp = requests.get(HERE_AUTOCOMPLETE_URL, params=params, timeout=5)
+        resp = requests.get(HERE_AUTOCOMPLETE_URL, params=params, timeout=8)
         if resp.status_code == 429:
             logger.warning("autocomplete: HERE rate limited (429), tentando Nominatim")
             return None
         resp.raise_for_status()
         data = resp.json()
         items = data.get("items", [])
-        return [
-            {
-                "label": item.get("address", {}).get("label", item.get("title", "")),
-                "lat": None,
-                "lng": None,
+        results = []
+        for item in items:
+            addr = item.get("address", {})
+            pos = item.get("position", {})
+            entry = {
+                "label": addr.get("label", item.get("title", "")),
+                "lat": pos.get("lat"),
+                "lng": pos.get("lng"),
                 "id": item.get("id", ""),
             }
-            for item in items
-        ]
+            if addr.get("street"):
+                entry["street"] = addr["street"]
+            if addr.get("houseNumber"):
+                entry["housenumber"] = addr["houseNumber"]
+            results.append(entry)
+        return results
     except requests.RequestException as e:
         logger.warning("autocomplete: HERE falhou (%s), tentando Nominatim", e)
         return None
@@ -234,7 +242,7 @@ def _nominatim_search(query, limit):
                 "countrycodes": "br",
             },
             headers=NOMINATIM_HEADERS,
-            timeout=5,
+            timeout=8,
         )
         if resp.status_code != 200:
             return None
@@ -266,7 +274,7 @@ def _nominatim_geocode(address):
                 "countrycodes": "br",
             },
             headers=NOMINATIM_HEADERS,
-            timeout=5,
+            timeout=8,
         )
         if resp.status_code != 200:
             return None

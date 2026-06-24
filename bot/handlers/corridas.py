@@ -7,8 +7,10 @@ from aiogram.fsm.context import FSMContext
 import messages
 import services
 from states import MotoristaStates
+from . import safe_tg
 
 router = Router()
+router.message.filter(F.chat.type == "private")
 
 
 @router.callback_query(F.data.startswith("aceitar:"))
@@ -30,7 +32,8 @@ async def aceitar_corrida(callback: CallbackQuery, state: FSMContext):
         await callback.answer(resultado["erro"], show_alert=True)
         return
 
-    await callback.message.edit_text(
+    await safe_tg.safe_edit_text(
+        callback.message,
         f"✅ *Oferta enviada!*\n\nAguardando o passageiro escolher...\n\n💰 R$ {valor:.2f}",
         parse_mode="Markdown",
     )
@@ -56,7 +59,7 @@ async def recusar_corrida(callback: CallbackQuery):
         await callback.answer(resultado["erro"], show_alert=True)
         return
 
-    await callback.message.edit_text(messages.OFERTA_RECUSADA, parse_mode="Markdown")
+    await safe_tg.safe_edit_text(callback.message, messages.OFERTA_RECUSADA, parse_mode="Markdown")
     await callback.answer("Recusada.")
 
 
@@ -78,7 +81,7 @@ async def ofertar_corrida(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(MotoristaStates.contra_oferta)
+@router.message(MotoristaStates.contra_oferta, F.text)
 async def receber_contra_oferta(message: Message, state: FSMContext):
     try:
         valor = float(message.text.replace(",", "."))
@@ -134,7 +137,8 @@ async def iniciar_corrida_callback(callback: CallbackQuery, state: FSMContext):
     await state.update_data(corrida_id_ativa=corrida_id)
     await state.set_state(MotoristaStates.em_corrida)
 
-    await callback.message.edit_text(
+    await safe_tg.safe_edit_text(
+        callback.message,
         messages.CORRIDA_INICIADA,
         parse_mode="HTML",
         reply_markup={"inline_keyboard": [[
@@ -163,7 +167,8 @@ async def cancelar_motorista_callback(callback: CallbackQuery, state: FSMContext
         return
 
     await state.set_state(MotoristaStates.disponivel)
-    await callback.message.edit_text(
+    await safe_tg.safe_edit_text(
+        callback.message,
         messages.CORRIDA_CANCELADA_MOTORISTA,
         parse_mode="HTML",
     )
@@ -191,7 +196,8 @@ async def concluir_corrida_callback(callback: CallbackQuery, state: FSMContext):
     valor = resultado.get("valor", "0.00")
     distancia = resultado.get("distancia_km", "0")
     await state.set_state(MotoristaStates.disponivel)
-    await callback.message.edit_text(
+    await safe_tg.safe_edit_text(
+        callback.message,
         messages.CORRIDA_CONCLUIDA.format(valor=valor, distancia=distancia),
         parse_mode="HTML",
     )
@@ -235,7 +241,8 @@ async def avaliar_passageiro_callback(callback: CallbackQuery, state: FSMContext
     if nota <= 2:
         await state.update_data(avaliacao_corrida_id=corrida_id)
         await state.set_state(MotoristaStates.aguardando_comentario_avaliacao)
-        await callback.message.edit_text(
+        await safe_tg.safe_edit_text(
+            callback.message,
             messages.COMENTARIO_PEDIDO,
             reply_markup={
                 "inline_keyboard": [[
@@ -244,12 +251,12 @@ async def avaliar_passageiro_callback(callback: CallbackQuery, state: FSMContext
             },
         )
     else:
-        await callback.message.edit_text(messages.AVALIACAO_REGISTRADA)
+        await safe_tg.safe_edit_text(callback.message, messages.AVALIACAO_REGISTRADA)
 
     await callback.answer()
 
 
-@router.message(MotoristaStates.aguardando_comentario_avaliacao)
+@router.message(MotoristaStates.aguardando_comentario_avaliacao, F.text)
 async def receber_comentario_avaliacao(message: Message, state: FSMContext):
     data = await state.get_data()
     corrida_id = data.get("avaliacao_corrida_id")
@@ -261,7 +268,7 @@ async def receber_comentario_avaliacao(message: Message, state: FSMContext):
     resultado = services.avaliar_passageiro(
         corrida_id=corrida_id,
         motorista_telegram_id=message.from_user.id,
-        nota=0,
+        nota=None,
         comentario=message.text[:500],
     )
 
@@ -272,13 +279,14 @@ async def receber_comentario_avaliacao(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("pular_comentario:"))
 async def pular_comentario(callback: CallbackQuery, state: FSMContext):
     await state.set_state(MotoristaStates.disponivel)
-    await callback.message.edit_text(messages.AVALIACAO_REGISTRADA)
+    await safe_tg.safe_edit_text(callback.message, messages.AVALIACAO_REGISTRADA)
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("nao_escolhido:"))
 async def nao_escolhido(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
+    await safe_tg.safe_edit_text(
+        callback.message,
         messages.CORRIDA_NAO_ESCOLHIDA,
         parse_mode="Markdown",
     )
@@ -287,7 +295,8 @@ async def nao_escolhido(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("expirado:"))
 async def corrida_expirada(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
+    await safe_tg.safe_edit_text(
+        callback.message,
         messages.CORRIDA_EXPIRADA,
         parse_mode="Markdown",
     )

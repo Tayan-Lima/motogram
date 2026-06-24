@@ -40,8 +40,8 @@ def _limpar_mensagens_antigas(telegram_id):
                         json={"chat_id": telegram_id, "message_id": msg_id},
                         timeout=5,
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Falha ao apagar msg %s: %s", msg_id, e)
 
 
 def _limpeza_agressiva(telegram_id: int, max_id_manter: int):
@@ -60,8 +60,8 @@ def _limpeza_agressiva(telegram_id: int, max_id_manter: int):
             )
             if resp.json().get("ok"):
                 apagadas += 1
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Falha ao apagar msg %s: %s", mid, e)
 
     logger.info(
         "_limpeza_agressiva: apagadas=%d de %d tentativas para tg=%s",

@@ -1,7 +1,7 @@
 """Handler /start — guardião de token e menu principal do motorista."""
 
 import os
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -10,6 +10,7 @@ import services
 from states import MotoristaStates
 
 router = Router()
+router.message.filter(F.chat.type == "private")
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
 

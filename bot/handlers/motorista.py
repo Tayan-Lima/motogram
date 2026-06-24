@@ -11,6 +11,7 @@ import services
 from states import MotoristaStates
 
 router = Router()
+router.message.filter(F.chat.type == "private")
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
 

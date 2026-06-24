@@ -1,10 +1,10 @@
 """Views da app site_publico — páginas públicas e do passageiro."""
 
 import json
+import logging
 import secrets
 from django.utils.decorators import method_decorator
 import threading
-import requests
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
@@ -17,6 +17,7 @@ from django.conf import settings
 from motoristas.models import Utilizador, EnderecoFavorito
 from corridas.models import Corrida
 
+logger = logging.getLogger(__name__)
 
 def landing(request):
     """Landing page do Motogram GO."""
@@ -150,8 +151,8 @@ class RecuperarSenhaPassageiroView(View):
                     f"🔑 *Nova senha*\n\nA tua nova senha é: `{nova_senha}`\n\nEntra no site e troca a senha.",
                 )
                 enviado = True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Falha ao enviar senha via Telegram: %s", e)
 
         if not enviado and utilizador.email:
             try:
@@ -164,8 +165,8 @@ class RecuperarSenhaPassageiroView(View):
                     fail_silently=True,
                 )
                 enviado = True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Falha ao enviar email de recuperação: %s", e)
 
         return render(request, "passageiro/recuperar_senha.html", {
             "enviado": True,
@@ -236,19 +237,24 @@ class PerfilPassageiroView(View):
         })
 
 
+@login_required
 def confirmacao(request, corrida_id):
     """GET /passageiro/confirmacao/{id}/ — confirmação após pedido."""
     corrida = get_object_or_404(Corrida, id=corrida_id)
+    if corrida.passageiro_id != request.user.id:
+        return render(request, "passageiro/login.html", {"erro": "Acesso negado."})
     return render(request, "passageiro/confirmacao.html", {
         "corrida": corrida,
     })
 
 
+@login_required
 def acompanhar(request, corrida_id):
     """GET /passageiro/acompanhar/{id}/ — acompanhamento em tempo real."""
     corrida = get_object_or_404(Corrida, id=corrida_id)
+    if corrida.passageiro_id != request.user.id:
+        return render(request, "passageiro/login.html", {"erro": "Acesso negado."})
     from corridas.models import Avaliacao
-    import json
     avaliado_json = "true" if Avaliacao.objects.filter(corrida=corrida, tipo='pm').exists() else "false"
     return render(request, "passageiro/acompanhar.html", {
         "corrida": corrida,
@@ -369,7 +375,6 @@ def _enviar_email_confirmacao(utilizador):
     from django.utils import timezone
     from datetime import timedelta
     from django.core.mail import send_mail
-    from django.conf import settings
 
     token = secrets.token_urlsafe(32)
     utilizador.email_token = token

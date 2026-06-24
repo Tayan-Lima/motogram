@@ -37,7 +37,7 @@ class Corrida(models.Model):
     valor_sugerido = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='aguardando')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='aguardando', db_index=True)
 
     criada_em = models.DateTimeField(auto_now_add=True)
     aceite_em = models.DateTimeField(null=True, blank=True)

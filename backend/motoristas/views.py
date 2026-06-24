@@ -3,12 +3,11 @@
 import json
 from django.http import JsonResponse
 from django.views import View
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -216,7 +215,6 @@ class CadastroMotoristaView(View):
         if Utilizador.objects.filter(telefone=dados["telefone"]).exists():
             return render(request, "motorista/cadastro.html", {"erro": "Telefone já registrado."})
 
-        import secrets as _secrets
         password = request.POST.get("password", "").strip()
         password_confirm = request.POST.get("password_confirm", "").strip()
 
@@ -529,7 +527,6 @@ class ToggleOnlineView(LoginRequiredMixin, View):
     login_url = "/motorista/login/"
 
     def post(self, request):
-        import json
         try:
             motorista = request.user.motorista
         except Motorista.DoesNotExist:

@@ -27,7 +27,7 @@ class Utilizador(AbstractUser):
     telegram_token = models.CharField(max_length=50, null=True, blank=True)
     telegram_token_expiry = models.DateTimeField(null=True, blank=True)
     email_confirmado = models.BooleanField(default=False)
-    email_token = models.CharField(max_length=50, blank=True)
+    email_token = models.CharField(max_length=50, blank=True, default='')
     email_token_expiry = models.DateTimeField(null=True, blank=True)
     foto = models.ImageField(upload_to='fotos_perfil/', null=True, blank=True)
     
@@ -86,7 +86,7 @@ class Motorista(models.Model):
         ('reprovado', 'Reprovado'),
         ('suspenso', 'Suspenso'),
     ]
-    status_cadastro = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    status_cadastro = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente', db_index=True)
     motivo_reprovacao = models.TextField(blank=True)
     analisado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -96,13 +96,13 @@ class Motorista(models.Model):
     )
     analisado_em = models.DateTimeField(null=True, blank=True)
     
-    activo = models.BooleanField(default=False)
+    activo = models.BooleanField(default=False, db_index=True)
     assinatura_ate = models.DateField(null=True, blank=True)
     
     telegram_id = models.BigIntegerField(null=True, blank=True, unique=True)
     telegram_token = models.CharField(max_length=50, null=True, blank=True)
     telegram_token_expiry = models.DateTimeField(null=True, blank=True)
-    
+
     if PointField is not None:
         localizacao = PointField(null=True, blank=True, srid=4326)
     else:

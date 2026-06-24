@@ -170,15 +170,17 @@ def limpar_mensagens(motorista_telegram_id: int) -> dict:
         return {"erro": "Erro de conexão com o servidor."}
 
 
-def avaliar_passageiro(corrida_id: int, motorista_telegram_id: int, nota: int, comentario: str = "") -> dict:
+def avaliar_passageiro(corrida_id: int, motorista_telegram_id: int, nota: int | None, comentario: str = "") -> dict:
     try:
+        body = {
+            "motorista_telegram_id": motorista_telegram_id,
+            "comentario": comentario,
+        }
+        if nota is not None:
+            body["nota"] = nota
         resp = requests.post(
             f"{BACKEND_URL}/api/corridas/{corrida_id}/avaliar-passageiro/",
-            json={
-                "motorista_telegram_id": motorista_telegram_id,
-                "nota": nota,
-                "comentario": comentario,
-            },
+            json=body,
             headers=_headers(),
             timeout=5,
         )

@@ -6,12 +6,12 @@ import logging
 import threading
 from django.http import JsonResponse
 from django.views import View
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import transaction
-from django.db.models import F
 from django.utils.decorators import method_decorator
 
 from .models import Corrida, Oferta
@@ -260,7 +260,7 @@ class ConcluirCorridaView(BotAuthMixin, View):
         if not motorista_telegram_id:
             return JsonResponse({"erro": "motorista_telegram_id obrigatório"}, status=400)
 
-        corrida = get_object_or_404(Corrida, id=corrida_id)
+        corrida = get_object_or_404(Corrida.objects.select_related("motorista", "passageiro"), id=corrida_id)
         if corrida.status not in ("aceite", "em_curso"):
             return JsonResponse({"erro": "Corrida não está em estado que permite conclusão."}, status=400)
 
@@ -323,7 +323,7 @@ class IniciarCorridaView(BotAuthMixin, View):
         if not motorista_telegram_id:
             return JsonResponse({"erro": "motorista_telegram_id obrigatório"}, status=400)
 
-        corrida = get_object_or_404(Corrida, id=corrida_id, status="aceite")
+        corrida = get_object_or_404(Corrida.objects.select_related("motorista", "passageiro"), id=corrida_id, status="aceite")
 
         try:
             motorista = Motorista.objects.get(telegram_id=motorista_telegram_id)
@@ -369,7 +369,7 @@ class CancelarCorridaMotoristaView(BotAuthMixin, View):
         if not motorista_telegram_id:
             return JsonResponse({"erro": "motorista_telegram_id obrigatório"}, status=400)
 
-        corrida = get_object_or_404(Corrida, id=corrida_id)
+        corrida = get_object_or_404(Corrida.objects.select_related("motorista", "passageiro"), id=corrida_id)
         if corrida.status not in ("aceite", "em_curso"):
             return JsonResponse({"erro": "Corrida não pode ser cancelada neste estado."}, status=400)
 
@@ -398,13 +398,16 @@ class CancelarCorridaMotoristaView(BotAuthMixin, View):
         return JsonResponse({"ok": True, "corrida_id": corrida.id, "status": "cancelada"})
 
 
+@method_decorator(login_required, name='dispatch')
 class ListarOfertasView(View):
     """GET /api/corridas/{id}/ofertas/ — passageiro vê motoristas que responderam."""
 
     def get(self, request, corrida_id):
         corrida = get_object_or_404(Corrida, id=corrida_id)
+        if corrida.passageiro_id != request.user.id:
+            return JsonResponse({"erro": "Acesso negado."}, status=403)
 
-        ofertas = corrida.ofertas.filter(status="pendente").select_related("motorista")
+        ofertas = corrida.ofertas.filter(status="pendente").select_related("motorista__utilizador")
 
         resultado = []
         for o in ofertas:
@@ -428,10 +431,15 @@ class ListarOfertasView(View):
         })
 
 
+@method_decorator(login_required, name='dispatch')
 class EscolherMotoristaView(View):
     """POST /api/corridas/{id}/escolher/ — passageiro escolhe um motorista."""
 
     def post(self, request, corrida_id):
+        corrida = get_object_or_404(Corrida, id=corrida_id, status="aguardando")
+        if corrida.passageiro_id != request.user.id:
+            return JsonResponse({"erro": "Acesso negado."}, status=403)
+
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
@@ -440,8 +448,6 @@ class EscolherMotoristaView(View):
         oferta_id = data.get("oferta_id")
         if not oferta_id:
             return JsonResponse({"erro": "oferta_id obrigatório"}, status=400)
-
-        corrida = get_object_or_404(Corrida, id=corrida_id, status="aguardando")
 
         with transaction.atomic():
             oferta = get_object_or_404(
@@ -489,7 +495,7 @@ class CorridaStatusView(View):
     """GET /api/corridas/{id}/status/ — polling do passageiro."""
 
     def get(self, request, corrida_id):
-        corrida = get_object_or_404(Corrida, id=corrida_id)
+        corrida = get_object_or_404(Corrida.objects.select_related("motorista__utilizador"), id=corrida_id)
 
         if corrida.status == "aguardando":
             qtd_ofertas = corrida.ofertas.filter(status="pendente").count()
@@ -521,22 +527,24 @@ class CorridaStatusView(View):
         return JsonResponse(response)
 
 
+@method_decorator(login_required, name='dispatch')
 class CancelarCorridaView(View):
     """POST /api/corridas/{id}/cancelar/ — passageiro cancela corrida aguardando."""
 
     def post(self, request, corrida_id):
-        corrida = get_object_or_404(Corrida, id=corrida_id)
+        corrida = get_object_or_404(
+            Corrida.objects.prefetch_related("ofertas__motorista"), id=corrida_id
+        )
 
         if corrida.status not in ("aguardando",):
             return JsonResponse({"erro": "Não é possível cancelar uma corrida que já foi aceite."}, status=400)
 
-        if request.user.is_authenticated and corrida.passageiro_id != request.user.id:
+        if corrida.passageiro_id != request.user.id:
             return JsonResponse({"erro": "Esta corrida não te pertence."}, status=403)
 
         corrida.status = "cancelada"
         corrida.save()
 
-        import threading
         from .services import notificar_motorista_telegram
         for oferta in corrida.ofertas.filter(status="pendente"):
             m = oferta.motorista
@@ -652,7 +660,9 @@ class AvaliarMotoristaView(View):
         if not request.user.is_authenticated:
             return JsonResponse({"erro": "Login obrigatório."}, status=401)
 
-        corrida = get_object_or_404(Corrida, id=corrida_id)
+        corrida = get_object_or_404(
+            Corrida.objects.select_related("motorista__utilizador", "passageiro"), id=corrida_id
+        )
 
         if corrida.passageiro_id != request.user.id:
             return JsonResponse({"erro": "Esta corrida não te pertence."}, status=403)
@@ -707,7 +717,9 @@ class AvaliarPassageiroView(BotAuthMixin, View):
         if not motorista_telegram_id:
             return JsonResponse({"erro": "motorista_telegram_id obrigatório"}, status=400)
 
-        corrida = get_object_or_404(Corrida, id=corrida_id)
+        corrida = get_object_or_404(
+            Corrida.objects.select_related("motorista__utilizador", "passageiro"), id=corrida_id
+        )
 
         if corrida.status != "concluida":
             return JsonResponse({"erro": "Só podes avaliar corridas concluídas."}, status=400)

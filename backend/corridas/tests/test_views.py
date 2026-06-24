@@ -149,6 +149,7 @@ class CorridaEndpointsTest(TestCase):
             tipo="aceite",
         )
 
+        self.client.force_login(self.passageiro)
         response = self.client.get(f"/api/corridas/{corrida.id}/ofertas/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -171,6 +172,7 @@ class CorridaEndpointsTest(TestCase):
             tipo="aceite",
         )
 
+        self.client.force_login(self.passageiro)
         response = self.client.post(
             f"/api/corridas/{corrida.id}/escolher/",
             data=json.dumps({"oferta_id": oferta.id}),

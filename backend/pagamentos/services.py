@@ -2,8 +2,11 @@
 
 import hmac
 import hashlib
+import logging
 import requests
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def criar_pix_mercadopago(motorista, valor, pix_txid):
@@ -56,14 +59,25 @@ def criar_pix_mercadopago(motorista, valor, pix_txid):
 def verificar_assinatura_webhook(request):
     secret = settings.MP_WEBHOOK_SECRET
     if not secret:
-        return True
+        logger.error("MP_WEBHOOK_SECRET não configurado — rejeitando webhook")
+        return False
 
     signature = request.headers.get("X-Signature", "")
     x_request_id = request.headers.get("X-Request-Id", "")
 
+    if not signature or not x_request_id:
+        logger.warning("Webhook sem X-Signature ou X-Request-Id")
+        return False
+
+    try:
+        body = request.body.decode()
+    except Exception:
+        logger.warning("Webhook com body inválido")
+        return False
+
     expected = hmac.new(
         secret.encode(),
-        f"{x_request_id}{request.body.decode()}".encode(),
+        f"{x_request_id}{body}".encode(),
         hashlib.sha256,
     ).hexdigest()
 
@@ -88,4 +102,27 @@ def processar_webhook_mercadopago(data):
         except Assinatura.DoesNotExist:
             return
 
+    access_token = settings.MP_ACCESS_TOKEN
+    if not access_token:
+        logger.error("MP_ACCESS_TOKEN não configurado — não é possível verificar pagamento")
+        return
+
+    try:
+        resp = requests.get(
+            f"https://api.mercadopago.com/v1/payments/{payment_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            logger.warning("Falha ao consultar status do pagamento %s: HTTP %s", payment_id, resp.status_code)
+            return
+        payment_data = resp.json()
+        if payment_data.get("status") != "approved":
+            logger.info("Pagamento %s com status '%s' — não será activado", payment_id, payment_data.get("status"))
+            return
+    except requests.RequestException as e:
+        logger.exception("Erro ao consultar API Mercado Pago para pagamento %s", payment_id)
+        return
+
     activar_motorista_apos_pagamento(assinatura)
+    logger.info("Assinatura %s activada após pagamento %s aprovado", assinatura.id, payment_id)
