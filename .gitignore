@@ -14,6 +14,7 @@ de/
 # Environment
 .env
 .env.*
+!.env.example
 
 # Django
 backend/db.sqlite3

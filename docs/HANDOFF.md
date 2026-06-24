@@ -1,7 +1,8 @@
 # HANDOFF.md — Motogram GO
 
 **Última sessão**: 2026-06-24
-**Estado**: Fase 1 (MVP) ~99% completa — **matching geo expansivo + Live Location Telegram + PT-BR completo + dashboard read-only + UX/UI mobile-first**, deploy pendente
+**Estado**: Fase 1 (MVP) ~99% completa — **deploy Railway concluído, PostGIS 3.7 activo**, matching geo expansivo + Live Location Telegram + PT-BR completo + dashboard read-only + UX/UI mobile-first
+**Deploy**: `https://web-production-ff262.up.railway.app` | Bot: `@MotoGram_Go_bot` | Admin: `https://web-production-ff262.up.railway.app/g7x9kadm/entrar/`
 **Nota**: Página `/motorista/online/` eliminada — substituída por Telegram Live Location (8h, updates ~60s). Dashboard toggle agora é badge informativo (só leitura).
 
 ---
@@ -125,13 +126,20 @@ Mudanças:
 
 **Todas as suites executadas e confirmadas (146/146 ✅, 0 falhas).**
 
-### ⚠️ Pendente para Deploy
+### ✅ Deploy Concluído (2026-06-24)
 
-1. **Deploy Railway** — `Procfile` configurado mas não deployado
-2. **Domínio** — não configurado
-3. **LICENSE** — referenciada mas não criada (AGPL-3.0)
-4. **MP webhook Sandbox** — lógica implementada e testada com unit tests, mas não com o Sandbox real do Mercado Pago
-5. **Corrigir issues críticas do audit** — `AUDIT_REPORT.md` lista 4 critical + 8 high ainda não resolvidos (C1-C4, H1-H8)
+**Railway**: 4 serviços (web, bot, PostGIS, Redis) em `https://web-production-ff262.up.railway.app`
+**PostGIS**: 3.7 com GEOS + PROJ + STATS — template `postgis` via CLI (`railway deploy --template postgis`)
+**Admin**: `admin@motogram.app` / `Admin123!@#` (superuser criado via `create_admin.py` no startup)
+**Domínio**: `web-production-ff262.up.railway.app` (Railway auto-generated)
+
+### ⚠️ Pendente
+
+1. **Domínio próprio** — não configurado (ex: motogram.app)
+2. **LICENSE** — referenciada mas não criada (AGPL-3.0)
+3. **MP webhook Sandbox** — lógica implementada e testada com unit tests, mas não com o Sandbox real do Mercado Pago
+4. **Corrigir issues críticas do audit** — `AUDIT_REPORT.md` lista 4 critical + 8 high ainda não resolvidos
+5. **Testar fluxo completo real** — motorista registado + Telegram vinculado + corrida criada
 
 ---
 
@@ -299,13 +307,12 @@ cd bot && .venv/bin/python -m pytest tests/ -v
 
 ## Próximos Passos (ordem de prioridade)
 
-1. **Testar Live Location real** — motorista compartilha live location 8h no Telegram, confirmar `ultima_localizacao_em` atualiza no admin
-2. **Testar fluxo completo** — pedir corrida no site + aceitar/ofertar no Telegram + concluir e avaliar
-3. **Deploy Railway** — criar conta, linkar GitHub, configurar env vars
-4. **Criar admin superuser** no Railway: `python manage.py createsuperuser` com `tipo='admin'`
-5. **Teste real** — celular Android em 4G/3G: motorista no Telegram, passageiro no Chrome
-6. **LICENSE** — discutir e criar (AGPL-3.0)
-7. **MP webhook Sandbox** — testar com Sandbox real do Mercado Pago
+1. **Testar fluxo completo** — registar motorista no site, pagar assinatura, vincular Telegram, pedir corrida + aceitar/ofertar + concluir e avaliar
+2. **Testar Live Location real** — motorista compartilha live location no Telegram, confirmar no admin
+3. **Teste real 3G/4G** — celular Android: motorista no Telegram, passageiro no Chrome
+4. **LICENSE** — criar ficheiro LICENSE (AGPL-3.0)
+5. **MP webhook Sandbox** — testar com Sandbox real do Mercado Pago
+6. **Domínio próprio** — comprar e configurar (ex: motogram.app)
 
 ## Próximas Features (Fase 2 — backlog)
 

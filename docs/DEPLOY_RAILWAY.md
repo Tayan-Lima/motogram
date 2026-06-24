@@ -1,12 +1,16 @@
 # DEPLOY_RAILWAY.md — Guia de Deploy no Railway
 
-**Motogram GO** — deploy para dev team testar. Sem Mercado Pago (pagamentos desactivados).
-Simula produção: `DEBUG=False`, HTTPS, WhiteNoise para estáticos, Redis Geo Cache activo.
+**Motogram GO** — deploy de produção concluído em 2026-06-24.
+`DEBUG=False`, HTTPS, WhiteNoise para estáticos, Redis Geo Cache activo, PostGIS 3.7.
 
-**Ferramentas já configuradas:**
-- Railway CLI v5.23.0 instalado (`~/.railway/bin/railway`)
-- MCP Railway activo no OpenCode (gere deploys sem sair do editor)
-- `RAILWAY_API_KEY` definida em `.zshrc`
+**URL**: `https://web-production-ff262.up.railway.app`
+**Admin**: `https://web-production-ff262.up.railway.app/g7x9kadm/entrar/`
+**Bot**: `@MotoGram_Go_bot` (long-polling)
+
+**Ferramentas:**
+- Railway CLI v5.23.0 (`~/.railway/bin/railway`)
+- MCP Railway configurado em `opencode.json`
+- `RAILWAY_API_KEY` em `.zshrc`
 
 ---
 
@@ -48,16 +52,18 @@ O Railway vai criar um serviço automaticamente. Nos próximos passos vais organ
 
 ### 2.1 Serviço PostgreSQL + PostGIS
 
+**IMPORTANTE**: O template padrão `postgres` do Railway NÃO inclui PostGIS. Usar o template `postgis`:
+
+```bash
+# Usar CLI (NÃO o link web — cria projecto separado)
+railway deploy --template postgis
 ```
-Project Canvas → Create → Database → Add PostgreSQL
-→ Clica Deploy e aguarda ficar verde
-→ Abre a tab "Query" do serviço PostgreSQL
-→ Cola e executa:
-    CREATE EXTENSION postgis;
-→ Verifica:
-    SELECT PostGIS_Version();
-    -- Deve retornar algo como "3.5 USE_GEOS=1 USE_PROJ=1 USE_STATS=1"
-→ Anota o nome do serviço (normalmente "Postgres")
+
+O serviço será criado com nome `PostGIS` e imagem `postgis/postgis:16-master`. A extensão já vem pré-instalada:
+
+```sql
+CREATE EXTENSION postgis;   -- deve retornar: extension "postgis" already exists
+SELECT PostGIS_Version();    -- 3.7 USE_GEOS=1 USE_PROJ=1 USE_STATS=1
 ```
 
 ### 2.2 Serviço Redis
@@ -251,11 +257,15 @@ exit
 | Sintoma | Causa provável | Solução |
 |---------|---------------|---------|
 | 502 Bad Gateway | `gunicorn` não arrancou | `railway logs` → ver erro de startup (migrações? env var?) |
-| PostGIS não detectado | GDAL não instalado | Verificar `nixpacks.toml` na raiz do repo |
+| GDAL crash no migrate | Migration `0003` importa GIS sem GDAL | A migration tem `try/except` — se falhar, verificar se o fix está no GitHub |
+| PostGIS não disponível | Template `postgres` não tem PostGIS | Usar `railway deploy --template postgis` (NÃO o link web) |
 | Bot não responde | `TELEGRAM_TOKEN` errado ou bot bloqueado | `railway logs -s bot` → ver erro de autenticação Telegram |
-| Static files 404 | WhiteNoise não configurado | `railway shell` → `python manage.py collectstatic --noinput` |
-| Redis não conecta | `REDIS_URL` mal referenciada | Verificar nome do serviço Redis no `${{Redis.REDIS_URL}}` |
+| Static files 404 | WhiteNoise não configurado | `railway logs` → `python manage.py collectstatic --noinput` |
+| Redis não conecta | `REDIS_URL` mal referenciada | Verificar referência `${{Redis.REDIS_URL}}` nas env vars |
 | CSRF 403 | `CSRF_TRUSTED_ORIGINS` não inclui o domínio | Adicionar domínio Railway + fazer redeploy |
+| Free plan limit (5 serviços) | Serviços fantasmas ocupam slots | Verificar `unmergedChangesCount` no dashboard → Discard changes |
+| Railway não actualiza código | Build cache ou `railway redeploy` não puxa | Usar `railway up` (upload directo do código local) |
+| "Unknown error" ao aplicar changes | Mudanças conflituosas staged | Discard changes no dashboard, aplicar uma de cada vez |
 
 ---
 

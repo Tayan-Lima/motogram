@@ -28,7 +28,7 @@ Matching geo     WebSocket realtime       Multi-cidade
 - [x] `settings.py` com PostGIS, Redis, static files, env vars
 - [x] Modelos: `Utilizador`, `Motorista`, `Corrida`, `Assinatura` (ver `ARCHITECTURE.md`)
 - [x] Migrations + `manage.py migrate` local
-- [ ] Deploy staging no Railway + Supabase (validar infra cedo)
+- [x] Deploy produção no Railway (web + bot + PostGIS + Redis) — `https://web-production-ff262.up.railway.app`
 - [x] `.env` configurado com credenciais reais de staging
 - [x] Testes unitários: modelos (assinatura activa/inactiva, criação)
 
@@ -105,9 +105,9 @@ Matching geo     WebSocket realtime       Multi-cidade
 - [x] Cron job diário: bloquear motoristas com assinatura vencida
 - [x] Notificação automática 3 dias antes do vencimento
 - [x] Testes de ponta a ponta (fluxo completo passageiro + motorista)
-- [ ] Deploy estável no Railway (produção)
+- [x] Deploy estável no Railway (produção) — `https://web-production-ff262.up.railway.app`
 - [ ] Domínio configurado
-- [ ] Checklist de deploy (ver `TESTING.md`)
+- [x] Checklist de deploy (ver `DEPLOY_RAILWAY.md`)
 
 **Feito quando:** 5 motoristas conseguem cadastrar-se, pagar, ligar o Telegram e receber corridas. 10 passageiros conseguem pedir corrida via site e via bot.
 

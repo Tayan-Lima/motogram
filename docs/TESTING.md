@@ -36,10 +36,9 @@ backend/
 └── test_e2e.py                 (5 testes — fluxos completos)
 ```
 
-**Total: 82 testes Django, 0 falhas** (126 total incluindo Playwright + bot)
+**Total: 110 testes Django, 0 falhas** (159 total incluindo Playwright + bot)
 
-**Nota (2026-06-23):** Testes de cadastro agora exigem os campos
-`password` e `password_confirm` nos POSTs (mín. 6 caracteres). Ciclo de vida completo implementado — ver `docs/CHECKLIST_TESTES_MANUAIS.md` para testes manuais.
+**Nota (2026-06-24):** Testes de cadastro exigem `password` e `password_confirm` (mín. 6 caracteres). Ciclo de vida completo implementado. Deploy Railway concluído. Ver `docs/TESTES_MATCHING_GPS.md` para testes manuais.
 
 ---
 

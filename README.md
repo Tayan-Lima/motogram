@@ -34,7 +34,7 @@ Combina um **bot Telegram** para operação em tempo real com um **site mobile-f
 | Base de dados | PostgreSQL + PostGIS (Supabase) |
 | Cache | Redis (Upstash) |
 | Pagamentos | Mercado Pago (Pix) |
-| Deploy | Railway |
+| Deploy | Railway (`web-production-ff262.up.railway.app`) |
 
 ---
 
@@ -48,7 +48,7 @@ Combina um **bot Telegram** para operação em tempo real com um **site mobile-f
 | [ROADMAP.md](docs/ROADMAP.md) | Fases de desenvolvimento e backlog |
 | [CONVENTIONS.md](docs/CONVENTIONS.md) | Convenções de código e nomenclatura |
 | [TESTING.md](docs/TESTING.md) | Estratégia de testes e estrutura |
-| [CHECKLIST_TESTES_MANUAIS.md](docs/CHECKLIST_TESTES_MANUAIS.md) | Checklist de testes manuais — fluxo completo |
+| [TESTES_MATCHING_GPS.md](docs/TESTES_MATCHING_GPS.md) | Checklist de 17 testes manuais (matching + GPS) |
 | [HANDOFF.md](docs/HANDOFF.md) | Estado actual da sessão, bugs, prioridades |
 | [PASSENGER_APP.md](docs/PASSENGER_APP.md) | Interface do passageiro — stack, mapas OSM, polling, service worker |
 | [LIBRETAXI_INTEGRATION.md](docs/LIBRETAXI_INTEGRATION.md) | Referência do LibreTaxi — padrões de lógica adaptados para aiogram 3 |
@@ -60,9 +60,9 @@ Combina um **bot Telegram** para operação em tempo real com um **site mobile-f
 ## Setup Rápido
 
 ```bash
-git clone https://github.com/teu-user/motogram
+git clone https://github.com/Tayan-Lima/motogram
 cd motogram
-pip install -r requirements.txt
+source venv/bin/activate && pip install -r requirements.txt
 cp .env.example .env
 # editar .env com as credenciais
 
@@ -70,9 +70,8 @@ cd backend
 python manage.py migrate
 python manage.py runserver
 
-# Terminal separado — bot
-cd bot
-python main.py
+# Terminal separado — bot (env separado, Python 3.12 via uv)
+cd bot && .venv/bin/python main.py
 ```
 
 Ver [AGENTS.md](AGENTS.md) para setup completo.

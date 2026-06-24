@@ -70,6 +70,8 @@ source venv/bin/activate && pip install -r requirements.txt
 
 **Total**: 159 testes (105 Django + 36 bot + 18 Playwright).
 
+**Deploy em**: `https://web-production-ff262.up.railway.app` — Railway (4 serviços: web, bot, PostGIS, Redis).
+
 Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_cache/` existe — ruff foi usado pontualmente mas não está integrado.
 
 ---
@@ -89,6 +91,7 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 ### Processos & Deploy
 - **Dois processos**: `Procfile` → `web` (gunicorn, 2 workers) e `bot` (`python main.py`). Railway.
 - **Bot roda apenas em long-polling.** O endpoint `/api/bot/update/` é stub no-op. Não configurar webhook sem substituir o entrypoint.
+- **PostGIS no Railway**: usar `railway deploy --template postgis` (CLI, NÃO o link web — cria projecto separado). O template `postgis` usa `postgis/postgis:16-master`. Activar com `CREATE EXTENSION postgis` (já vem pré-instalada).
 
 ### User Model & Auth
 - **`AUTH_USER_MODEL = 'motoristas.Utilizador'`**. Sempre `get_user_model()` ou import de `motoristas.models`.
@@ -127,7 +130,7 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 - Todo model DEVE ter `__str__`.
 - Nunca usar `null=True` em CharField ou TextField — usar `blank=True, default=''`.
 - Sempre adicionar `select_related`/`prefetch_related` em querysets com FK/M2M que serão acedidos.
-- Variáveis de ambiente sem fallback hardcoded — falhar no startup se ausentes (excepção: `SECRET_KEY` tem fallback dev em `settings.py:11`; `TELEGRAM_TOKEN` e `BOT_SECRET` falham no startup tanto no Django quanto no bot).
+- Variáveis de ambiente sem fallback hardcoded — `SECRET_KEY` falha no Django com `ValueError`; `TELEGRAM_TOKEN` e `BOT_SECRET` validados apenas no arranque do bot (`bot/main.py:19-22`).
 - `except Exception: pass` proibido — sempre logar com `logger.warning()` ou `logger.debug()`.
 - Lógica de negócio em `services.py`. Views só orquestram (validar → service → resposta).
 - Endpoints que acedem dados de um utilizador específico devem verificar ownership.
@@ -159,7 +162,9 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 - Novo endpoint = novo teste de autenticação + happy path + erro 400.
 - Novo handler de bot = teste com Update simulado + estado FSM inválido.
 - E2E tests usam `@override_settings(BOT_SECRET="test-secret")`.
-- Bot tests precisam de env vars (`BOT_SECRET`, `BACKEND_URL`, `SITE_URL`, `TELEGRAM_TOKEN`) — injetadas via `bot/tests/conftest.py`.
+- Bot tests precisam de env vars (`BOT_SECRET`, `BACKEND_URL`, `SITE_URL`, `TELEGRAM_TOKEN`) — injetadas via `bot/tests/conftest.py` + dependência `requests-mock`.
+- Migrations são commitadas (`.gitignore` tem as linhas comentadas). Correr `makemigrations` e commitar os ficheiros gerados.
+- Antes de correr testes Playwright: `playwright install` (instala browsers Chromium).
 
 ### Performance (crítico para 3G)
 - Sempre adicionar `select_related`/`prefetch_related` em views que acedem FK.
