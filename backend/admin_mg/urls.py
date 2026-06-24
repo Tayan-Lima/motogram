@@ -18,6 +18,7 @@ urlpatterns = [
     # CRM — Utilizadores
     path(f"{PREFIX}/motoristas/", views.MotoristasListView.as_view(), name="motoristas"),
     path(f"{PREFIX}/motoristas/<int:motorista_id>/", views.MotoristaDetailView.as_view(), name="motorista_detalhe"),
+    path(f"{PREFIX}/passageiros-pendentes/", views.PassageirosPendentesView.as_view(), name="passageiros_pendentes"),
     path(f"{PREFIX}/passageiros/", views.PassageirosListView.as_view(), name="passageiros"),
     path(f"{PREFIX}/passageiros/<int:passageiro_id>/", views.PassageiroDetailView.as_view(), name="passageiro_detalhe"),
 

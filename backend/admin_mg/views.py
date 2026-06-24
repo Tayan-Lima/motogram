@@ -271,6 +271,17 @@ class MotoristaDetailView(AdminMixin, View):
         })
 
 
+class PassageirosPendentesView(AdminMixin, View):
+    """GET /{prefix}/passageiros-pendentes/ — passageiros com email nao confirmado."""
+
+    def get(self, request):
+        qs = Utilizador.objects.filter(tipo="passageiro", email_confirmado=False).order_by("-date_joined")
+        return render(request, "admin_mg/passageiros_pendentes.html", {
+            "passageiros": qs,
+            "prefix": PREFIX,
+        })
+
+
 class PassageirosListView(AdminMixin, View):
     """GET /{prefix}/passageiros/ — lista de passageiros."""
 
@@ -324,6 +335,10 @@ class PassageiroDetailView(AdminMixin, View):
 
         elif accao == "reativar":
             passageiro.is_active = True
+            passageiro.save()
+
+        elif accao == "confirmar_email":
+            passageiro.email_confirmado = True
             passageiro.save()
 
         elif accao == "excluir":

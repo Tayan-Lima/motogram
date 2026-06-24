@@ -37,6 +37,13 @@
             {% endif %}
         </div>
         <div class="flex gap-2 flex-wrap">
+            {% if not passageiro.email_confirmado %}
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="accao" value="confirmar_email">
+                <button type="submit" class="text-sm bg-accent text-white rounded-pill px-4 py-2 hover:bg-accent/90 transition-all">✓ Confirmar Email</button>
+            </form>
+            {% endif %}
             {% if passageiro.is_active %}
             <form method="POST" onsubmit="return confirm('Tem certeza que deseja bloquear este passageiro?')">
                 {% csrf_token %}
