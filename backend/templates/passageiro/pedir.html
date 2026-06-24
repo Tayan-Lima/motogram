@@ -348,6 +348,11 @@ function rideRequest() {
                         this.destinoLon = pos.lng;
                     });
                 }
+                const bounds = L.latLngBounds(
+                    [this.lat, this.lon],
+                    [this.destinoLat, this.destinoLon]
+                );
+                this._map.fitBounds(bounds, { padding: [50, 50] });
             } else if (this._markerDestino) {
                 this._map.removeLayer(this._markerDestino);
                 this._markerDestino = null;
