@@ -91,6 +91,7 @@ Sem linter, formatter, typecheck, pre-commit hooks ou CI configurados. `.ruff_ca
 ### Processos & Deploy
 - **Dois processos**: `Procfile` → `web` (gunicorn, 2 workers) e `bot` (`python main.py`). Railway.
 - **Bot roda apenas em long-polling.** O endpoint `/api/bot/update/` é stub no-op. Não configurar webhook sem substituir o entrypoint.
+- **Deploy automático via GitHub**: `git push origin main` dispara deploy no Railway (webhooks). Sempre push depois de commit — Railway detecta e faz build limpa. Se o deploy não actualizar código, usar `railway up` (upload directo).
 - **PostGIS no Railway**: usar `railway deploy --template postgis` (CLI, NÃO o link web — cria projecto separado). O template `postgis` usa `postgis/postgis:16-master`. Activar com `CREATE EXTENSION postgis` (já vem pré-instalada).
 
 ### User Model & Auth
