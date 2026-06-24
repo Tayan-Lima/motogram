@@ -7,13 +7,14 @@
     <div class="px-5 py-8 text-center border-b border-border">
         <div class="relative w-16 h-16 mx-auto mb-3">
             {% if user.foto %}
-            <img src="{{ user.foto.url }}" class="w-16 h-16 rounded-full object-cover">
-            {% else %}
+            <img src="{{ user.foto.url }}?v={{ user.foto.mtime|default:0 }}" class="w-16 h-16 rounded-full object-cover" :src="fotoUrl || '{{ user.foto.url }}' + fotoCacheBust" alt="Sua foto de perfil">
+            {% endif %}
+            {% if not user.foto %}
             <div class="w-16 h-16 rounded-full bg-gradient-to-br from-accent2 to-orange-300 flex items-center justify-center text-white text-xl font-bold">
                 {{ user.username|slice:":1"|upper }}
             </div>
             {% endif %}
-            <label class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-fg text-bg flex items-center justify-center cursor-pointer hover:bg-accent transition-all text-xs">
+            <label class="absolute -bottom-1 -right-1 w-9 h-9 min-w-[44px] min-h-[44px] rounded-full bg-fg text-bg flex items-center justify-center cursor-pointer hover:bg-accent transition-all text-sm" aria-label="Trocar foto de perfil">
                 📷
                 <input type="file" name="foto" accept="image/*" class="hidden" @change="uploadFoto($event)">
             </label>
@@ -28,12 +29,12 @@
     </div>
 
     <div class="px-5 py-5 flex gap-3">
-        <a href="{% url 'site_publico:pedir_corrida' %}" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm text-center hover:bg-accent transition-all">
+        <a href="{% url 'site_publico:pedir_corrida' %}" class="flex-1 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm text-center hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
             Pedir corrida
         </a>
-        <a href="{% url 'site_publico:logout' %}" class="px-5 py-3.5 border border-border rounded-pill text-sm text-muted hover:border-fg transition-all">
+        <button type="button" @click="abrirModalSair()" class="px-5 min-h-[44px] border border-border rounded-pill text-sm text-muted hover:border-accent2 hover:text-accent2 transition-all focus-visible:ring-2 focus-visible:ring-accent2">
             Sair
-        </a>
+        </button>
     </div>
 
     <div class="px-5 pb-5">
@@ -42,14 +43,22 @@
             <button @click="mostrarForm = !mostrarForm" class="text-xs text-accent font-semibold hover:text-accent/80 transition-colors" x-text="mostrarForm ? 'Cancelar' : 'Adicionar'"></button>
         </div>
 
-        <div x-show="mostrarForm" class="bg-surface border border-border rounded-2xl p-4 mb-3">
-            <input type="text" x-model="novoNome" placeholder="Nome do local (ex: Casa, Trabalho)" class="w-full mb-2 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="60">
-            <input type="text" x-model="novoRua" placeholder="Rua" class="w-full mb-2 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="120">
+        <div x-show="mostrarForm" x-transition.opacity.duration.200ms class="bg-surface border border-border rounded-2xl p-4 mb-3">
+            <label for="fav-nome" class="text-xs font-semibold text-muted uppercase tracking-wider mb-1 block">Nome do local</label>
+            <input type="text" id="fav-nome" x-model="novoNome" placeholder="Ex: Casa, Trabalho" class="w-full mb-2 px-3 py-3 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" maxlength="60" autocomplete="off">
+            <label for="fav-rua" class="text-xs font-semibold text-muted uppercase tracking-wider mb-1 block">Rua</label>
+            <input type="text" id="fav-rua" x-model="novoRua" placeholder="Nome da rua" class="w-full mb-2 px-3 py-3 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" maxlength="120" autocomplete="address-line1">
             <div class="flex flex-col sm:flex-row gap-2 mb-2">
-                <input type="text" x-model="novoNumero" placeholder="Número" class="w-full sm:flex-1 px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="10">
-                <input type="text" x-model="novoPontoRef" placeholder="Ponto de referência (opcional)" class="w-full sm:flex-[2] px-3 py-2.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" maxlength="200">
+                <div class="w-full sm:flex-1">
+                    <label for="fav-numero" class="text-xs font-semibold text-muted uppercase tracking-wider mb-1 block">Número</label>
+                    <input type="text" id="fav-numero" x-model="novoNumero" placeholder="Nº" class="w-full px-3 py-3 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" maxlength="10" inputmode="numeric" autocomplete="address-line2">
+                </div>
+                <div class="w-full sm:flex-[2]">
+                    <label for="fav-ref" class="text-xs font-semibold text-muted uppercase tracking-wider mb-1 block">Ponto de referência</label>
+                    <input type="text" id="fav-ref" x-model="novoPontoRef" placeholder="Ex: próximo à praça" class="w-full px-3 py-3 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" maxlength="200" autocomplete="off">
+                </div>
             </div>
-            <button @click="salvarFavorito()" class="w-full mt-1 bg-fg text-bg py-2.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+            <button type="button" @click="salvarFavorito()" class="w-full mt-1 bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
                 Salvar endereço
             </button>
         </div>
@@ -57,7 +66,7 @@
         {% if favoritos %}
         <div class="flex flex-col gap-2">
             {% for f in favoritos %}
-            <div class="bg-surface border border-border rounded-xl p-3 flex items-center gap-3">
+            <div class="bg-surface border border-border rounded-xl p-3 flex items-center gap-3" x-show="!removidosIds.includes({{ f.id }})">
                 <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -73,8 +82,8 @@
                     <p class="text-xs text-muted truncate">Ref: {{ f.ponto_referencia }}</p>
                     {% endif %}
                 </div>
-                <button @click="removerFavorito({{ f.id }})" class="text-muted hover:text-accent2 transition-colors shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" @click="abrirModalRemover({{ f.id }}, '{{ f.nome|escapejs }}')" class="text-muted hover:text-accent2 transition-colors shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Remover favorito {{ f.nome|escapejs }}">
+                    <svg class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
                 </button>
@@ -154,6 +163,57 @@
             <span class="text-xs font-semibold">Perfil</span>
         </span>
     </nav>
+
+    <!-- Modal: remover favorito -->
+    <div x-show="modalRemover" x-transition.opacity.duration.200ms
+         class="fixed inset-0 bg-fg/50 z-50 flex items-end sm:items-center justify-center px-4"
+         @click.self="fecharModalRemover()"
+         @keydown.escape.window="fecharModalRemover()"
+         role="dialog" aria-modal="true" aria-labelledby="modal-remover-titulo">
+        <div class="bg-surface w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5" @click.outside="fecharModalRemover()">
+            <h3 id="modal-remover-titulo" class="text-lg font-bold mb-2">Remover endereço?</h3>
+            <p class="text-sm text-muted mb-5" x-text="`O endereço &quot;${removerNome}&quot; será removido da sua lista.`"></p>
+            <div class="flex flex-col gap-2">
+                <button type="button" @click="confirmarRemover()"
+                        class="w-full bg-accent2 text-white py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-accent2/90 transition-all">
+                    Sim, remover
+                </button>
+                <button type="button" @click="fecharModalRemover()"
+                        class="w-full border border-border text-fg py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-bg transition-all">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: sair -->
+    <div x-show="modalSair" x-transition.opacity.duration.200ms
+         class="fixed inset-0 bg-fg/50 z-50 flex items-end sm:items-center justify-center px-4"
+         @click.self="fecharModalSair()"
+         @keydown.escape.window="fecharModalSair()"
+         role="dialog" aria-modal="true" aria-labelledby="modal-sair-titulo">
+        <div class="bg-surface w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5" @click.outside="fecharModalSair()">
+            <h3 id="modal-sair-titulo" class="text-lg font-bold mb-2">Sair da conta?</h3>
+            <p class="text-sm text-muted mb-5">Você precisará entrar novamente para pedir corridas.</p>
+            <div class="flex flex-col gap-2">
+                <a href="{% url 'site_publico:logout' %}" class="w-full bg-accent2 text-white py-3.5 min-h-[44px] rounded-pill font-semibold text-sm text-center hover:bg-accent2/90 transition-all">
+                    Sim, sair
+                </a>
+                <button type="button" @click="fecharModalSair()"
+                        class="w-full border border-border text-fg py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-bg transition-all">
+                    Continuar na conta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div x-show="toast" x-transition.opacity.duration.200ms
+         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)]"
+         role="status" aria-live="polite">
+        <div class="bg-fg text-bg rounded-pill px-5 py-3 text-sm font-medium text-center shadow-lg"
+             x-text="toast"></div>
+    </div>
 </div>
 {% endblock %}
 
@@ -166,21 +226,70 @@ function perfil() {
         novoRua: '',
         novoNumero: '',
         novoPontoRef: '',
+        modalRemover: false,
+        removerId: null,
+        removerNome: '',
+        modalSair: false,
+        removidosIds: [],
+        toast: '',
+        _toastTimer: null,
+        fotoUrl: null,
+        fotoCacheBust: '',
+
+        mostrarToast(msg, ms = 5000) {
+            this.toast = msg;
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => { this.toast = ''; }, ms);
+        },
+
+        fetchComTimeout(url, options = {}, ms = 10000) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), ms);
+            return fetch(url, { ...options, signal: controller.signal })
+                .finally(() => clearTimeout(timeout));
+        },
 
         uploadFoto(event) {
             const file = event.target.files[0];
             if (!file) return;
+            if (file.size > 4 * 1024 * 1024) {
+                this.mostrarToast('Imagem muito grande (máx. 4MB).', 6000);
+                event.target.value = '';
+                return;
+            }
             const fd = new FormData();
             fd.append('foto', file);
-            fetch('/passageiro/upload-foto/', { method: 'POST', headers: { 'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '' }, body: fd })
-                .then(r => r.json()).then(d => { if (d.ok) window.location.reload(); });
+            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            this.fetchComTimeout('/passageiro/upload-foto/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrf },
+                body: fd,
+            }, 15000)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        this.fotoCacheBust = '?v=' + Date.now();
+                        this.mostrarToast('✅ Foto atualizada!');
+                    } else if (d.erro) {
+                        this.mostrarToast(d.erro, 6000);
+                    }
+                    event.target.value = '';
+                })
+                .catch(e => {
+                    if (e && e.name === 'AbortError') {
+                        this.mostrarToast('Conexão lenta. A foto pode não ter sido enviada.', 6000);
+                    } else {
+                        this.mostrarToast('Sem conexão. Tente novamente.', 6000);
+                    }
+                    event.target.value = '';
+                });
         },
 
         async salvarFavorito() {
             if (!this.novoNome.trim()) return;
             if (!this.novoRua.trim()) return;
             try {
-                const resp = await fetch('/api/passageiros/favoritos/criar/', {
+                const resp = await this.fetchComTimeout('/api/passageiros/favoritos/criar/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -192,24 +301,52 @@ function perfil() {
                         numero: this.novoNumero.trim(),
                         ponto_referencia: this.novoPontoRef.trim(),
                     }),
-                });
+                }, 10000);
                 if (resp.ok) {
                     window.location.reload();
+                } else {
+                    const d = await resp.json().catch(() => ({}));
+                    this.mostrarToast(d.erro || 'Não foi possível salvar agora.', 6000);
                 }
-            } catch(e) {}
+            } catch(e) {
+                this.mostrarToast('Sem conexão. Tente novamente.', 6000);
+            }
         },
 
-        async removerFavorito(id) {
+        abrirModalRemover(id, nome) {
+            this.removerId = id;
+            this.removerNome = nome;
+            this.modalRemover = true;
+        },
+        fecharModalRemover() {
+            this.modalRemover = false;
+            this.removerId = null;
+            this.removerNome = '';
+        },
+        async confirmarRemover() {
+            const id = this.removerId;
+            this.fecharModalRemover();
+            if (id == null) return;
             try {
-                await fetch(`/api/passageiros/favoritos/${id}/remover/`, {
+                const resp = await this.fetchComTimeout(`/api/passageiros/favoritos/${id}/remover/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
                     },
-                });
-                window.location.reload();
-            } catch(e) {}
+                }, 10000);
+                if (resp.ok) {
+                    this.removidosIds.push(id);
+                    this.mostrarToast('Endereço removido.');
+                } else {
+                    this.mostrarToast('Não foi possível remover agora.', 6000);
+                }
+            } catch(e) {
+                this.mostrarToast('Sem conexão. Tente novamente.', 6000);
+            }
         },
+
+abrirModalSair() { this.modalSair = true; },
+         fecharModalSair() { this.modalSair = false; },
     };
 }
 </script>

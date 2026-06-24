@@ -9,3 +9,4 @@ class MotoristaStates(StatesGroup):
     em_corrida = State()
     contra_oferta = State()
     aguardando_comentario_avaliacao = State()
+    confirmando_localizacao_aceite = State()

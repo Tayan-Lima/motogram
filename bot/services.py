@@ -191,3 +191,41 @@ def avaliar_passageiro(corrida_id: int, motorista_telegram_id: int, nota: int | 
     except requests.RequestException as e:
         logger.error("avaliar_passageiro erro: %s", e)
         return {"erro": "Erro de conexão com o servidor."}
+
+
+def atualizar_localizacao(telegram_id: int, latitude: float, longitude: float) -> dict:
+    try:
+        resp = requests.post(
+            f"{BACKEND_URL}/api/motoristas/atualizar-localizacao/",
+            json={
+                "telegram_id": telegram_id,
+                "latitude": latitude,
+                "longitude": longitude,
+            },
+            headers=_headers(),
+            timeout=5,
+        )
+        data = resp.json()
+        if not resp.ok:
+            logger.warning("atualizar_localizacao falhou: %s %s", resp.status_code, data)
+        return data
+    except requests.RequestException as e:
+        logger.error("atualizar_localizacao erro: %s", e)
+        return {"erro": "Erro de conexão com o servidor."}
+
+
+def toggle_online(telegram_id: int, activo: bool) -> dict:
+    try:
+        resp = requests.post(
+            f"{BACKEND_URL}/api/motoristas/toggle-online-bot/",
+            json={"telegram_id": telegram_id, "activo": activo},
+            headers=_headers(),
+            timeout=5,
+        )
+        data = resp.json()
+        if not resp.ok:
+            logger.warning("toggle_online falhou: %s %s", resp.status_code, data)
+        return data
+    except requests.RequestException as e:
+        logger.error("toggle_online erro: %s", e)
+        return {"erro": "Erro de conexão com o servidor."}

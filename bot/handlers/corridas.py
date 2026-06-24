@@ -1,7 +1,7 @@
 """Handlers de corridas — aceitar, ofertar, recusar, concluir."""
 
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.context import FSMContext
 
 import messages
@@ -23,6 +23,25 @@ async def aceitar_corrida(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Dados inválidos.", show_alert=True)
         return
 
+    verificacao = services.verificar_assinatura(callback.from_user.id)
+    if not verificacao.get("active"):
+        await callback.answer("Assinatura inativa.", show_alert=True)
+        return
+
+    if verificacao.get("localizacao_desatualizada"):
+        await state.update_data(aceitar_corrida_id=corrida_id, aceitar_valor=valor)
+        await state.set_state(MotoristaStates.confirmando_localizacao_aceite)
+        await callback.message.answer(
+            messages.LOCALIZACAO_DESATUALIZADA,
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="📍 Compartilhar localização", request_location=True)]],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            ),
+        )
+        await callback.answer()
+        return
+
     resultado = services.aceitar_corrida(
         corrida_id=corrida_id,
         motorista_telegram_id=callback.from_user.id,
@@ -39,6 +58,55 @@ async def aceitar_corrida(callback: CallbackQuery, state: FSMContext):
     )
     await state.set_state(MotoristaStates.aguardando_oferta)
     await callback.answer("Oferta enviada!")
+
+
+@router.message(MotoristaStates.confirmando_localizacao_aceite, F.location)
+async def receber_localizacao_aceite(message: Message, state: FSMContext):
+    lat = message.location.latitude
+    lon = message.location.longitude
+
+    resultado_loc = services.atualizar_localizacao(
+        telegram_id=message.from_user.id,
+        latitude=lat,
+        longitude=lon,
+    )
+    if "erro" in resultado_loc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("atualizar_localizacao falhou no fluxo de aceite para tg=%s: %s", message.from_user.id, resultado_loc["erro"])
+
+    data = await state.get_data()
+    corrida_id = data.get("aceitar_corrida_id")
+    valor = data.get("aceitar_valor", 0.0)
+
+    if not corrida_id:
+        await message.answer(messages.ERRO_GENERICO)
+        await state.set_state(MotoristaStates.disponivel)
+        return
+
+    await message.answer(messages.LOCALIZACAO_ATUALIZADA)
+
+    resultado = services.aceitar_corrida(
+        corrida_id=corrida_id,
+        motorista_telegram_id=message.from_user.id,
+    )
+
+    if "erro" in resultado:
+        await message.answer(resultado["erro"])
+        await state.set_state(MotoristaStates.disponivel)
+        return
+
+    await message.answer(
+        f"✅ *Oferta enviada!*\n\nAguardando o passageiro escolher...\n\n💰 R$ {valor:.2f}",
+        parse_mode="Markdown",
+    )
+    await state.set_state(MotoristaStates.aguardando_oferta)
+
+
+@router.message(MotoristaStates.confirmando_localizacao_aceite, F.text == "/cancel")
+async def cancelar_confirmacao_localizacao(message: Message, state: FSMContext):
+    await state.set_state(MotoristaStates.disponivel)
+    await message.answer("Operação cancelada.")
 
 
 @router.callback_query(F.data.startswith("recusar:"))

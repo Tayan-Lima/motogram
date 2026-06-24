@@ -8,7 +8,9 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY deve ser definida em producao")
 
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
@@ -39,8 +41,9 @@ if _USE_POSTGIS:
     INSTALLED_APPS.insert(6, 'django.contrib.gis')
 
 MIDDLEWARE = [
-    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -76,6 +79,7 @@ if DATABASE_URL:
         'default': dj_database_url.parse(DATABASE_URL, engine=engine)
     }
     DATABASES['default']['TEST'] = {'NAME': 'test_motogram'}
+    DATABASES['default']['CONN_MAX_AGE'] = 300
 else:
     # Desenvolvimento local — SQLite (sem PostGIS)
     DATABASES = {
@@ -106,6 +110,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -150,6 +155,8 @@ print(f"[Motogram] Diagnóstico: BOT_SECRET hash={_BOT_SECRET_HASH} BACKEND_URL=
 PRECO_ASSINATURA_MENSAL = int(os.environ.get('PRECO_ASSINATURA_MENSAL', '6900'))
 
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+
+ADMIN_SECRET_PATH = os.environ.get('ADMIN_SECRET_PATH', 'admin_mg')
 
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 MP_WEBHOOK_SECRET = os.environ.get('MP_WEBHOOK_SECRET', '')

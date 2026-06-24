@@ -331,7 +331,7 @@ transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
 | `motogram-acompanhar-corrida.html` | Acompanhar corrida | Mapa + info motorista |
 | `motogram-perfil-passageiro.html` | Perfil passageiro | Settings, toggle switches |
 | `motogram-historico-corridas.html` | Histórico | Lista com filtros |
-| `motogram-dashboard-motorista.html` | Dashboard motorista | Ganhos, toggle online/offline |
+| `motogram-dashboard-motorista.html` | Dashboard motorista | Ganhos, badge online/offline (informativo) |
 
 ---
 

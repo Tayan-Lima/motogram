@@ -3,54 +3,52 @@
 BOAS_VINDAS = (
     "🏍️ *Bem-vindo ao Motogram GO!*\n\n"
     "Este bot é exclusivo para motoristas cadastrados.\n\n"
-    "Para começar, envie o *token de ativação* que está no seu painel "
-    "em {link}"
+    "Para começar, envie o *token de ativação* que está em "
+    "[seu painel]({link})"
 )
 
 TOKEN_INVALIDO = (
     "❌ *Token inválido ou expirado.*\n\n"
-    "Gere um novo no site:\n{link}"
+    "[Gerar novo token]({link})"
 )
 
 TOKEN_JA_VINCULADO = (
     "⚠️ Este motorista já está vinculado a outra conta Telegram.\n"
-    "Contacte o suporte se precisar de ajuda."
+    "Entre em contato com o suporte se precisar de ajuda."
 )
 
 MENU_PRINCIPAL = (
     "🏍️ *Olá, {nome}!*\n\n"
-    "O que queres fazer?"
+    "O que você quer fazer?"
 )
 
 STATUS_ATIVO = (
     "✅ *Assinatura ativa*\n"
     "Válida até {data}\n\n"
-    "Usa o botão abaixo para ficar online."
+    "Use o botão abaixo para ficar online."
 )
 
 STATUS_INATIVO = (
     "❌ *Assinatura inativa*\n\n"
-    "Renove em: {link}"
+    "[Renove sua assinatura]({link})"
 )
 
 FICAR_ONLINE = (
-    "🟢 *Estás online!*\n\n"
-    "Receberás notificações de corridas na tua zona.\n"
-    "Se receberes uma solicitação, responde rápido — "
-    "o passageiro escolhe entre os motoristas que responderem."
+    "🟢 *Você está online!*\n\n"
+    "Você receberá notificações de corridas na sua região."
 )
 
 FICAR_OFFLINE = (
-    "🔴 *Estás offline.*\n\n"
-    "Não receberás novas solicitações de corrida."
+    "🔴 *Você está offline.*\n\n"
+    "Você não receberá novas solicitações de corrida."
 )
 
 JA_ESTA_ONLINE = (
-    "🟢 Já estás online e pronto para corridas!"
+    "🟢 Você já está online e pronto para corridas!"
 )
 
 JA_ESTA_OFFLINE = (
-    "🔴 Já estás offline."
+    "🔴 Você já está offline."
 )
 
 NOVA_CORRIDA = (
@@ -60,12 +58,12 @@ NOVA_CORRIDA = (
     "📍 Para: {destino}\n"
     "📏 Distância: ~{distancia} km\n"
     "{ponto_referencia}"
-    "⏱️ Responde em até 60 segundos!"
+    "⏱️ Responda em até 60 segundos!"
 )
 
 OFERTA_ENVIADA = (
     "💬 *Contra-oferta enviada!*\n\n"
-    "Ofereceste R$ {valor:.2f}\n"
+    "Você ofereceu R$ {valor:.2f}\n"
     "Aguardando resposta do passageiro..."
 )
 
@@ -79,13 +77,13 @@ CORRIDA_CONFIRMADA = (
     "📍 Origem: {origem}\n"
     "📍 Destino: {destino}\n"
     "👤 Passageiro: {passageiro}\n"
-    "📞 Contacto: {telefone}\n\n"
+    "📞 Contato: {telefone}\n\n"
     "Boa corrida! 🏍️"
 )
 
 CORRIDA_NAO_ESCOLHIDA = (
     "🤷 O passageiro escolheu outro motorista.\n"
-    "Fica online para novas solicitações!"
+    "Fique online para novas solicitações!"
 )
 
 CORRIDA_EXPIRADA = (
@@ -112,7 +110,7 @@ CORRIDA_CONCLUIDA = (
 )
 
 DIGITE_OFERTA = (
-    "💬 Qual o valor que queres cobrar?\n\n"
+    "💬 Qual o valor que você quer cobrar?\n\n"
     "Digite apenas o número (ex: 15.50)"
 )
 
@@ -126,16 +124,17 @@ AJUDA = (
     "📊 *Status* — vê estado da assinatura\n"
     "📋 *Ganhos* — resumo no site\n"
     "🏍️ *Conta* — gerencie seu cadastro\n"
+    "📍 *Live Location* — compartilhe localização em tempo real para receber corridas\n"
     "❓ *Ajuda* — esta mensagem\n\n"
-    "Dúvidas? motogram.app"
+    "Dúvidas? [motogram.app](https://motogram.app)"
 )
 
 ERRO_INTERNO = (
-    "❌ Erro interno. Tenta novamente mais tarde."
+    "❌ Erro interno. Tente novamente mais tarde."
 )
 
 ERRO_GENERICO = (
-    "❌ Ocorreu um erro. Tenta novamente mais tarde."
+    "❌ Ocorreu um erro. Tente novamente mais tarde."
 )
 
 LIMPAR_CHAT = "🧹 Limpar Chat"
@@ -151,7 +150,25 @@ AVALIAR_PASSAGEIRO = (
 )
 
 COMENTARIO_PEDIDO = (
-    "Conta o que aconteceu:\n(ou clica Pular para não comentar)"
+    "Conte o que aconteceu:\n(ou clique em Pular para não comentar)"
 )
 
 AVALIACAO_REGISTRADA = "✅ Avaliação registrada! Obrigado pelo feedback."
+
+LOCALIZACAO_DESATUALIZADA = (
+    "📍 Sua localização está desatualizada.\n\n"
+    "Para confirmar que está próximo do passageiro, "
+    "compartilhe sua localização atual."
+)
+
+LOCALIZACAO_ATUALIZADA = "✅ Localização atualizada! Processando seu aceite..."
+
+INSTRUCAO_LIVE_LOCATION = (
+    "📍 *Compartilhe sua localização em tempo real*\n\n"
+    "Para receber corridas próximas automaticamente:\n"
+    "1. Toque no ícone 📎 (clipe)\n"
+    "2. Selecione *Localização*\n"
+    "3. Escolha *Localização em tempo real*\n"
+    "4. Defina a duração para *8 horas*\n\n"
+    "Sua localização será atualizada automaticamente a cada minuto."
+)

@@ -5,6 +5,7 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from aiogram.types import CallbackQuery, Message
 from handlers.corridas import (
     aceitar_corrida, recusar_corrida, ofertar_corrida, concluir_corrida_callback,
+    receber_localizacao_aceite,
 )
 
 
@@ -25,6 +26,20 @@ def _make_cb(data, user_id=123456789):
     return cb
 
 
+def _make_msg(user_id=123456789, text="ok"):
+    msg = MagicMock(spec=Message)
+    msg.from_user = MagicMock()
+    msg.from_user.id = user_id
+    msg.chat = MagicMock()
+    msg.chat.id = user_id
+    msg.text = text
+    msg.answer = AsyncMock()
+    msg.location = MagicMock()
+    msg.location.latitude = -3.1
+    msg.location.longitude = -60.0
+    return msg
+
+
 @pytest.mark.asyncio
 async def test_aceitar_corrida():
     cb = _make_cb("aceitar:42:12.00")
@@ -35,6 +50,64 @@ async def test_aceitar_corrida():
         await aceitar_corrida(cb, state)
 
     cb.answer.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_aceitar_corrida_localizacao_desatualizada():
+    """Se localização >30min, pede GPS antes de aceitar."""
+    cb = _make_cb("aceitar:42:12.00")
+    state = AsyncMock()
+
+    with patch("handlers.corridas.services.verificar_assinatura") as mock_ver:
+        mock_ver.return_value = {
+            "active": True,
+            "localizacao_desatualizada": True,
+        }
+        with patch("handlers.corridas.services.aceitar_corrida") as mock_aceitar:
+            await aceitar_corrida(cb, state)
+
+    state.set_state.assert_called()
+    mock_aceitar.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_aceitar_corrida_localizacao_fresca():
+    """Se localização é fresca, aceita directamente."""
+    cb = _make_cb("aceitar:42:12.00")
+    state = AsyncMock()
+
+    with patch("handlers.corridas.services.verificar_assinatura") as mock_ver:
+        mock_ver.return_value = {
+            "active": True,
+            "localizacao_desatualizada": False,
+        }
+        with patch("handlers.corridas.services.aceitar_corrida") as mock_aceitar:
+            mock_aceitar.return_value = {"ok": True}
+            await aceitar_corrida(cb, state)
+
+    mock_aceitar.assert_called_once()
+    cb.answer.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_receber_localizacao_aceite():
+    """Handler de location após pedido de GPS no fluxo de aceitar."""
+    msg = _make_msg()
+    state = AsyncMock()
+    state.get_data.return_value = {"aceitar_corrida_id": 42, "aceitar_valor": 12.0}
+
+    with patch("handlers.corridas.services.atualizar_localizacao") as mock_loc:
+        mock_loc.return_value = {"ok": True}
+        with patch("handlers.corridas.services.aceitar_corrida") as mock_aceitar:
+            mock_aceitar.return_value = {"ok": True}
+            await receber_localizacao_aceite(msg, state)
+
+    mock_loc.assert_called_once_with(
+        telegram_id=123456789, latitude=-3.1, longitude=-60.0
+    )
+    mock_aceitar.assert_called_once_with(
+        corrida_id=42, motorista_telegram_id=123456789
+    )
 
 
 @pytest.mark.asyncio

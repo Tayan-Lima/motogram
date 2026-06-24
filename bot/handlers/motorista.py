@@ -64,8 +64,17 @@ async def ficar_online(message: Message, state: FSMContext):
         )
         return
 
+    resultado_toggle = services.toggle_online(message.from_user.id, True)
+    if "erro" in resultado_toggle:
+        await message.answer(messages.ERRO_GENERICO, parse_mode="Markdown")
+        return
+
     await message.answer(
         messages.FICAR_ONLINE,
+        parse_mode="Markdown",
+    )
+    await message.answer(
+        messages.INSTRUCAO_LIVE_LOCATION,
         parse_mode="Markdown",
         reply_markup=_menu_online(),
     )
@@ -74,6 +83,11 @@ async def ficar_online(message: Message, state: FSMContext):
 
 @router.message(F.text == "🔴 Ficar Offline")
 async def ficar_offline(message: Message, state: FSMContext):
+    resultado_toggle = services.toggle_online(message.from_user.id, False)
+    if "erro" in resultado_toggle:
+        await message.answer(messages.ERRO_GENERICO, parse_mode="Markdown")
+        return
+
     await message.answer(
         messages.FICAR_OFFLINE,
         parse_mode="Markdown",
@@ -101,7 +115,9 @@ async def meu_status(message: Message):
 @router.message(F.text == "📋 Ganhos")
 async def ganhos(message: Message):
     await message.answer(
-        f"📊 *Ganhos*\n\nO resumo completo está no site:\n{SITE_URL}/motorista/dashboard/",
+        f"📊 *Ganhos*\n\n"
+        f"O resumo completo está no site:\n"
+        f"[Ver ganhos no site]({SITE_URL}/motorista/dashboard/)",
         parse_mode="Markdown",
     )
 
@@ -109,7 +125,9 @@ async def ganhos(message: Message):
 @router.message(F.text == "🏍️ Minha Conta")
 async def minha_conta(message: Message):
     await message.answer(
-        f"🏍️ *Minha Conta*\n\nGere o seu token, veja assinatura e mais:\n{SITE_URL}/motorista/conta/",
+        f"🏍️ *Minha Conta*\n\n"
+        f"Gere o seu token, veja assinatura e mais:\n"
+        f"[Acessar minha conta]({SITE_URL}/motorista/conta/)",
         parse_mode="Markdown",
     )
 
@@ -122,6 +140,21 @@ async def cmd_status(message: Message):
 @router.message(Command("ganhos"))
 async def cmd_ganhos(message: Message):
     await ganhos(message)
+
+
+@router.edited_message(F.location)
+async def receber_localizacao_live(message: Message):
+    verificacao = services.verificar_assinatura(message.from_user.id)
+    if not verificacao.get("active"):
+        return
+
+    lat = message.location.latitude
+    lon = message.location.longitude
+    services.atualizar_localizacao(
+        telegram_id=message.from_user.id,
+        latitude=lat,
+        longitude=lon,
+    )
 
 
 @router.message(F.text == "🧹 Limpar Chat")

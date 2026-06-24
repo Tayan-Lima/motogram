@@ -15,11 +15,12 @@
         <div x-show="!mapaPronto" class="absolute inset-0 bg-bg flex items-center justify-center z-10">
             <div class="text-center px-6">
                 <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-8 h-8 text-accent animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
                     </svg>
                 </div>
                 <h2 class="text-lg font-bold mb-1">Carregando mapa...</h2>
+                <p class="text-sm text-muted" role="status" aria-live="polite">Baixando o mapa...</p>
             </div>
         </div>
     </div>
@@ -109,9 +110,9 @@
                     </template>
                 </div>
                 <div x-show="notaAvaliacao > 0 && notaAvaliacao <= 2" class="mb-3">
-                    <textarea x-model="comentarioAvaliacao" placeholder="Conta o que aconteceu (opcional)..."
-                              class="w-full border-1.5 border-border rounded-xl px-3 py-2.5 text-sm focus:border-fg focus:outline-none transition-colors resize-none"
-                              rows="2" maxlength="500"></textarea>
+                    <textarea id="comentario-avaliacao" x-model="comentarioAvaliacao" placeholder="Conte o que aconteceu (opcional)..."
+                              class="w-full border-1.5 border-border rounded-xl px-3 py-2.5 text-base focus:border-fg focus:outline-none transition-colors resize-none"
+                              rows="2" maxlength="500" autocomplete="off"></textarea>
                 </div>
                 <button x-show="notaAvaliacao > 0" @click="enviarAvaliacao()"
                         class="w-full bg-accent text-white py-2.5 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all"
@@ -120,7 +121,7 @@
                     <span x-show="enviandoAvaliacao">Enviando...</span>
                 </button>
             </div>
-            <p x-show="avaliacaoEnviada" class="text-sm text-accent font-semibold mb-4">✅ Obrigado pela avaliação!</p>
+            <p x-show="avaliacaoEnviada" class="text-sm text-accent font-semibold mb-4" role="status" aria-live="polite">✅ Obrigado pela avaliação!</p>
 
             <a href="/passageiro/" class="inline-block w-full bg-fg text-bg py-3.5 rounded-pill font-semibold text-sm hover:bg-accent transition-all">
                 Pedir nova corrida
@@ -143,6 +144,14 @@
                 Pedir outra corrida
             </a>
         </div>
+    </div>
+
+    <!-- Toast -->
+    <div x-show="toast" x-transition.opacity.duration.200ms
+         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)]"
+         role="status" aria-live="polite">
+        <div class="bg-fg text-bg rounded-pill px-5 py-3 text-sm font-medium text-center shadow-lg"
+             x-text="toast"></div>
     </div>
 </div>
 {% endblock %}
@@ -168,6 +177,21 @@ function acompanhar(corridaId) {
         comentarioAvaliacao: '',
         enviandoAvaliacao: false,
         avaliacaoEnviada: false,
+        toast: '',
+        _toastTimer: null,
+
+        mostrarToast(msg, ms = 5000) {
+            this.toast = msg;
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => { this.toast = ''; }, ms);
+        },
+
+        fetchComTimeout(url, options = {}, ms = 10000) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), ms);
+            return fetch(url, { ...options, signal: controller.signal })
+                .finally(() => clearTimeout(timeout));
+        },
 
         get statusTexto() {
             const textos = {
@@ -225,6 +249,7 @@ function acompanhar(corridaId) {
             const map = L.map(container, {
                 zoomAnimation: false,
                 fadeAnimation: false,
+                zoomControl: false,
             }).setView([origemLat, origemLon], 15);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -232,11 +257,13 @@ function acompanhar(corridaId) {
                 crossOrigin: true,
             }).addTo(map);
 
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
             this._map = map;
 
             L.marker([origemLat, origemLon])
                 .addTo(map)
-                .bindPopup('Origem');
+                .bindTooltip('Origem', { permanent: true, direction: 'top', className: 'tooltip-mg' });
 
             {% if corrida.destino_lat %}
             {% localize off %}
@@ -245,12 +272,13 @@ function acompanhar(corridaId) {
             {% endlocalize %}
             L.marker([destinoLat, destinoLon])
                 .addTo(map)
-                .bindPopup('Destino');
+                .bindTooltip('Destino', { permanent: true, direction: 'top', className: 'tooltip-mg' });
             map.fitBounds([[origemLat, origemLon], [destinoLat, destinoLon]], { padding: [50, 50] });
             {% endif %}
 
             setTimeout(() => map.invalidateSize(), 300);
             setTimeout(() => map.invalidateSize(), 800);
+            map.on('load', () => { this.mapaPronto = true; });
             this.mapaPronto = true;
         },
 
@@ -259,20 +287,28 @@ function acompanhar(corridaId) {
             this.enviandoAvaliacao = true;
             try {
                 const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
-                const resp = await fetch(`/api/corridas/${corridaId}/avaliar/`, {
+                const resp = await this.fetchComTimeout(`/api/corridas/${corridaId}/avaliar/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
                     body: JSON.stringify({
                         nota: this.notaAvaliacao,
                         comentario: this.comentarioAvaliacao.trim(),
                     }),
-                });
+                }, 12000);
                 const data = await resp.json();
                 if (data.ok) {
                     this.avaliacaoEnviada = true;
                     this.avaliado = true;
+                } else if (data.erro) {
+                    this.mostrarToast(data.erro, 6000);
                 }
-            } catch(e) {}
+            } catch(e) {
+                if (e && e.name === 'AbortError') {
+                    this.mostrarToast('Conexão lenta. Sua avaliação pode não ter sido enviada.', 6000);
+                } else {
+                    this.mostrarToast('Sem conexão. Tente novamente em instantes.', 6000);
+                }
+            }
             this.enviandoAvaliacao = false;
         },
 
@@ -280,7 +316,7 @@ function acompanhar(corridaId) {
             if (this.status === 'concluida' || this.status === 'cancelada') return;
 
             try {
-                const resp = await fetch(`/api/corridas/${corridaId}/status/`);
+                const resp = await this.fetchComTimeout(`/api/corridas/${corridaId}/status/`, {}, 8000);
                 const data = await resp.json();
                 this.status = data.status;
 
@@ -316,6 +352,9 @@ function acompanhar(corridaId) {
 
                 setTimeout(() => this.poll(), proximo);
             } catch (e) {
+                if (e && e.name === 'AbortError') {
+                    this.mostrarToast('Sem conexão. Tentando novamente...', 4000);
+                }
                 setTimeout(() => this.poll(), 15000);
             }
         },

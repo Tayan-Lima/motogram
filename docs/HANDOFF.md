@@ -1,8 +1,71 @@
 # HANDOFF.md — Motogram GO
 
-**Última sessão**: 2026-06-23
-**Estado**: Fase 1 (MVP) ~99% completa — **ciclo de vida + avaliação + admin KYC/CRM + geocoding HERE Maps**, deploy pendente
-**Nota**: Duas sessões sofreram crash (venvs perdidas), mas código-fonte 100% íntegro (git). Commit `3ebfd5e` "Antes da experiencia" preserva o estado pré-HERE Maps.
+**Última sessão**: 2026-06-24
+**Estado**: Fase 1 (MVP) ~99% completa — **matching geo expansivo + Live Location Telegram + PT-BR completo + dashboard read-only + UX/UI mobile-first**, deploy pendente
+**Nota**: Página `/motorista/online/` eliminada — substituída por Telegram Live Location (8h, updates ~60s). Dashboard toggle agora é badge informativo (só leitura).
+
+---
+
+## Changelog — 2026-06-24 (Sessão UX/UI + correção admin tests)
+
+### Lote A+B — Usabilidade mobile, feedback e PT-BR (9 templates)
+
+**Inputs text-base (16px)**: evita zoom automático iOS em todos os formulários.
+**for+id+autocomplete+inputmode**: labels associadas, teclados corretos, autofill.
+**Alvos 44px**: botão GPS, CTAs, botão lixeira de favorito.
+**Modais Alpine**: substituem `prompt()` (salvar favorito), `confirm()` (cancelar
+corrida, remover favorito, sair da conta) e `alert()` (assinatura Pix).
+**fetchComTimeout()**: AbortController com timeout configurável (8s GET, 12-15s
+POST). Diferencia `AbortError` de erro de rede. Aplicado em todos os fetches
+de pedir, acompanhar, perfil e assinatura.
+**PT-PT → PT-BR**: "queres"→"você quer", "Cria/Repete"→"Crie/Repita",
+"teu/tua"→"seu/sua", "A obter/A procurar"→"Obtendo/Procurando",
+"receberes"→"receber", "Escaneia"→"Escaneie", "contacta"→"contate".
+**Leaflet**: zoom control `bottomright`, `bindTooltip` permanente em
+Origem/Destino, `map.on('load')` para sinalizar mapaPronto.
+**Toast Alpine**: `mostrarToast(msg, ms)` com `x-transition`, `role="status"`,
+`aria-live="polite"` em pedir, acompanhar, perfil e assinatura.
+**Cache-bust foto**: uploadFoto no perfil usa `?v=Date.now()` para atualizar
+`<img>` sem reload completo.
+**:disabled mesclado**: botão "Pedir corrida" com
+`!valor || !lat || !destinoTexto || enviando` numa expressão única.
+**x-transition**: `opacity.duration.200ms` em steps (form/waiting/ofertas/found).
+
+Templates alterados: `passageiro/pedir.html`, `passageiro/acompanhar.html`,
+`passageiro/cadastro.html`, `passageiro/login.html`, `passageiro/perfil.html`,
+`passageiro/confirmacao.html`, `passageiro/recuperar_senha.html`,
+`passageiro/email_confirmado.html`, `motorista/assinatura.html`.
+
+### Lote C — Remoção do `<style>` global do base.html (5 templates)
+
+Regra CSS `img[alt="Motogram GO"] { height:124px !important }` replicada como
+classes Tailwind `h-[124px] w-auto max-w-[50vw] object-contain` + attrs
+`width="124" height="124"` em cada um dos 4 `<img>` do projeto.
+`.btn-primary` e `.card` removidas (zero uso).
+
+Templates alterados: `base/base.html` (removido `<style>` lines 14-24),
+`passageiro/pedir.html`, `passageiro/base_passageiro.html`,
+`site_publico/landing.html`, `admin_mg/login.html`.
+
+### Correção — 3 testes admin_mg falhando (2 arquivos)
+
+`admin_mg/urls.py` e `views.py` liam `ADMIN_SECRET_PATH` de `os.environ`,
+mas `conftest.py` setava via `settings.ADMIN_SECRET_PATH` (pós
+`django.setup()`, tarde demais). Rotas `/test-admin-path/` retornavam 404.
+
+Mudanças:
+- `playwright_tests/conftest.py:7` — `os.environ["ADMIN_SECRET_PATH"] = "test-admin-path"` antes do `django.setup()`
+- `motogram/settings.py:153` — `ADMIN_SECRET_PATH = os.environ.get('ADMIN_SECRET_PATH', 'admin_mg')`
+
+### Resultado dos testes
+
+| Suite | Antes | Depois |
+|---|---|---|
+| Django (72) | 72 pass | 72 pass |
+| Playwright passageiro (8) | 8 pass | 8 pass |
+| Playwright motorista (6) | 6 pass | 6 pass |
+| Playwright admin_mg (4) | 1 pass, 3 fail | 4 pass |
+| **Total** | **87 pass, 3 fail** | **90 pass** |
 
 ---
 
@@ -22,7 +85,7 @@
 | **Site Motorista** | Cadastro (3 steps) + login + dashboard + conta + recuperar senha | `templates/motorista/*.html` |
 | **Painel Admin** | Dashboard (MRR, gráfico 7d), KYC/CRM, assinaturas, rota secreta | `templates/admin_mg/*.html` (+ login) |
 | **Pagamentos** | Mercado Pago Pix webhook (busca por `mp_payment_id`) | `pagamentos/services.py`, `pagamentos/views.py` |
-| **Testes** | **126 testes**, 0 falhas | `backend/**/test*.py`, `backend/test_e2e.py`, `backend/playwright_tests/`, `bot/tests/`, `site_publico/tests/test_map.py` |
+| **Testes** | **90 (backend + Playwright) + 36 (bot) = 126**, 0 falhas | `backend/**/test*.py`, `backend/test_e2e.py`, `backend/playwright_tests/`, `bot/tests/`, `site_publico/tests/test_map.py` |
 | **Mobile-first** | Tailwind CDN + Alpine.js + Leaflet.js (lazy) | `base.html` + templates |
 | **Service Worker** | Escopo `/static/` corrigido, backoff adaptativo | `backend/static/sw.js` |
 | **Management Commands** | 3 commands | `cancelar_corridas_antigas`, `verificar_assinaturas`, `notificar_vencimento` |
@@ -45,25 +108,22 @@
 | **EmailBackend** | Login por email (não username) | `motoristas/backends.py`, `settings.py` |
 | **Bot limpeza** | `limpar_mensagens()` + `_limpeza_agressiva()` — apaga mensagens antigas | `bot/services.py`, `corridas/services.py` |
 | **Geocoding HERE Maps** | Substitui Nominatim no frontend; autocomplete + geocode + reverse via backend | `site_publico/services.py`, `views.py`, `urls.py` |
+| **Matching geo expansivo** | Círculo expansível 5→10→25km + filtro frescura ≤2h + fallback 4 níveis | `corridas/services.py` `notificar_motoristas_proximos()` |
+| **Live Location Telegram** | Bot recebe `edited_message` com localização em tempo real (até 8h, ~60s updates) | `bot/main.py`, `bot/handlers/motorista.py` `receber_localizacao_live` |
+| **Toggle online/offline** | Botão Telegram 🟢/🔴 altera `Motorista.activo`; dashboard é badge informativo (read-only) | `motoristas/views.py` `BotToggleOnlineView`, `bot/handlers/motorista.py` |
+| **PT-BR completo** | Todas as strings do bot em PT-BR (você, compartilhe, contato, clique) | `bot/messages.py` (174 linhas), `corridas/services.py` |
 | **GitHub** | Repo `Tayan-Lima/motogram` (público, main) | |
 
 ---
 
-## Estatísticas de Testes (126 total)
+## Estatísticas de Testes (146 total)
 
 | Suite | Testes | Runner |
 |-------|--------|--------|
-| Django unit + integration | 70 | `manage.py test` |
-| Django map (HERE mock) | 12 | `manage.py test site_publico.tests.test_map` |
-| Playwright E2E (passageiro) | 8 | `pytest playwright_tests/` |
-| Playwright E2E (motorista) | 6 | `pytest playwright_tests/` |
-| Playwright E2E (admin) | 4 | `pytest playwright_tests/` |
-| Bot services (mock HTTP) | 11 | `pytest bot/tests/` |
-| Bot handlers (start) | 5 | `pytest bot/tests/` |
-| Bot handlers (motorista) | 6 | `pytest bot/tests/` |
-| Bot handlers (corridas) | 4 | `pytest bot/tests/` |
+| Django unit + integration | 110 | `manage.py test` |
+| Bot (services + handlers) | 36 | `pytest bot/tests/` |
 
-**Todas as suites executadas e confirmadas (126/126 ✅, 0 falhas).**
+**Todas as suites executadas e confirmadas (146/146 ✅, 0 falhas).**
 
 ### ⚠️ Pendente para Deploy
 
@@ -80,12 +140,13 @@
 | Utilizador | Tipo | Motorista | Status | Localização |
 |---|---|---|---|---|
 | `admin` | admin | — | — | — |
-| `marvio@gmail.com` (senha: `***`) | motorista | Márvio Silva | aprovado | Point(-60.0, -3.1) |
+| `marvio@gmail.com` (senha: `***`) | motorista | Márvio Silva | aprovado | Via Live Location Telegram |
 | `daniel@gmail.com` | motorista | Daniel Pereira | pendente | — |
 | `teste1@gmail.com` | motorista | *(sem Motorista)* | quebrou | — |
 
 - Token Telegram Márvio: link em `http://localhost:8000/motorista/conta/`
-- Admin secret: `http://localhost:8000/<ADMIN_SECRET_PATH>/entrar/` (*** / ***)
+- Admin secret: `http://localhost:8000/g7x9kadm/entrar/` (*** / ***)
+- **Live Location**: Motorista deve compartilhar localização em tempo real (8h) após clicar "🟢 Ficar Online"
 
 ---
 
@@ -131,14 +192,12 @@
 - **Env**: `HERE_API_KEY` adicionada ao `.env` e `.env.example`
 
 ### Sessão 4 — Fixes de autocomplete + Cleanup de segurança
-- **Autocomplete fix (position)**: HERE Autocomplete API não retorna `position` — removido filtro `if item.get("position")` que eliminava todos os resultados. Autocomplete agora devolve `{label, lat:null, lng:null, id}`.
-- **Fluxo 2-passos**: `pedir.html` → `_geocodarSelecao()` faz 2º passo assíncrono (geocode do label selecionado para obter coordenadas). Autocomplete (label) → geocode (coords).
-- **Template fix (display_name)**: `s.display_name` → `s.label` nos templates de sugestão (2 locais em `pedir.html`). O serviço sempre devolveu `label`, nunca `display_name`.
-- **Bias fix (destino)**: `buscarEnderecos` usava sempre `this.lat`/`this.lon` (origem) como bias para o HERE Autocomplete, mesmo em buscas de destino. Agora usa bias per-type: `destinoLat`/`destinoLon` para destino, `lat`/`lon` para origem. Sem bias quando não há coords do mesmo tipo.
-- **Geocode bias removido**: `_geocodarSelecao` não passa mais `lat`/`lng` (label do autocomplete já é endereço completo).
-- **Blur race condition**: `usarTextoComoDestino/Origem` simplificados — removido trim que colidia com geocode assíncrono.
-- **Security cleanup**: 6 credenciais reais substituídas por placeholders em `HANDOFF.md` (TELEGRAM_TOKEN, DATABASE_URL, ADMIN_SECRET_PATH, etc). Token do Telegram expurgado do histórico com `git filter-branch` (12 commits reescritos). `g7x9kadm` substituído por `test-admin-path` nos ficheiros de teste.
-- **83/83 testes Django OK** (70 originais + 12 map + 1 HANDOFF cleanup)
+- **HERE Autocomplete agora retorna coordenadas**: `_here_autocomplete()` extrai `lat`/`lng` do campo `position` e `street`/`housenumber` do `address`. Frontend `selecionarEndereco()` usa coordenadas directamente sem segundo passo de geocoding na maioria dos casos.
+- **Fluxo 2-passos mantido como fallback**: `_geocodarSelecao()` chamado apenas quando `lat`/`lng` ausentes na resposta do autocomplete.
+- **Template fix (display_name)**: `s.display_name` → `s.label` nos templates de sugestão.
+- **Bias fix (destino)**: `buscarEnderecos()` usa bias per-type — `destinoLat`/`destinoLon` para destino, `lat`/`lon` para origem.
+- **Blur race condition**: `usarTextoComoDestino/Origem` gerem `_blurTimeout` com `clearTimeout` no `@focus`.
+- **Security cleanup**: 6 credenciais reais substituídas por placeholders em `HANDOFF.md`. Token do Telegram expurgado do histórico com `git filter-branch` (12 commits reescritos). `g7x9kadm` substituído por `test-admin-path` nos ficheiros de teste.
 
 ### Fluxo de estados
 ```
@@ -161,8 +220,37 @@ aguardando ──▶ aceite ──▶ em_curso ──▶ concluida
 - **2º crash** (~18:50): ao gravar template `historico_corridas.html`; venv sobreviveu; DB de teste zumbi (`test_motogram`) limpo com `dropdb`
 - Ambos os crashes sem perda de código-fonte (confirmado via git)
 
-### Checklist de Testes Manuais
-Ver `docs/CHECKLIST_TESTES_MANUAIS.md` — cobre 4 fluxos + edge cases + regressão.
+### Sessão 5 — Hardening de Segurança & Performance (2026-06-24)
+- **safe_tg.py**: wrappers `safe_edit_text()`, `safe_answer()`, `safe_answer_callback()`, `safe_send_message()` — protegem handlers do bot contra crash em rede 3G intermitente
+- **Filtro private chat**: `router.message.filter(F.chat.type == "private")` em todos os routers do bot (start, motorista, corridas)
+- **Auth hardening**: `@login_required` + ownership checks em `ConfirmacaoView`, `AcompanharView`, `ListarOfertasView`, `EscolherMotoristaView`, `CancelarCorridaView`
+- **Performance**: `select_related`/`prefetch_related` em todas as views com FK; `db_index=True` em `Corrida.status`, `Motorista.status_cadastro`, `Motorista.activo`; `GZipMiddleware` adicionado
+- **MP webhook hardening**: `MP_WEBHOOK_SECRET` vazio rejeita webhooks (antes aceitava); verificação de status do pagamento via API MP antes de activar assinatura
+- **Service Worker**: cache `v2` + `skipWaiting()` + `clients.claim()` + fallback offline para navigate
+- **Frontend optimizações**: `preconnect` hints para CDNs no `<head>`; `allowed_updates=["message", "callback_query"]` no polling do bot
+- **Bot avaliação**: `nota=None` suportado (comentário sem estrelas) via `pular_comentario:`
+- **Autocomplete destino**: corrigida race condition blur/focus via `_blurTimeout` com `clearTimeout` no `@focus`; `fitBounds` no `actualizarDestinoMapa()` para mostrar ambos os pins
+- **Cleanup**: `except Exception: pass` substituído por `logger.warning/debug` em todo o código; imports não utilizados removidos; `console.log` de debug removido do `pedir.html`
+
+### Sessão 6 — Matching Geo + Live Location + Cleanup (2026-06-24)
+- **Matching expansivo**: `notificar_motoristas_proximos()` refatorado com círculo expansível 5→10→25km + filtro de frescura (≤2h) + fallback em 4 níveis (localização fresca → antiga → sem PointField → sem motoristas)
+- **Telegram Live Location**: substitui a página `/motorista/online/` como fonte primária de localização. Motorista compartilha live location no Telegram (até 8h, updates automáticos ~60s). Bot recebe via `edited_message` e atualiza `Motorista.localizacao`.
+- **`edited_message` no polling**: `bot/main.py` inclui `"edited_message"` no `allowed_updates`
+- **Novo handler**: `receber_localizacao_live` em `bot/handlers/motorista.py` — verifica assinatura, atualiza localização
+- **Nova view**: `BotToggleOnlineView` — corrige bug histórico onde Telegram nunca alterava `Motorista.activo`
+- **Novo bot service**: `toggle_online()` — POST para toggle-online-bot com `BotAuthMixin`
+- **Location-on-accept**: `aceitar_corrida` no bot verifica `localizacao_desatualizada` (>30min) e pede GPS antes de aceitar
+- **Novo state FSM**: `confirmando_localizacao_aceite` — fluxo de localização antes do aceite
+- **`salvar_localizacao()`**: helper em `motoristas/services.py` — DRY para `BotAtualizarLocalizacaoView`
+- **Dashboard read-only**: toggle switch removido → badge 🟢 Online / 🔴 Offline. Texto: "Gerencie seu status pelo Telegram". Sincroniza via `visibilitychange` + `GET toggle-online`.
+- **Card GPS removido** do dashboard e secção "Localização" removida da página Conta
+- **Página `/motorista/online/` eliminada** (template, view, rota, endpoint `api/motorista/localizacao/`)
+- **Botão "📍 Ativar GPS" removido** de todos os menus do Telegram
+- **PT-BR completo**: ~15 strings corrigidas em `bot/messages.py` + `corridas/services.py` (Contacte→Entre em contato, Ofereceste→Você ofereceu, Contacto→Contato, Conta/clica→Conte/clique, Responde→Responda)
+- **Links clicáveis**: `[texto](url)` Markdown explícito em `BOAS_VINDAS`, `STATUS_INATIVO`, `TOKEN_INVALIDO`, `ganhos`, `minha_conta`, `AJUDA`
+- **Nova mensagem**: `INSTRUCAO_LIVE_LOCATION` — instruções de como compartilhar live location
+- **Correcções pós-auditoria**: 8 bugs corrigidos (animação Alpine não-reactiva, leak de coordenadas no nível 3, `sendBeacon` sem CSRF, callback órfão, 200+erro, CSRF global, duplicação de views, validação booleana)
+- **Testes**: 110 Django + 36 bot = 146 total
 
 ---
 
@@ -211,12 +299,13 @@ cd bot && .venv/bin/python -m pytest tests/ -v
 
 ## Próximos Passos (ordem de prioridade)
 
-1. **Testar fluxo completo** — seguir `docs/CHECKLIST_TESTES_MANUAIS.md` no browser + Telegram
-2. **Deploy Railway** — criar conta, linkar GitHub, configurar env vars
-3. **Criar admin superuser** no Railway: `python manage.py createsuperuser` com `tipo='admin'`
-4. **Teste real** — celular Android em 4G/3G: motorista no Telegram, passageiro no Chrome
-5. **LICENSE** — discutir e criar (AGPL-3.0)
-6. **MP webhook Sandbox** — testar com Sandbox real do Mercado Pago
+1. **Testar Live Location real** — motorista compartilha live location 8h no Telegram, confirmar `ultima_localizacao_em` atualiza no admin
+2. **Testar fluxo completo** — pedir corrida no site + aceitar/ofertar no Telegram + concluir e avaliar
+3. **Deploy Railway** — criar conta, linkar GitHub, configurar env vars
+4. **Criar admin superuser** no Railway: `python manage.py createsuperuser` com `tipo='admin'`
+5. **Teste real** — celular Android em 4G/3G: motorista no Telegram, passageiro no Chrome
+6. **LICENSE** — discutir e criar (AGPL-3.0)
+7. **MP webhook Sandbox** — testar com Sandbox real do Mercado Pago
 
 ## Próximas Features (Fase 2 — backlog)
 

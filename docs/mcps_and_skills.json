@@ -177,7 +177,7 @@
     "description": "Configuração sugerida para opencode.json na raiz do projecto",
     "model": "claude-sonnet-4-20250514",
     "context_files": [
-      "docs/AGENTS.md",
+      "AGENTS.md",
       "docs/ARCHITECTURE.md",
       "docs/CONVENTIONS.md"
     ],

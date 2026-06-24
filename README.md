@@ -75,7 +75,7 @@ cd bot
 python main.py
 ```
 
-Ver [AGENTS.md](docs/AGENTS.md) para setup completo.
+Ver [AGENTS.md](AGENTS.md) para setup completo.
 
 ---
 

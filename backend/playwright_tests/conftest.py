@@ -4,6 +4,7 @@ import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "motogram.settings")
 os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
+os.environ["ADMIN_SECRET_PATH"] = "test-admin-path"
 
 import django
 django.setup()

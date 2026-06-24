@@ -91,3 +91,42 @@ def test_concluir_corrida_erro(mock_post):
     mock_post.side_effect = r.RequestException("timeout")
     result = services.concluir_corrida(42, 999)
     assert "erro" in result
+
+
+@patch("services.requests.post")
+def test_atualizar_localizacao(mock_post):
+    mock_post.return_value = _mock_resp(200, {"ok": True})
+    result = services.atualizar_localizacao(999, -3.1, -60.0)
+    assert result["ok"] is True
+
+
+@patch("services.requests.post")
+def test_atualizar_localizacao_erro_conexao(mock_post):
+    import requests as r
+    mock_post.side_effect = r.RequestException("timeout")
+    result = services.atualizar_localizacao(999, -3.1, -60.0)
+    assert "erro" in result
+
+
+@patch("services.requests.post")
+def test_toggle_online_activa(mock_post):
+    mock_post.return_value = _mock_resp(200, {"ok": True, "activo": True})
+    result = services.toggle_online(999, True)
+    assert result["ok"] is True
+    assert result["activo"] is True
+
+
+@patch("services.requests.post")
+def test_toggle_online_desactiva(mock_post):
+    mock_post.return_value = _mock_resp(200, {"ok": True, "activo": False})
+    result = services.toggle_online(999, False)
+    assert result["ok"] is True
+    assert result["activo"] is False
+
+
+@patch("services.requests.post")
+def test_toggle_online_erro_conexao(mock_post):
+    import requests as r
+    mock_post.side_effect = r.RequestException("timeout")
+    result = services.toggle_online(999, True)
+    assert "erro" in result

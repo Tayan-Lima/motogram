@@ -17,7 +17,7 @@
     </div>
 
     <!-- Mensagem de erro -->
-    <div x-show="erro" class="px-5 mb-3">
+    <div x-show="erro" class="px-5 mb-3" role="alert" aria-live="assertive">
         <p class="bg-accent2/10 border border-accent2/20 rounded-xl px-4 py-3 text-sm text-accent2" x-text="erro"></p>
     </div>
 
@@ -33,11 +33,11 @@
             <div class="text-center pt-8">
                 <div class="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4 text-3xl">📱</div>
                 <h2 class="text-2xl font-extrabold tracking-tighter mb-1">Seu telefone</h2>
-                <p class="text-muted text-sm">Usamos o teu telefone para contato com o motorista.</p>
+                <p class="text-muted text-sm">Usamos seu telefone para contato com o motorista.</p>
             </div>
             <div class="flex gap-2">
-                <input type="text" value="+55" readonly class="w-20 px-3 py-3.5 border-1.5 border-border rounded-xl text-sm text-muted bg-bg">
-                <input type="tel" x-model="telefone" x-mask="(99) 9 9999-9999" placeholder="(92) 9 9999-8888" class="flex-1 px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" inputmode="numeric">
+                <input type="text" value="+55" readonly aria-label="Prefixo do Brasil +55" class="w-20 px-3 py-3.5 border-1.5 border-border rounded-xl text-base text-muted bg-bg">
+                <input type="tel" id="telefone" x-model="telefone" x-mask="(99) 9 9999-9999" placeholder="(92) 9 9999-8888" class="flex-1 px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" inputmode="numeric" autocomplete="tel" required>
             </div>
         </div>
 
@@ -49,21 +49,21 @@
                 <p class="text-muted text-sm">Como os motoristas vão te chamar.</p>
             </div>
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Nome completo</label>
-                <input type="text" x-model="nome" placeholder="Seu nome" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="name">
+                <label for="id_nome" class="text-xs font-semibold text-muted uppercase tracking-wider">Nome completo</label>
+                <input type="text" id="id_nome" x-model="nome" placeholder="Seu nome" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" autocomplete="name">
             </div>
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail</label>
-                <input type="email" x-model="email" placeholder="seu@email.com" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="email" required>
+                <label for="id_email" class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail</label>
+                <input type="email" id="id_email" x-model="email" placeholder="seu@email.com" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" autocomplete="email" autocapitalize="none" inputmode="email" required>
                 <p class="text-xs text-muted">Enviaremos um link de confirmação para este e-mail.</p>
             </div>
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Senha</label>
-                <input type="password" x-model="senha" placeholder="Cria uma senha (mín. 6)" minlength="6" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" required>
+                <label for="id_senha" class="text-xs font-semibold text-muted uppercase tracking-wider">Senha</label>
+                <input type="password" id="id_senha" x-model="senha" placeholder="Crie uma senha (mín. 6)" minlength="6" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" autocomplete="new-password" required>
             </div>
             <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-muted uppercase tracking-wider">Confirmar senha</label>
-                <input type="password" x-model="senha_confirm" placeholder="Repete a senha" minlength="6" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" required>
+                <label for="id_senha_confirm" class="text-xs font-semibold text-muted uppercase tracking-wider">Confirmar senha</label>
+                <input type="password" id="id_senha_confirm" x-model="senha_confirm" placeholder="Repita a senha" minlength="6" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" autocomplete="new-password" required>
             </div>
         </div>
 
@@ -104,7 +104,7 @@
             <input type="hidden" name="email" :value="email">
             <input type="hidden" name="password" :value="senha">
             <input type="hidden" name="password_confirm" :value="senha_confirm">
-            <button type="button" @click="avancar()" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold hover:bg-accent transition-all" x-text="passo === 3 ? 'Criar conta' : 'Continuar'">
+            <button type="button" @click="avancar()" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold text-sm hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg" x-text="passo === 3 ? 'Criar conta' : 'Continuar'">
                 Continuar
             </button>
         </form>

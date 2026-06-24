@@ -1,0 +1,66 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "oauth": {},
+      "enabled": true
+    },
+
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com",
+      "oauth": {},
+      "enabled": true
+    },
+
+    "postgres": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-postgres", "{env:DATABASE_URL}"],
+      "enabled": true
+    },
+
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "."],
+      "enabled": true
+    },
+
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "enabled": false
+    },
+
+    "sentry": {
+      "type": "remote",
+      "url": "https://mcp.sentry.dev/mcp",
+      "oauth": {},
+      "enabled": false
+    },
+
+    "memory-ogham": {
+      "type": "local",
+      "command": ["npx", "-y", "ogham-mcp"],
+      "enabled": false
+    },
+
+    "railway": {
+      "type": "remote",
+      "url": "https://mcp.railway.app",
+      "headers": {
+        "Authorization": "Bearer {env:RAILWAY_API_KEY}"
+      },
+      "enabled": true
+    }
+
+  }
+}

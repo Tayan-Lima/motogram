@@ -5,14 +5,16 @@ from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 
 from .models import Utilizador, Motorista
-from .services import validar_token_telegram, gerar_token_telegram
+from .services import validar_token_telegram, gerar_token_telegram, salvar_localizacao
 from .validators import validar_documento, validar_imagem
 from motogram.mixins import BotAuthMixin
 
@@ -39,7 +41,17 @@ class VerificarAssinaturaView(BotAuthMixin, View):
             })
 
         if motorista.assinatura_activa:
-            return JsonResponse({"active": True})
+            from datetime import timedelta
+            from django.utils import timezone
+            localizacao_desatualizada = True
+            if motorista.ultima_localizacao_em:
+                localizacao_desatualizada = (timezone.now() - motorista.ultima_localizacao_em) > timedelta(minutes=30)
+            return JsonResponse({
+                "active": True,
+                "nome": motorista.nome_completo,
+                "valida_ate": str(motorista.assinatura_ate),
+                "localizacao_desatualizada": localizacao_desatualizada,
+            })
 
         return JsonResponse({
             "active": False,
@@ -522,9 +534,18 @@ class AssinaturaMotoristaView(LoginRequiredMixin, View):
 
 
 class ToggleOnlineView(LoginRequiredMixin, View):
-    """POST /api/motoristas/toggle-online/ — alterna estado activo do motorista."""
+    """GET/POST /api/motoristas/toggle-online/ — lê ou alterna estado activo do motorista.
+    GET: retorna estado actual sem alterar nada.
+    POST: altera o estado."""
 
     login_url = "/motorista/login/"
+
+    def get(self, request):
+        try:
+            motorista = request.user.motorista
+        except Motorista.DoesNotExist:
+            return JsonResponse({"activo": False, "erro": "Motorista não encontrado."}, status=404)
+        return JsonResponse({"activo": motorista.activo})
 
     def post(self, request):
         try:
@@ -544,6 +565,68 @@ class ToggleOnlineView(LoginRequiredMixin, View):
 
         motorista.save()
         return JsonResponse({"activo": motorista.activo})
+
+
+class BotAtualizarLocalizacaoView(BotAuthMixin, View):
+    """POST /api/motoristas/atualizar-localizacao/ — bot envia lat/lon do motorista."""
+
+    def post(self, request):
+        auth_erro = self.verificar_bot_secret(request)
+        if auth_erro:
+            return auth_erro
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        telegram_id = data.get("telegram_id")
+        lat = data.get("latitude")
+        lon = data.get("longitude")
+
+        if not telegram_id or lat is None or lon is None:
+            return JsonResponse({"erro": "telegram_id, latitude e longitude obrigatórios"}, status=400)
+
+        try:
+            motorista = Motorista.objects.get(telegram_id=int(telegram_id))
+        except (ValueError, Motorista.DoesNotExist):
+            return JsonResponse({"erro": "Motorista não encontrado"}, status=404)
+
+        ok, aviso = salvar_localizacao(motorista, lat, lon)
+        if aviso:
+            return JsonResponse({"ok": True, "aviso": aviso})
+        return JsonResponse({"ok": True})
+
+
+class BotToggleOnlineView(BotAuthMixin, View):
+    """POST /api/motoristas/toggle-online-bot/ — alterna estado activo via bot."""
+
+    def post(self, request):
+        auth_erro = self.verificar_bot_secret(request)
+        if auth_erro:
+            return auth_erro
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        telegram_id = data.get("telegram_id")
+        if not telegram_id:
+            return JsonResponse({"erro": "telegram_id obrigatório"}, status=400)
+
+        activo = data.get("activo")
+        if not isinstance(activo, bool):
+            activo = True
+
+        try:
+            motorista = Motorista.objects.get(telegram_id=int(telegram_id))
+        except (ValueError, Motorista.DoesNotExist):
+            return JsonResponse({"erro": "Motorista não encontrado"}, status=404)
+
+        motorista.activo = activo
+        motorista.save(update_fields=["activo"])
+        return JsonResponse({"ok": True, "activo": motorista.activo})
 
 
 class EditarPerfilMotoristaView(LoginRequiredMixin, View):

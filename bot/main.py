@@ -31,7 +31,7 @@ async def main():
     dp.include_router(motorista.router)
     dp.include_router(corridas.router)
 
-    await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
+    await dp.start_polling(bot, allowed_updates=["message", "callback_query", "edited_message"])
 
 
 if __name__ == "__main__":

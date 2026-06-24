@@ -21,16 +21,16 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 ### Semana 1: Fundação + Deploy Staging
 
-- [ ] Criar estrutura de pastas: `backend/`, `bot/`, `backend/templates/`
-- [ ] Django project: `django-admin startproject motogram backend/`
-- [ ] Apps Django: `corridas`, `motoristas`, `pagamentos`, `site_publico`
-- [ ] `requirements.txt` (Django 5, DRF, psycopg2, redis, aiogram, Pillow, requests, python-dotenv, gunicorn)
-- [ ] `settings.py` com PostGIS, Redis, static files, env vars
-- [ ] Modelos: `Utilizador`, `Motorista`, `Corrida`, `Assinatura` (ver `ARCHITECTURE.md`)
-- [ ] Migrations + `manage.py migrate` local
+- [x] Criar estrutura de pastas: `backend/`, `bot/`, `backend/templates/`
+- [x] Django project: `django-admin startproject motogram backend/`
+- [x] Apps Django: `corridas`, `motoristas`, `pagamentos`, `site_publico`
+- [x] `requirements.txt` (Django 5, DRF, psycopg2, redis, aiogram, Pillow, requests, python-dotenv, gunicorn)
+- [x] `settings.py` com PostGIS, Redis, static files, env vars
+- [x] Modelos: `Utilizador`, `Motorista`, `Corrida`, `Assinatura` (ver `ARCHITECTURE.md`)
+- [x] Migrations + `manage.py migrate` local
 - [ ] Deploy staging no Railway + Supabase (validar infra cedo)
-- [ ] `.env` configurado com credenciais reais de staging
-- [ ] Testes unitários: modelos (assinatura activa/inactiva, criação)
+- [x] `.env` configurado com credenciais reais de staging
+- [x] Testes unitários: modelos (assinatura activa/inactiva, criação)
 
 **Feito quando:** `manage.py runserver` funciona local, deploy no Railway responde, modelos criam registros.
 
@@ -38,15 +38,14 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 → depende de: modelos Django (Semana 1)
 
-- [ ] `bot/main.py` com aiogram 3 + webhook setup
-- [ ] `bot/states.py`: `PassageiroStates`, `MotoristaStates`
-- [ ] `bot/services.py`: chamadas HTTP ao backend Django
-- [ ] `bot/messages.py`: constantes de mensagens (PT-BR)
-- [ ] Handler `/start` — escolha passageiro/motorista
-- [ ] Fluxo passageiro: pedir localização → `POST /api/corridas/` → confirmar
-- [ ] Fluxo motorista: `/status` mostra estado da assinatura
-- [ ] Endpoint Django `POST /api/bot/update/` para receber updates
-- [ ] Testes: handler /start, criação de corrida via bot
+- [x] `bot/main.py` com aiogram 3 + webhook setup
+- [x] `bot/states.py`: `PassageiroStates`, `MotoristaStates`
+- [x] `bot/services.py`: chamadas HTTP ao backend Django
+- [x] `bot/messages.py`: constantes de mensagens (PT-BR)
+- [x] Handler `/start` — escolha passageiro/motorista
+- [x] Fluxo motorista: `/status` mostra estado da assinatura + toggle online + menu + instrução Live Location
+- [x] Endpoint Django para bot: `BotAuthMixin` + `ActivarTelegramView` + `VerificarAssinaturaView`
+- [x] Testes: handler /start, serviços, handlers motorista/corridas
 
 **Feito quando:** passageiro consegue enviar localização no bot e corrida é criada na BD.
 
@@ -54,14 +53,14 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 → depende de: bot mínimo (Semana 2), modelos (Semana 1)
 
-- [ ] PostGIS: `PointField` em `Motorista`, `ST_DWithin` para matching
-- [ ] `corridas/services.py`: `notificar_motoristas_proximos()` — POST api.telegram.org
-- [ ] Endpoint `POST /api/corridas/{id}/aceitar/` e `recusar/`
-- [ ] Bot: callback handlers para botões ✅ Aceitar / ❌ Recusar
-- [ ] Troca de contactos após aceitação (telefone do passageiro → motorista)
-- [ ] Endpoint `GET /api/corridas/{id}/status/` (polling do passageiro)
-- [ ] Cron job: cancelar corridas aguardando há > 10 min
-- [ ] Testes: matching geográfico, aceitar/recusar corrida, webhook Mercado Pago
+- [x] PostGIS: `PointField` em `Motorista`, `ST_DWithin` para matching
+- [x] `corridas/services.py`: `notificar_motoristas_proximos()` — POST api.telegram.org
+- [x] Endpoint `POST /api/corridas/{id}/aceitar/` e `recusar/`
+- [x] Bot: callback handlers para botões ✅ Aceitar / 💬 Ofertar / ❌ Recusar
+- [x] Troca de contactos após aceitação (telefone do passageiro → motorista)
+- [x] Endpoint `GET /api/corridas/{id}/status/` (polling do passageiro)
+- [x] Cron job: cancelar corridas aguardando há > 10 min
+- [x] Testes: matching geográfico, aceitar/recusar corrida, webhook Mercado Pago
 
 **Feito quando:** passageiro pede corrida no bot, motorista recebe notificação e aceita, passageiro vê confirmação.
 
@@ -69,15 +68,15 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 → depende de: endpoints de corrida (Semana 3)
 
-- [ ] Landing page (`/`) — traduzir `motogram-landing.html` para Tailwind CDN
-- [ ] Página de pedido (`/passageiro`) — mapa Leaflet lazy + formulário
-- [ ] Polling com backoff adaptativo (5s → 15s → 30s)
-- [ ] Página de confirmação com dados do motorista
-- [ ] Página de acompanhamento (`/passageiro/acompanhar/`)
-- [ ] Service Worker (`/static/sw.js`) para cache offline
-- [ ] Formulário resiliente (POST funciona sem JS)
-- [ ] Page HTML < 15KB (verificar com Lighthouse)
-- [ ] Testes: view de pedido, polling endpoint
+- [x] Landing page (`/`) — traduzir `motogram-landing.html` para Tailwind CDN
+- [x] Página de pedido (`/passageiro`) — mapa Leaflet lazy + formulário
+- [x] Polling com backoff adaptativo (5s → 15s → 30s)
+- [x] Página de confirmação com dados do motorista
+- [x] Página de acompanhamento (`/passageiro/acompanhar/`)
+- [x] Service Worker (`/static/sw.js`) para cache offline
+- [x] Formulário resiliente (POST funciona sem JS)
+- [x] Page HTML < 15KB (verificar com Lighthouse)
+- [x] Testes: view de pedido, polling endpoint
 
 **Feito quando:** passageiro pede corrida pelo site, vê estado em tempo real, dados do motorista aparecem.
 
@@ -85,15 +84,15 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 → depende de: modelos (Semana 1), bot (Semana 2)
 
-- [ ] Cadastro motorista (3 passos): dados pessoais → moto → documentos
-- [ ] Upload de documentos (CNH, antecedentes, foto) para Supabase Storage
-- [ ] Página de pagamento — geração de QR Code Pix (Mercado Pago)
-- [ ] `POST /api/webhook/mercadopago/` — confirmação de pagamento
-- [ ] Geração de token único de activação Telegram (24h, uso único)
-- [ ] Login do motorista
-- [ ] Dashboard: ganhos, toggle online/offline
-- [ ] Página de conta: assinatura, link Telegram
-- [ ] Testes: cadastro, webhook Pix, activação Telegram
+- [x] Cadastro motorista (3 passos): dados pessoais → moto → documentos
+- [x] Upload de documentos (CNH, antecedentes, foto) para Supabase Storage
+- [x] Página de pagamento — geração de QR Code Pix (Mercado Pago)
+- [x] `POST /api/webhook/mercadopago/` — confirmação de pagamento
+- [x] Geração de token único de activação Telegram (24h, uso único)
+- [x] Login do motorista
+- [x] Dashboard: ganhos, badge online/offline (informativo, gerido via Telegram)
+- [x] Página de conta: assinatura, link Telegram
+- [x] Testes: cadastro, webhook Pix, activação Telegram
 
 **Feito quando:** motorista cadastra-se, paga Pix, activa Telegram e recebe corridas.
 
@@ -101,11 +100,11 @@ Matching geo     WebSocket realtime       Multi-cidade
 
 → depende de: todas as semanas anteriores
 
-- [ ] Painel admin (`/admin_mg/`): listagem de motoristas (aprovar/bloquear)
-- [ ] Painel admin: histórico de corridas
-- [ ] Cron job diário: bloquear motoristas com assinatura vencida
-- [ ] Notificação automática 3 dias antes do vencimento
-- [ ] Testes de ponta a ponta (fluxo completo passageiro + motorista)
+- [x] Painel admin (`/admin_mg/`): listagem de motoristas (aprovar/bloquear)
+- [x] Painel admin: histórico de corridas
+- [x] Cron job diário: bloquear motoristas com assinatura vencida
+- [x] Notificação automática 3 dias antes do vencimento
+- [x] Testes de ponta a ponta (fluxo completo passageiro + motorista)
 - [ ] Deploy estável no Railway (produção)
 - [ ] Domínio configurado
 - [ ] Checklist de deploy (ver `TESTING.md`)

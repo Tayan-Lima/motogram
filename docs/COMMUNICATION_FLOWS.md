@@ -49,18 +49,23 @@ PASSO 1 — Passageiro submete pedido
     "destino_texto": "Av. Djalma Batista, 123"  (opcional)
   }
 
-PASSO 2 — Django cria a corrida e procura motoristas
+PASSO 2 — Django cria a corrida e procura motoristas (matching expansivo)
   Django D:
     → Cria Corrida(status='aguardando')
-    → PostGIS: SELECT motoristas WHERE activo=True AND assinatura_activa
-               AND ST_DWithin(localizacao, ponto_passageiro, 5km)
-               ORDER BY distancia ASC LIMIT 5
-    → Guarda lista de motoristas notificados em Redis
-      (chave: corrida:{id}:motoristas_notificados, TTL: 10min)
+    → PostGIS: círculo expansível 5→10→25km
+      SELECT motoristas WHERE activo=True AND status_cadastro='aprovado'
+             AND telegram_id IS NOT NULL AND localizacao IS NOT NULL
+             AND ultima_localizacao_em >= NOW() - INTERVAL '2 hours'
+             AND ST_DWithin(localizacao, ponto, {raio}km)
+             ORDER BY distancia ASC LIMIT 5
+    → Se 0 resultados: tenta sem filtro de frescura (Nível 2)
+    → Se 0 resultados: tenta motoristas sem PointField (Nível 3)
+    → Se 0 resultados: marca corrida como 'sem_motoristas' (Nível 4)
+    → Guarda message_ids em Corrida.notificacao_msg_ids para limpeza futura
 
 PASSO 3 — Django notifica motoristas via Telegram API
    Django D → POST api.telegram.org/bot{TOKEN}/sendLocation
-                + POST api.telegram.org/bot{TOKEN}/sendMessage
+                 + POST api.telegram.org/bot{TOKEN}/sendMessage
    Para cada motorista (máx. 5, em paralelo com threading):
    
    Primeiro envia pin no mapa (sendLocation):
@@ -80,7 +85,7 @@ PASSO 3 — Django notifica motoristas via Telegram API
               📍 Para: {destino}\n
               📏 Distância: ~{distancia} km\n
               📍 Ref: {ponto_referencia}\n
-              ⏱️ Responde em até 60 segundos!",
+              ⏱️ Responda em até 60 segundos!",
      "parse_mode": "Markdown",
      "reply_markup": {
        "inline_keyboard": [
@@ -90,6 +95,11 @@ PASSO 3 — Django notifica motoristas via Telegram API
        ]
      }
    }
+   
+   Bandeiras adicionais na mensagem:
+     - Nível 2 (localização antiga): "⚠️ Localização pode estar desatualizada"
+     - Expansão de raio: "🔔 Expansão de raio (X km)"
+     - Nível 3 (sem GPS): "Sua localizacao nao esta definida. Compartilhe localizacao em tempo real."
 
 PASSO 4 — Django retorna ao site do passageiro
   Django D → Resposta ao site A:
@@ -139,7 +149,10 @@ PASSO 8 — Django processa escolha e notifica
    Django D → sendMessage ao motorista vencedor:
    {
      "text": "🎉 *Corrida confirmada!*\n💰 Valor: R$ 12.00\n👤 Passageiro: Maria\n📞 Contacto: ****-8888\n📍 Origem: -3.1190, -60.0217",
-     "reply_markup": {"inline_keyboard": [[{"text": "✅ Concluir corrida", "callback_data": "concluir:{id}"}]]}
+     "reply_markup": {"inline_keyboard": [[
+       {"text": "🏍️ Iniciar", "callback_data": "iniciar:{id}"},
+       {"text": "❌ Cancelar", "callback_data": "cancelar_motorista:{id}"}
+     ]]}
    }
 
    Django D → sendMessage aos perdedores:
@@ -147,7 +160,25 @@ PASSO 8 — Django processa escolha e notifica
      "text": "🤷 O passageiro escolheu outro motorista."
    }
 
-PASSO 9 — Site do passageiro detecta mudança via polling
+PASSO 9 — Motorista inicia a corrida
+   Motorista clica "🏍️ Iniciar"
+   callback_data: "iniciar:{corrida_id}"
+
+   Bot → POST /api/corridas/{id}/iniciar/
+   { "motorista_telegram_id": 987654 }
+
+   Django D:
+     → Corrida.status = 'em_curso'
+     → Notifica passageiro via Telegram
+
+   Bot edita mensagem do motorista com botão:
+   {
+     "reply_markup": {"inline_keyboard": [[
+       {"text": "✅ Concluir corrida", "callback_data": "concluir:{id}"}
+     ]]}
+   }
+
+PASSO 10 — Site do passageiro detecta mudança via polling
   GET /api/corridas/456/status/ retorna status='aceite'
   → Site A mostra:
     ✅ Mototaxista a caminho!
@@ -177,37 +208,47 @@ DIAGRAMA SIMPLIFICADO:
 
 ---
 
-## FLUXO 2 — Conclusão de corrida
-### Telegram do motorista (B) → Site do motorista (C)
+## FLUXO 2 — Início e Conclusão de corrida
+### Telegram do motorista (B) → Django (D)
 
 ```
-ACTORES: Motorista no Telegram, Django, Dashboard do motorista
+ACTORES: Motorista no Telegram, Django, Passageiro (site)
 
-PASSO 1 — Motorista conclui corrida no Telegram
-   Motorista clica "✅ Concluir corrida" enviado no PASSO 8
-   callback_data: "concluir:{corrida_id}"
+PASSO 1 — Motorista inicia a corrida
+   Motorista clica "🏍️ Iniciar" (enviado no FLUXO 1, PASSO 8)
+   callback_data: "iniciar:{corrida_id}"
 
 PASSO 2 — Bot repassa ao Django
+   Bot → POST /api/corridas/{id}/iniciar/
+   { "motorista_telegram_id": 987654 }
+   Django D:
+     → Corrida.status = 'em_curso'
+     → Corrida.iniciada_em = agora
+     → Notifica passageiro via Telegram
+
+PASSO 3 — Motorista conclui corrida no Telegram
+   Motorista clica "✅ Concluir corrida" (aparece após iniciar)
+   callback_data: "concluir:{corrida_id}"
+
+PASSO 4 — Bot repassa ao Django
    Bot → POST /api/corridas/{id}/concluir/
-   {
-     "motorista_telegram_id": 987654
-   }
+   { "motorista_telegram_id": 987654 }
 
-PASSO 3 — Django actualiza a corrida
-  Django D:
-    → Corrida.status = 'concluida'
-    → Corrida.valor = 12.50
-    → Corrida.distancia_km = 3.2
-    → Corrida.concluida_em = agora
-    → Recalcula totais do motorista (cache Redis)
+PASSO 5 — Django actualiza a corrida
+   Django D:
+     → Corrida.status = 'concluida'
+     → Corrida.valor = 12.50
+     → Corrida.distancia_km = 3.2
+     → Corrida.concluida_em = agora
+     → Recalcula totais do motorista (cache Redis)
 
-PASSO 4 — Dashboard actualiza automaticamente
-  Site C faz polling a GET /api/motoristas/dashboard/ a cada 30s
-  → Ganho do dia já inclui a nova corrida
-  → Barra de meta actualizada
-  → Última corrida aparece no histórico
+PASSO 6 — Dashboard actualiza automaticamente
+   Site C faz polling a GET /api/motoristas/dashboard/ a cada 30s
+   → Ganho do dia já inclui a nova corrida
+   → Barra de meta actualizada
+   → Última corrida aparece no histórico
 
-PASSO 5 — Bot confirma ao motorista
+PASSO 7 — Bot confirma ao motorista
   Django D → Telegram:
   "✅ Corrida registada!\n
    💰 Valor: R$ 12,50\n
@@ -245,14 +286,21 @@ PASSO 3 — Bot valida o token
      → Motorista.telegram_id = 987654
      → Token apagado (uso único, 24h)
 
-PASSO 4 — Bot confirma ao motorista
-   Bot → Telegram:
-   "🎉 Conta activada, {nome}!
-    🟢 Ficar Online
-    📊 Meu Status    📋 Ganhos
-    🏍️ Minha Conta  ❓ Ajuda"
+PASSO 4 — Bot confirma ao motorista e instrui Live Location
+    Bot → Telegram (2 mensagens):
+    "🟢 Você está online!
+     Você receberá notificações de corridas na sua região."
 
-   Motorista clica 🟢 Ficar Online → pronto para receber corridas
+    "📍 Compartilhe sua localização em tempo real
+     Para receber corridas próximas automaticamente:
+     1. Toque no ícone 📎 (clipe)
+     2. Selecione Localização
+     3. Escolha Localização em tempo real
+     4. Defina a duração para 8 horas
+     Sua localização será atualizada automaticamente a cada minuto."
+
+    Motorista compartilha live location → bot recebe edited_message a cada ~60s
+    → atualiza Motorista.localizacao + ultima_localizacao_em no backend
 
 PASSO 5 — Recuperar senha (se necessário)
    Motorista → /motorista/recuperar-senha/ → digita e-mail
@@ -396,6 +444,42 @@ CASO C — Timeout sem resposta (10 minutos sem aceitação)
 
 ---
 
+## FLUXO 7 — Live Location via Telegram
+### Telegram → Bot → Django
+
+```
+ACTORES: Motorista no Telegram, Bot, Django
+
+PASSO 1 — Motorista compartilha live location
+   Motorista clica "🟢 Ficar Online"
+   Bot envia instrução Live Location (FLUXO 3, PASSO 4)
+
+PASSO 2 — Motorista ativa live location no Telegram
+   📎 → Localização → Localização em tempo real → 8 horas
+   Telegram envia message.location (inicial) ao bot
+
+PASSO 3 — Bot atualiza backend (localização inicial)
+   Bot → POST /api/motoristas/atualizar-localizacao/
+   { "telegram_id": 987654, "latitude": -3.1, "longitude": -60.0 }
+
+PASSO 4 — Telegram envia atualizações periódicas
+   A cada ~60s, Telegram envia edited_message com nova location
+   Bot recebe via @router.edited_message(F.location)
+
+PASSO 5 — Bot atualiza backend (atualizações contínuas)
+   Bot verifica assinatura ativa (services.verificar_assinatura)
+   Se ativa → POST /api/motoristas/atualizar-localizacao/
+   Se inativa → ignora silenciosamente
+
+PASSO 6 — Matching usa localização fresca
+   Quando passageiro cria corrida, PostGIS usa ultima_localizacao_em ≤ 2h
+   Motorista com live location ativa sempre aparece no Nível 1 (fresco)
+
+DURAÇÃO: Até 8 horas. Após expirar, motorista precisa re-compartilhar.
+```
+
+---
+
 ## Tabela resumo — todos os canais
 
 | Evento | De | Para | Canal | Quem executa |
@@ -407,6 +491,8 @@ CASO C — Timeout sem resposta (10 minutos sem aceitação)
 | Rejeição (perdedores) | Django | Motorista | Telegram API (sendMessage) | Django directo |
 | Dados do motorista | Django | Passageiro | HTTP JSON (polling) | Site polling |
 | Corrida concluída | Motorista | Django | HTTP POST (bot callback) | Bot aiogram |
+| Corrida iniciada | Motorista | Django | HTTP POST (bot callback) | Bot aiogram |
+| Corrida cancelada pelo motorista | Motorista | Django | HTTP POST (bot callback) | Bot aiogram |
 | Dashboard actualizado | Django | Site motorista | HTTP JSON (polling) | Site polling |
 | Assinatura paga | Mercado Pago | Django | Webhook HTTP | Mercado Pago |
 | Link activação Telegram | Django | Motorista | Página web | Site |

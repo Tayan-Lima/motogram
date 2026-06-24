@@ -11,20 +11,20 @@
     </div>
 
     {% if erro %}
-    <div class="bg-accent2/10 border border-accent2/20 rounded-xl px-4 py-3 text-sm text-accent2 mb-4">{{ erro }}</div>
+    <div role="alert" class="bg-accent2/10 border border-accent2/20 rounded-xl px-4 py-3 text-sm text-accent2 mb-4">{{ erro }}</div>
     {% endif %}
 
     <form method="POST" class="flex flex-col gap-4">
         {% csrf_token %}
         <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail ou telefone</label>
-            <input type="text" name="username" value="{{ username|default:'' }}" placeholder="seu@email.com" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="username" required>
+            <label for="id_username" class="text-xs font-semibold text-muted uppercase tracking-wider">E-mail ou telefone</label>
+            <input type="text" id="id_username" name="username" value="{{ username|default:'' }}" placeholder="seu@email.com" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" autocomplete="username" autocapitalize="none" autocorrect="off" inputmode="email" required>
         </div>
         <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold text-muted uppercase tracking-wider">Senha</label>
-            <input type="password" name="password" placeholder="Sua senha" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-sm focus:border-fg focus:outline-none transition-colors" autocomplete="current-password" required>
+            <label for="id_password" class="text-xs font-semibold text-muted uppercase tracking-wider">Senha</label>
+            <input type="password" id="id_password" name="password" placeholder="Sua senha" class="px-4 py-3.5 border-1.5 border-border rounded-xl text-base focus:border-fg focus:outline-none transition-colors" autocomplete="current-password" required>
         </div>
-        <button type="submit" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold hover:bg-accent transition-all mt-2">
+        <button type="submit" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold text-sm hover:bg-accent transition-all mt-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
             Entrar
         </button>
     </form>

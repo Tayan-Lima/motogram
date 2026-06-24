@@ -211,3 +211,113 @@ class CorridaEndpointsTest(TestCase):
         data = response.json()
         self.assertEqual(data["status"], "aceite")
         self.assertIn("motorista", data)
+
+
+class NotificarMotoristasProximosTest(TestCase):
+    """Testes da lógica de matching: círculo expansivo, filtro frescura, fallback."""
+
+    def setUp(self):
+        self.passageiro = Utilizador.objects.create_user(
+            username="matchpassageiro",
+            password="testpass123",
+            tipo="passageiro",
+            telegram_id=222222222,
+        )
+        self.utilizador_m1 = Utilizador.objects.create_user(
+            username="matchmotorista1",
+            password="testpass123",
+            tipo="motorista",
+        )
+        self.motorista1 = Motorista.objects.create(
+            utilizador=self.utilizador_m1,
+            nome_completo="Motorista Fresco",
+            cpf="111.111.111-01",
+            data_nascimento=date(1990, 1, 1),
+            telefone="92911111101",
+            cidade="Manaus",
+            bairros=["Centro"],
+            modelo_moto="Honda CG",
+            ano_moto=2022,
+            cor_moto="Azul",
+            placa="FRK-1111",
+            status_cadastro="aprovado",
+            activo=True,
+            assinatura_ate=date.today() + timedelta(days=15),
+            telegram_id=111111111,
+        )
+
+    def test_corrida_marcada_sem_motoristas_quando_zero_absoluto(self):
+        """Se não há motoristas em nenhum nível, marca corrida como sem_motoristas."""
+        # Remove o motorista do setup (desactiva) para garantir nível 4
+        self.motorista1.activo = False
+        self.motorista1.save()
+
+        corrida = Corrida.objects.create(
+            passageiro=self.passageiro,
+            origem_lat=-3.1,
+            origem_lon=-60.0,
+            origem_texto="Centro, Manaus",
+            destino_texto="Flores",
+            valor_sugerido=12.00,
+            status="aguardando",
+        )
+
+        from corridas.services import notificar_motoristas_proximos
+        from unittest.mock import patch
+
+        with patch("corridas.services.notificar_passageiro_telegram") as mock_notif:
+            notificar_motoristas_proximos(corrida)
+            corrida.refresh_from_db()
+
+        self.assertEqual(corrida.status, "sem_motoristas")
+
+    def test_nivel_3_notifica_motoristas_sem_gps(self):
+        """Motoristas sem PointField recebem notificação no nível 3 de fallback."""
+        self.motorista1.activo = True
+        self.motorista1.save()
+
+        corrida = Corrida.objects.create(
+            passageiro=self.passageiro,
+            origem_lat=-3.1,
+            origem_lon=-60.0,
+            origem_texto="Centro, Manaus",
+            destino_texto="Flores",
+            valor_sugerido=12.00,
+            status="aguardando",
+        )
+
+        from corridas.services import notificar_motoristas_proximos, notificar_motorista_telegram
+        from unittest.mock import patch
+
+        with patch("corridas.services.notificar_motorista_telegram") as mock_notif:
+            mock_notif.return_value = {"ok": True, "result": {"message_id": 999}}
+            notificar_motoristas_proximos(corrida)
+            corrida.refresh_from_db()
+
+        self.assertEqual(corrida.status, "aguardando")  # não mudou para sem_motoristas
+        self.assertIn("111111111", corrida.notificacao_msg_ids)
+
+    def test_motorista_offline_nao_recebe_notificacao(self):
+        """Motorista com activo=False é excluído do match."""
+        self.motorista1.activo = False
+        self.motorista1.save()
+
+        corrida = Corrida.objects.create(
+            passageiro=self.passageiro,
+            origem_lat=-3.1,
+            origem_lon=-60.0,
+            origem_texto="Centro, Manaus",
+            destino_texto="Flores",
+            valor_sugerido=12.00,
+            status="aguardando",
+        )
+
+        from corridas.services import notificar_motoristas_proximos
+        from unittest.mock import patch
+
+        with patch("corridas.services.notificar_motorista_telegram") as mock_notif:
+            notificar_motoristas_proximos(corrida)
+            corrida.refresh_from_db()
+
+        self.assertEqual(corrida.status, "sem_motoristas")
+        mock_notif.assert_not_called()

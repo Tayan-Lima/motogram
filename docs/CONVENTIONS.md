@@ -108,9 +108,38 @@ await message.answer(
 )
 ```
 
----
+### Wrappers seguros (safe_tg)
 
-## Templates HTML
+```python
+# bot/handlers/safe_tg.py — wrappers obrigatórios para chamadas à API Telegram
+# Protegem contra crash em rede 3G intermitente
+
+async def safe_edit_text(message, text, **kwargs):
+    try: return await message.edit_text(text, **kwargs)
+    except Exception as e: logger.debug("safe_edit_text: %s", e)
+
+async def safe_answer(message, text=None, **kwargs):
+    try: return await message.answer(text, **kwargs)
+    except Exception as e: logger.debug("safe_answer: %s", e)
+
+async def safe_answer_callback(callback, text=None, **kwargs):
+    try: return await callback.answer(text=text, **kwargs)
+    except Exception as e: logger.debug("safe_answer_callback: %s", e)
+```
+
+**Usar sempre** `safe_edit_text()` em vez de `message.edit_text()`,  
+`safe_answer()` em vez de `message.answer()`,  
+`safe_answer_callback()` para callbacks.
+
+### Filtro de chat privado
+
+```python
+# Todos os routers DEVEM ter este filtro — bot não responde em grupos
+router = Router()
+router.message.filter(F.chat.type == "private")
+```
+
+---
 
 ### Estrutura base
 

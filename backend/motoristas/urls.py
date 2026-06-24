@@ -24,5 +24,7 @@ urlpatterns = [
     path("motorista/gerar-link-telegram/", views.GerarLinkTelegramView.as_view(), name="gerar_link_telegram"),
     path("motorista/desconectar-telegram/", views.DesconectarTelegramView.as_view(), name="desconectar_telegram"),
     path("api/motoristas/toggle-online/", views.ToggleOnlineView.as_view(), name="toggle_online"),
+    path("api/motoristas/atualizar-localizacao/", views.BotAtualizarLocalizacaoView.as_view(), name="bot_atualizar_localizacao"),
+    path("api/motoristas/toggle-online-bot/", views.BotToggleOnlineView.as_view(), name="toggle_online_bot"),
     path("api/motoristas/limpar-mensagens/", views.LimparMensagensView.as_view(), name="limpar_mensagens"),
 ]

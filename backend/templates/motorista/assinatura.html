@@ -13,7 +13,7 @@
     <div class="flex-1 px-5 flex flex-col justify-center" x-data="assinatura()">
         <div class="text-center mb-8">
             <h2 class="text-3xl font-extrabold tracking-tighter mb-2">Plano Mensal</h2>
-            <p class="text-muted">R$ 69,00/mês para receberes corridas ilimitadas</p>
+            <p class="text-muted">R$ 69,00/mês para receber corridas ilimitadas</p>
         </div>
 
         <div class="bg-surface border border-border rounded-2xl p-6 mb-6">
@@ -35,17 +35,33 @@
                 <span class="text-muted">/mês</span>
             </p>
 
-            <button @click="criarAssinatura()" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold hover:bg-accent transition-all">
-                Pagar com Pix
+            <button type="button" @click="criarAssinatura()" class="w-full bg-fg text-bg py-4 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg" :disabled="gerando">
+                <span x-show="!gerando">Pagar com Pix</span>
+                <span x-show="gerando">Gerando código...</span>
             </button>
         </div>
 
-        <div x-show="qrCode" class="text-center" x-transition>
-            <p class="text-sm text-muted mb-3">Escaneia o QR Code ou copia o código Pix</p>
-            <img x-bind:src="'data:image/png;base64,' + qrCode" class="mx-auto mb-4 rounded-xl max-w-[200px]" x-show="qrCode">
-            <div class="bg-surface border border-border rounded-xl p-3 text-xs text-muted break-all mb-4" x-text="pixCopiaCola" x-show="pixCopiaCola"></div>
-            <p class="text-xs text-accent">Após o pagamento, a assinatura ativa automaticamente.</p>
+        <div x-show="qrCode" class="text-center" x-transition.opacity.duration.200ms>
+            <p class="text-sm text-muted mb-3">Escaneie o QR Code ou copie o código Pix</p>
+            <div class="bg-white p-4 rounded-2xl mx-auto inline-block mb-4">
+                <img x-bind:src="'data:image/png;base64,' + qrCode" class="mx-auto rounded-xl max-w-[260px]" x-show="qrCode" alt="QR Code Pix" width="260" height="260">
+            </div>
+            <div class="bg-surface border border-border rounded-xl p-3 text-xs text-muted break-all mb-4 flex items-center justify-between gap-2" x-show="pixCopiaCola">
+                <code x-text="pixCopiaCola" class="break-all text-left flex-1"></code>
+                <button type="button" @click="copiarPix()" class="shrink-0 bg-accent text-white px-3 py-2 rounded-pill text-xs font-semibold min-h-[44px] hover:bg-accent/90 transition-all" aria-label="Copiar código Pix">
+                    <span x-text="copiado ? 'Copiado!' : 'Copiar'"></span>
+                </button>
+            </div>
+            <p class="text-xs text-accent" role="status" aria-live="polite">Após o pagamento, a assinatura ativa automaticamente.</p>
         </div>
+    </div>
+
+    <!-- Toast -->
+    <div x-show="toast" x-transition.opacity.duration.200ms
+         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)]"
+         role="status" aria-live="polite">
+        <div class="bg-fg text-bg rounded-pill px-5 py-3 text-sm font-medium text-center shadow-lg"
+             x-text="toast"></div>
     </div>
 </div>
 
@@ -54,25 +70,61 @@ function assinatura() {
     return {
         qrCode: null,
         pixCopiaCola: null,
+        gerando: false,
+        copiado: false,
+        toast: '',
+        _toastTimer: null,
+
+        mostrarToast(msg, ms = 5000) {
+            this.toast = msg;
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => { this.toast = ''; }, ms);
+        },
+
+        fetchComTimeout(url, options = {}, ms = 10000) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), ms);
+            return fetch(url, { ...options, signal: controller.signal })
+                .finally(() => clearTimeout(timeout));
+        },
 
         async criarAssinatura() {
+            if (this.gerando) return;
+            this.gerando = true;
             try {
-                const resp = await fetch("{% url 'pagamentos:criar_assinatura' %}", {
+                const resp = await this.fetchComTimeout("{% url 'pagamentos:criar_assinatura' %}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
                     },
-                });
+                }, 12000);
                 const data = await resp.json();
                 if (data.qr_code_base64) {
                     this.qrCode = data.qr_code_base64;
                     this.pixCopiaCola = data.pix_copia_cola;
                 } else if (data.erro) {
-                    alert(data.erro);
+                    this.mostrarToast(data.erro, 6000);
                 }
             } catch (e) {
-                alert('Erro ao criar assinatura. Tente novamente.');
+                if (e && e.name === 'AbortError') {
+                    this.mostrarToast('Conexão lenta. Aguarde alguns segundos antes de tentar de novo.', 6000);
+                } else {
+                    this.mostrarToast('Não foi possível gerar o Pix agora. Tente novamente.', 6000);
+                }
+            }
+            this.gerando = false;
+        },
+
+        async copiarPix() {
+            if (!this.pixCopiaCola) return;
+            try {
+                await navigator.clipboard.writeText(this.pixCopiaCola);
+                this.copiado = true;
+                this.mostrarToast('Código Pix copiado!');
+                setTimeout(() => { this.copiado = false; }, 2500);
+            } catch (e) {
+                this.mostrarToast('Toque e segure o código para copiar manualmente.', 6000);
             }
         },
     };

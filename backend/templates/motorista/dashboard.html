@@ -54,11 +54,12 @@
         <div class="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between">
             <div>
                 <p class="font-semibold text-sm">Modo motorista</p>
-                <p class="text-xs text-muted" x-text="online ? 'Aceitando novas corridas' : 'Indisponível para corridas'"></p>
+                <p class="text-xs text-muted">Gerencie seu status pelo Telegram</p>
             </div>
-            <button @click="toggleOnline()" class="w-11 h-6 rounded-full transition-colors relative cursor-pointer" :class="online ? 'bg-accent' : 'bg-border'">
-                <span class="absolute top-[3px] left-[3px] w-5 h-5 bg-surface rounded-full shadow transition-transform duration-300" :class="online ? 'translate-x-5' : 'translate-x-0'"></span>
-            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" :class="online ? 'bg-accent' : 'bg-accent2'"></div>
+                <span class="text-sm font-semibold" x-text="online ? 'Online' : 'Offline'"></span>
+            </div>
         </div>
     </div>
 
@@ -106,20 +107,20 @@
 function dashboard() {
     return {
         online: {{ motorista.activo|yesno:"true,false" }},
+        csrfToken: (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
 
-        toggleOnline() {
-            const novo = !this.online;
-            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
-            fetch("{% url 'motoristas:toggle_online' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrf,
-                },
-                body: JSON.stringify({ activo: novo }),
-            }).then(() => {
-                this.online = novo;
-            }).catch(() => {});
+        async init() {
+            document.addEventListener('visibilitychange', async () => {
+                if (!document.hidden) {
+                    try {
+                        const resp = await fetch("{% url 'motoristas:toggle_online' %}", {
+                            headers: {'X-CSRFToken': this.csrfToken}
+                        });
+                        const data = await resp.json();
+                        this.online = !!data.activo;
+                    } catch (e) {}
+                }
+            });
         },
     };
 }

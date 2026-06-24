@@ -13,7 +13,7 @@
     <!-- HEADER -->
     <header class="px-5 py-4 flex items-center justify-between border-b border-border shrink-0">
         <a href="/" class="flex items-center gap-2">
-            <img src="{% static 'motogram-go-logo.png' %}" alt="Motogram GO" class="h-11 w-auto max-w-[150px] object-contain">
+            <img src="{% static 'motogram-go-logo.png' %}" alt="Motogram GO" class="h-[124px] w-auto max-w-[50vw] object-contain" width="124" height="124">
         </a>
         <span class="flex items-center gap-3">
             {% if user.is_authenticated %}
@@ -30,7 +30,7 @@
         <div x-show="!mapaPronto" class="absolute inset-0 bg-surface flex items-center justify-center z-10">
             <div class="flex flex-col items-center gap-3">
                 <div class="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin"></div>
-                <p class="text-sm text-muted">A obter localização...</p>
+                <p class="text-sm text-muted" role="status" aria-live="polite">Obtendo localização...</p>
             </div>
         </div>
     </div>
@@ -40,10 +40,10 @@
         <div class="w-10 h-1 bg-border rounded mx-auto mb-4"></div>
 
         <!-- Status: selecting location + destination (tela única) -->
-        <div x-show="step === 'form'">
+        <div x-show="step === 'form'" x-transition.opacity.duration.200ms>
             <!-- ORIGEM -->
             <div class="mb-4">
-                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">De onde?</label>
+                <label for="origem" class="text-xs text-muted uppercase tracking-wider mb-1.5 block">De onde?</label>
                 <div x-show="favoritos.length > 0" class="mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                     <template x-for="f in favoritos" :key="f.id">
                         <button @click="usarFavoritoOrigem(f)"
@@ -52,12 +52,12 @@
                     </template>
                 </div>
                 <div class="relative">
-                    <input type="text" x-model="origemTexto" @input.debounce.400ms="buscarEnderecos('origem')"
+                    <input id="origem" type="text" x-model="origemTexto" @input.debounce.400ms="buscarEnderecos('origem')"
                            @focus="clearTimeout(_blurTimeout); sugestoesAtivas = 'origem'"
                            @blur="usarTextoComoOrigem()"
-                           placeholder="Rua, bairro ou use o GPS"
-                           class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
-                    <button @click="getLocation()" class="absolute right-2 top-1/2 -translate-y-1/2 bg-accent/10 text-accent rounded-lg px-2.5 py-2 text-xs font-semibold hover:bg-accent hover:text-white transition-all" title="Usar GPS">
+                           placeholder="Rua, bairro ou use o GPS" autocomplete="off"
+                           class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-base focus:border-fg focus:outline-none transition-colors">
+                    <button type="button" @click="getLocation()" class="absolute right-2 top-1/2 -translate-y-1/2 bg-accent/10 text-accent rounded-lg min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-semibold hover:bg-accent hover:text-white transition-all" title="Usar GPS" aria-label="Usar minha localização (GPS)">
                         📍 GPS
                     </button>
                 </div>
@@ -76,7 +76,7 @@
 
             <!-- DESTINO -->
             <div class="mb-4">
-                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Para onde?</label>
+                <label for="destino" class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Para onde?</label>
                 <div x-show="favoritos.length > 0" class="mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                     <template x-for="f in favoritos" :key="f.id">
                         <button @click="usarFavorito(f)"
@@ -85,11 +85,11 @@
                     </template>
                 </div>
                 <div class="relative">
-                    <input type="text" x-model="destinoTexto" @input.debounce.400ms="buscarEnderecos('destino')"
+                    <input id="destino" type="text" x-model="destinoTexto" @input.debounce.400ms="buscarEnderecos('destino')"
                            @focus="clearTimeout(_blurTimeout); sugestoesAtivas = 'destino'"
                            @blur="usarTextoComoDestino()"
-                           placeholder="Rua, bairro ou referência"
-                           class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                           placeholder="Rua, bairro ou referência" autocomplete="off"
+                           class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-base focus:border-fg focus:outline-none transition-colors">
                 </div>
                 <template x-if="sugestoesAtivas === 'destino' && sugestoesDestino.length > 0">
                     <div class="mt-1 border border-border rounded-xl overflow-hidden bg-surface shadow-sm">
@@ -105,29 +105,30 @@
 
             <!-- PREÇO -->
             <div class="mb-4">
-                <label class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Quanto queres pagar?</label>
+                <label for="valor" class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Quanto você quer pagar?</label>
                 <div class="relative">
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold">R$</span>
-                    <input type="number" x-model="valor" step="0.50" min="5" placeholder="12,00" class="w-full border-1.5 border-border rounded-xl pl-10 pr-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                    <input id="valor" type="number" x-model="valor" step="0.50" min="5" placeholder="12,00" inputmode="decimal" class="w-full border-1.5 border-border rounded-xl pl-10 pr-4 py-3.5 text-base focus:border-fg focus:outline-none transition-colors">
                 </div>
             </div>
 
             <!-- PONTO DE REFERÊNCIA -->
             <div class="mb-5">
-                <input type="text" x-model="pontoRef" placeholder="Ponto de referência (opcional)" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-sm focus:border-fg focus:outline-none transition-colors">
+                <label for="ponto-ref" class="sr-only">Ponto de referência (opcional)</label>
+                <input id="ponto-ref" type="text" x-model="pontoRef" placeholder="Ponto de referência (opcional)" autocomplete="off" class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-base focus:border-fg focus:outline-none transition-colors">
             </div>
 
-            <button @click="submitRide()" class="w-full bg-fg text-bg py-3.5 rounded-pill font-semibold hover:bg-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed" x-bind:disabled="!valor || !lat || !destinoTexto">
+            <button type="button" @click="submitRide()" class="w-full bg-fg text-bg py-4 rounded-pill font-semibold text-sm hover:bg-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg" x-bind:disabled="!valor || !lat || !destinoTexto || enviando">
                 <span x-show="!enviando">Pedir corrida</span>
                 <span x-show="enviando">Enviando...</span>
             </button>
-            <button @click="salvarComoFavorito()" x-show="lat" class="w-full mt-2 text-sm text-muted hover:text-fg transition-colors py-2.5">
+            <button type="button" @click="abrirModalFavorito()" x-show="lat" class="w-full mt-2 min-h-[44px] text-sm text-muted hover:text-fg transition-colors py-2.5">
                 💾 Salvar localização como favorito
             </button>
         </div>
 
         <!-- Status: waiting -->
-        <div x-show="step === 'waiting'" class="text-center py-4">
+        <div x-show="step === 'waiting'" x-transition.opacity.duration.200ms class="text-center py-4">
             <div class="relative w-20 h-20 mx-auto mb-5">
                 <div class="absolute inset-0 rounded-full bg-accent/20 animate-ping-slow"></div>
                 <div class="absolute inset-2 rounded-full bg-accent/30 animate-ping-slow" style="animation-delay: 0.4s;"></div>
@@ -135,23 +136,23 @@
                     <span class="text-3xl">🏍️</span>
                 </div>
             </div>
-            <p class="font-semibold mb-1">A procurar mototaxista...</p>
+            <p class="font-semibold mb-1">Procurando mototaxista...</p>
             <p class="text-sm text-muted mb-4" x-text="ofertasCount > 0 ? `${ofertasCount} motorista(s) responderam!` : 'Aguardando respostas...'"></p>
             <div class="flex gap-3 justify-center">
-                <button x-show="ofertasCount > 0" @click="verOfertas()" class="bg-accent text-white px-6 py-2.5 rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all">
+                <button x-show="ofertasCount > 0" @click="verOfertas()" type="button" class="bg-accent text-white px-6 py-3 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-accent/90 transition-all focus-visible:ring-2 focus-visible:ring-accent">
                     Ver respostas
                 </button>
-                <button @click="cancelarCorrida()" class="border border-border text-muted px-6 py-2.5 rounded-pill font-semibold text-sm hover:border-accent2 hover:text-accent2 transition-all">
+                <button type="button" @click="abrirModalCancelar()" class="border border-accent2 text-accent2 px-6 py-3 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-accent2 hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-accent2">
                     Cancelar pedido
                 </button>
             </div>
         </div>
 
         <!-- Status: viewing offers -->
-        <div x-show="step === 'ofertas'">
+        <div x-show="step === 'ofertas'" x-transition.opacity.duration.200ms>
             <div class="flex items-center justify-between mb-2">
                 <p class="text-sm font-semibold">Motoristas que responderam</p>
-                <button @click="cancelarCorrida()" class="text-xs text-muted hover:text-accent2 transition-colors">Cancelar</button>
+                <button type="button" @click="abrirModalCancelar()" class="text-xs text-accent2 hover:text-accent2/80 transition-colors">Cancelar</button>
             </div>
             <p class="text-xs text-muted mb-3">Clique num motorista para <strong>confirmar</strong> a corrida</p>
             <p class="text-xs text-muted mb-4">Escolha o motorista pela melhor oferta</p>
@@ -186,7 +187,7 @@
         </div>
 
         <!-- Status: found -->
-        <div x-show="step === 'found'" class="text-center py-4">
+        <div x-show="step === 'found'" x-transition.opacity.duration.200ms class="text-center py-4">
             <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center mx-auto mb-4">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -208,6 +209,68 @@
             <span class="text-xs">Perfil</span>
         </a>
     </nav>
+
+    <!-- Modal de confirmação: cancelar corrida -->
+    <div x-show="modalCancelar" x-transition.opacity.duration.200ms
+         class="fixed inset-0 bg-fg/50 z-50 flex items-end sm:items-center justify-center px-4"
+         @click.self="fecharModalCancelar()"
+         @keydown.escape.window="fecharModalCancelar()"
+         role="dialog" aria-modal="true" aria-labelledby="modal-cancelar-titulo">
+        <div x-show="modalCancelar" x-transition.opacity.duration.200ms
+             class="bg-surface w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5"
+             @click.outside="fecharModalCancelar()">
+            <h3 id="modal-cancelar-titulo" class="text-lg font-bold mb-2">Cancelar corrida?</h3>
+            <p class="text-sm text-muted mb-5">O motorista pode já estar a caminho. Esta ação não pode ser desfeita.</p>
+            <div class="flex flex-col gap-2">
+                <button type="button" @click="confirmarCancelar()"
+                        class="w-full bg-accent2 text-white py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-accent2/90 transition-all">
+                    Sim, cancelar
+                </button>
+                <button type="button" @click="fecharModalCancelar()" @click.outside
+                        class="w-full border border-border text-fg py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-bg transition-all">
+                    Continuar aguardando
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: salvar favorito -->
+    <div x-show="modalFavorito" x-transition.opacity.duration.200ms
+         class="fixed inset-0 bg-fg/50 z-50 flex items-end sm:items-center justify-center px-4"
+         @click.self="fecharModalFavorito()"
+         @keydown.escape.window="fecharModalFavorito()"
+         role="dialog" aria-modal="true" aria-labelledby="modal-favorito-titulo">
+        <div x-show="modalFavorito" x-transition.opacity.duration.200ms
+             class="bg-surface w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5"
+             @click.outside="fecharModalFavorito()">
+            <h3 id="modal-favorito-titulo" class="text-lg font-bold mb-4">Salvar localização</h3>
+            <div class="mb-4">
+                <label for="fav-nome" class="text-xs text-muted uppercase tracking-wider mb-1.5 block">Nome do local</label>
+                <input id="fav-nome" type="text" x-model="novoFavoritoNome" placeholder="Ex: Casa, Trabalho"
+                       autocomplete="off" maxlength="60"
+                       @keydown.enter.prevent="confirmarSalvarFavorito()"
+                       class="w-full border-1.5 border-border rounded-xl px-4 py-3.5 text-base focus:border-fg focus:outline-none transition-colors">
+            </div>
+            <div class="flex flex-col gap-2">
+                <button type="button" @click="confirmarSalvarFavorito()"
+                        class="w-full bg-fg text-bg py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-accent transition-all">
+                    Salvar
+                </button>
+                <button type="button" @click="fecharModalFavorito()"
+                        class="w-full border border-border text-fg py-3.5 min-h-[44px] rounded-pill font-semibold text-sm hover:bg-bg transition-all">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div x-show="toast" x-transition.opacity.duration.200ms
+         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)]"
+         role="status" aria-live="polite">
+        <div class="bg-fg text-bg rounded-pill px-5 py-3 text-sm font-medium text-center shadow-lg"
+             x-text="toast"></div>
+    </div>
 </div>
 
 <style>
@@ -248,6 +311,11 @@ function rideRequest() {
         sugestoesAtivas: null,
         sugestoesOrigem: [],
         sugestoesDestino: [],
+        modalCancelar: false,
+        modalFavorito: false,
+        novoFavoritoNome: '',
+        toast: '',
+        _toastTimer: null,
         _map: null,
         _markerOrigem: null,
         _markerDestino: null,
@@ -264,9 +332,22 @@ function rideRequest() {
             this.$nextTick(() => this.initMap());
         },
 
+        mostrarToast(msg, ms = 5000) {
+            this.toast = msg;
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => { this.toast = ''; }, ms);
+        },
+
+        fetchComTimeout(url, options = {}, ms = 10000) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), ms);
+            return fetch(url, { ...options, signal: controller.signal })
+                .finally(() => clearTimeout(timeout));
+        },
+
         async carregarFavoritos() {
             try {
-                const resp = await fetch('/api/passageiros/favoritos/');
+                const resp = await this.fetchComTimeout('/api/passageiros/favoritos/', {}, 8000);
                 if (resp.ok) {
                     const data = await resp.json();
                     this.favoritos = data.favoritos || [];
@@ -304,12 +385,16 @@ function rideRequest() {
                     zoomAnimation: false,
                     fadeAnimation: false,
                     markerZoomAnimation: false,
+                    zoomControl: false,
                 }).setView([this.lat, this.lon], 15);
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap',
                     crossOrigin: true,
                 }).addTo(map);
+
+                L.control.zoom({ position: 'bottomright' }).addTo(map);
+                map.on('load', () => { this.mapaPronto = true; });
 
                 this._map = map;
                 this.mapaPronto = true;
@@ -390,7 +475,7 @@ function rideRequest() {
                 const bLon = tipo === 'destino' ? this.destinoLon : this.lon;
                 if (bLat) params.set('lat', bLat);
                 if (bLon) params.set('lng', bLon);
-                const resp = await fetch(`/api/map/autocomplete/?${params}`);
+                const resp = await this.fetchComTimeout(`/api/map/autocomplete/?${params}`, {}, 8000);
                 if (!resp.ok) return;
                 const data = await resp.json();
                 this._nominatimCache[texto] = data.sugestoes || [];
@@ -455,7 +540,7 @@ function rideRequest() {
             if (!q) return;
             try {
                 const params = new URLSearchParams({ q });
-                const resp = await fetch(`/api/map/geocode/?${params}`);
+                const resp = await this.fetchComTimeout(`/api/map/geocode/?${params}`, {}, 8000);
                 if (!resp.ok) return;
                 const data = await resp.json();
                 if (data.lat && data.lng) {
@@ -472,6 +557,51 @@ function rideRequest() {
                             this.actualizarDestinoMapa();
                         }
                     }
+                }
+            } catch(e) {}
+        },
+
+        async _geocodarFavoritoOrigem(f, textoFallback) {
+            const query = (f.rua + ' ' + (f.numero || '') + ', Brasil').trim();
+            if (query.length < 5) {
+                this.origemTexto = textoFallback;
+                return;
+            }
+            try {
+                const params = new URLSearchParams({ q: query });
+                if (this.lat) params.set('lat', this.lat);
+                if (this.lon) params.set('lng', this.lon);
+                const resp = await this.fetchComTimeout(`/api/map/geocode/?${params}`, {}, 8000);
+                if (!resp.ok) { this.origemTexto = textoFallback; return; }
+                const data = await resp.json();
+                if (data.lat && data.lng) {
+                    const lat = parseFloat(data.lat);
+                    const lng = parseFloat(data.lng);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        this.definirOrigem(lat, lng, textoFallback);
+                        return;
+                    }
+                }
+                this.origemTexto = textoFallback;
+            } catch(e) { this.origemTexto = textoFallback; }
+        },
+
+        async _geocodarFavorito(f) {
+            const query = (f.rua + ' ' + (f.numero || '') + ', Brasil').trim();
+            if (query.length < 5) return;
+            try {
+                const params = new URLSearchParams({ q: query });
+                if (this.destinoLat) params.set('lat', this.destinoLat);
+                else if (this.lat) params.set('lat', this.lat);
+                if (this.destinoLon) params.set('lng', this.destinoLon);
+                else if (this.lon) params.set('lng', this.lon);
+                const resp = await this.fetchComTimeout(`/api/map/geocode/?${params}`, {}, 8000);
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (data.lat && data.lng) {
+                    this.destinoLat = parseFloat(data.lat);
+                    this.destinoLon = parseFloat(data.lng);
+                    this.actualizarDestinoMapa();
                 }
             } catch(e) {}
         },
@@ -494,19 +624,20 @@ function rideRequest() {
                 }
                 if (this.pontoRef) body.ponto_referencia = this.pontoRef;
 
-                const resp = await fetch('/api/corridas/web/', {
+                const resp = await this.fetchComTimeout('/api/corridas/web/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrf,
                     },
                     body: JSON.stringify(body),
-                });
+                }, 15000);
                 const data = await resp.json();
                 if (data.erro) {
                     if (data.erro === 'Login obrigatório') {
                         window.location.href = '/passageiro/login/?next=/passageiro/';
                     }
+                    this.mostrarToast(data.erro || 'Não foi possível enviar a corrida.', 6000);
                     this.enviando = false;
                     return;
                 }
@@ -517,7 +648,11 @@ function rideRequest() {
                     this.startPolling();
                 }
             } catch (e) {
-                console.error('Erro ao criar corrida:', e);
+                if (e && e.name === 'AbortError') {
+                    this.mostrarToast('Conexão lenta. Aguarde alguns segundos antes de tentar de novo.', 6000);
+                } else {
+                    this.mostrarToast('Sem conexão. Verifique sua internet e tente novamente.', 6000);
+                }
             }
             this.enviando = false;
         },
@@ -529,36 +664,62 @@ function rideRequest() {
             }
             const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
             try {
-                await fetch(`/api/corridas/${this.corridaId}/cancelar/`, {
+                await this.fetchComTimeout(`/api/corridas/${this.corridaId}/cancelar/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrf,
                     },
-                });
-            } catch(e) {}
+                }, 10000);
+            } catch(e) {
+                this.mostrarToast('Sem conexão. A corrida ainda está pendente no servidor.', 6000);
+            }
             this.corridaId = null;
             this.step = 'form';
             this.ofertasCount = 0;
             this.ofertasList = [];
         },
 
-        salvarComoFavorito() {
-            const nome = prompt('Nome do local (ex: Casa, Trabalho):', '');
+        abrirModalCancelar() { this.modalCancelar = true; },
+        fecharModalCancelar() { this.modalCancelar = false; },
+        confirmarCancelar() {
+            this.fecharModalCancelar();
+            this.cancelarCorrida();
+        },
+
+        abrirModalFavorito() {
+            this.novoFavoritoNome = '';
+            this.modalFavorito = true;
+            this.$nextTick(() => {
+                const el = document.getElementById('fav-nome');
+                if (el) el.focus();
+            });
+        },
+        fecharModalFavorito() { this.modalFavorito = false; },
+        async confirmarSalvarFavorito() {
+            const nome = (this.novoFavoritoNome || '').trim();
             if (!nome) return;
-            fetch('/api/passageiros/favoritos/criar/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
-                },
-                body: JSON.stringify({
-                    nome: nome.trim().substring(0, 60),
-                    endereco: this.origemTexto || '',
-                    lat: this.lat,
-                    lon: this.lon,
-                }),
-            }).then(() => this.carregarFavoritos()).catch(() => {});
+            this.fecharModalFavorito();
+            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            try {
+                await this.fetchComTimeout('/api/passageiros/favoritos/criar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf,
+                    },
+                    body: JSON.stringify({
+                        nome: nome.substring(0, 60),
+                        endereco: this.origemTexto || '',
+                        lat: this.lat,
+                        lon: this.lon,
+                    }),
+                }, 10000);
+                this.carregarFavoritos();
+                this.mostrarToast('✅ Local salvo como favorito.');
+            } catch(e) {
+                this.mostrarToast('Sem conexão. Não foi possível salvar agora.', 6000);
+            }
         },
 
         usarFavoritoOrigem(f) {
@@ -579,30 +740,6 @@ function rideRequest() {
             }
         },
 
-        async _geocodarFavoritoOrigem(f, textoFallback) {
-            const query = (f.rua + ' ' + (f.numero || '') + ', Brasil').trim();
-            if (query.length < 5) {
-                this.origemTexto = textoFallback;
-                return;
-            }
-            try {
-                const params = new URLSearchParams({ q: query });
-                if (this.lat) params.set('lat', this.lat);
-                if (this.lon) params.set('lng', this.lon);
-                const resp = await fetch(`/api/map/geocode/?${params}`);
-                if (!resp.ok) { this.origemTexto = textoFallback; return; }
-                const data = await resp.json();
-                if (data.lat && data.lng) {
-                    const lat = parseFloat(data.lat);
-                    const lng = parseFloat(data.lng);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        this.definirOrigem(lat, lng, textoFallback);
-                        return;
-                    }
-                }
-                this.origemTexto = textoFallback;
-            } catch(e) { this.origemTexto = textoFallback; }
-        },
 
         usarFavorito(f) {
             let texto = f.nome;
@@ -623,25 +760,6 @@ function rideRequest() {
             }
         },
 
-        async _geocodarFavorito(f) {
-            const query = (f.rua + ' ' + (f.numero || '') + ', Brasil').trim();
-            if (query.length < 5) return;
-            try {
-                const params = new URLSearchParams({ q: query });
-                if (this.destinoLat) params.set('lat', this.destinoLat);
-                else if (this.lat) params.set('lat', this.lat);
-                if (this.destinoLon) params.set('lng', this.destinoLon);
-                else if (this.lon) params.set('lng', this.lon);
-                const resp = await fetch(`/api/map/geocode/?${params}`);
-                if (!resp.ok) return;
-                const data = await resp.json();
-                if (data.lat && data.lng) {
-                    this.destinoLat = parseFloat(data.lat);
-                    this.destinoLon = parseFloat(data.lng);
-                    this.actualizarDestinoMapa();
-                }
-            } catch(e) {}
-        },
 
         usarTextoComoOrigem() {
             clearTimeout(this._blurTimeout);
@@ -662,12 +780,12 @@ function rideRequest() {
         async carregarOfertas() {
             if (!this.corridaId) return;
             try {
-                const resp = await fetch(`/api/corridas/${this.corridaId}/ofertas/`);
+                const resp = await this.fetchComTimeout(`/api/corridas/${this.corridaId}/ofertas/`, {}, 8000);
                 const data = await resp.json();
                 this.ofertasList = data.ofertas || [];
                 this.ofertasCount = this.ofertasList.length;
             } catch (e) {
-                console.error('Erro ao carregar ofertas:', e);
+                if (e && e.name === 'AbortError') return;
             }
         },
 
@@ -678,20 +796,26 @@ function rideRequest() {
 
         async escolherMotorista(oferta) {
             try {
-                const resp = await fetch(`/api/corridas/${this.corridaId}/escolher/`, {
+                const resp = await this.fetchComTimeout(`/api/corridas/${this.corridaId}/escolher/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
                     },
                     body: JSON.stringify({ oferta_id: oferta.id }),
-                });
+                }, 12000);
                 const data = await resp.json();
                 if (data.ok) {
                     window.location.href = `/passageiro/acompanhar/${this.corridaId}/`;
+                } else if (data.erro) {
+                    this.mostrarToast(data.erro, 6000);
                 }
             } catch (e) {
-                console.error('Erro ao escolher motorista:', e);
+                if (e && e.name === 'AbortError') {
+                    this.mostrarToast('Conexão lenta. Verifique se a corrida foi confirmada antes de tentar de novo.', 8000);
+                } else {
+                    this.mostrarToast('Sem conexão. Tente novamente.', 6000);
+                }
             }
         },
 
@@ -699,7 +823,7 @@ function rideRequest() {
             const poll = async () => {
                 if (!this.corridaId || this.step !== 'waiting') return;
                 try {
-                    const resp = await fetch(`/api/corridas/${this.corridaId}/status/`);
+                    const resp = await this.fetchComTimeout(`/api/corridas/${this.corridaId}/status/`, {}, 8000);
                     const data = await resp.json();
 
                     if (data.status === 'aceite') {
