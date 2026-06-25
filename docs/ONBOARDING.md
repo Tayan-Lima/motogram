@@ -68,6 +68,28 @@ PASSO 3 — Confirmar e-mail
   → Link válido por 24 horas
   → Conta funciona antes de confirmar o e-mail,
     mas mostra banner de aviso enquanto pendente
+  → Admin pode confirmar manualmente via painel — ver "Confirmação Manual" abaixo
+```
+
+### 1.2.1 Confirmação Manual de Email pelo Admin
+
+Quando o email de confirmação não chega (ex: `console.EmailBackend` no Railway, ou falha
+de entrega), o admin pode confirmar manualmente no painel:
+
+**Pelo dashboard** (`/{PREFIX}/`):
+- Card "⚠ Pendentes — Passageiros p/ confirmar" → lista todos com `email_confirmado=False`
+
+**Pela lista de pendentes** (`/{PREFIX}/passageiros-pendentes/`):
+- Cada passageiro tem botão "✓ Confirmar Email" — um clique e `email_confirmado = True`
+
+**Pelo detalhe do passageiro** (`/{PREFIX}/passageiros/{id}/`):
+- Botão "✓ Confirmar Email" visível apenas quando email não confirmado
+
+```python
+# admin_mg/views.py — PassageiroDetailView.post()
+elif accao == "confirmar_email":
+    passageiro.email_confirmado = True
+    passageiro.save()
 ```
 
 ---

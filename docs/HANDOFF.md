@@ -112,19 +112,20 @@ Mudanças:
 | **Matching geo expansivo** | Círculo expansível 5→10→25km + filtro frescura ≤2h + fallback 4 níveis | `corridas/services.py` `notificar_motoristas_proximos()` |
 | **Live Location Telegram** | Bot recebe `edited_message` com localização em tempo real (até 8h, ~60s updates) | `bot/main.py`, `bot/handlers/motorista.py` `receber_localizacao_live` |
 | **Toggle online/offline** | Botão Telegram 🟢/🔴 altera `Motorista.activo`; dashboard é badge informativo (read-only) | `motoristas/views.py` `BotToggleOnlineView`, `bot/handlers/motorista.py` |
+| **Passageiros pendentes admin** | Painel lista passageiros com `email_confirmado=False` + confirmação manual (botão) | `admin_mg/views.py`, `templates/admin_mg/passageiros_pendentes.html` |
 | **PT-BR completo** | Todas as strings do bot em PT-BR (você, compartilhe, contato, clique) | `bot/messages.py` (174 linhas), `corridas/services.py` |
 | **GitHub** | Repo `Tayan-Lima/motogram` (público, main) | |
 
 ---
 
-## Estatísticas de Testes (146 total)
+## Estatísticas de Testes (152 total)
 
 | Suite | Testes | Runner |
 |-------|--------|--------|
-| Django unit + integration | 110 | `manage.py test` |
+| Django unit + integration | 116 | `manage.py test` |
 | Bot (services + handlers) | 36 | `pytest bot/tests/` |
 
-**Todas as suites executadas e confirmadas (146/146 ✅, 0 falhas).**
+**Todas as suites executadas e confirmadas (152/152 ✅, 0 falhas).**
 
 ### ✅ Deploy Concluído (2026-06-24)
 
